@@ -9,7 +9,7 @@
  *   created_at timestamptz default now()
  * );
  */
-import { supabase } from '../index.js';
+import { supabase } from '../src/index.js';
 
 async function 演示() {
   const 表名 = 'tasks';

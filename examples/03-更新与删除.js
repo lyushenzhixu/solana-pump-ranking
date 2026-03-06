@@ -1,7 +1,7 @@
 /**
  * 示例：更新 (UPDATE) 和 删除 (DELETE)
  */
-import { supabase } from '../index.js';
+import { supabase } from '../src/index.js';
 
 async function 更新() {
   const { data, error } = await supabase

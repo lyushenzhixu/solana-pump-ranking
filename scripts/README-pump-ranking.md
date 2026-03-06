@@ -2,7 +2,7 @@
 
 ## 一步：在 Supabase 建表
 
-打开 [Supabase SQL Editor](https://app.supabase.com/project/rkzljtotquogikekxhcw/sql)，把 **`solana-pump-ranking.sql`** 里的 SQL 全部复制进去，点击 **Run** 执行一次。
+打开 [Supabase SQL Editor](https://app.supabase.com/project/rkzljtotquogikekxhcw/sql)，把 **`config/sql/solana-pump-ranking.sql`** 里的 SQL 全部复制进去，点击 **Run** 执行一次。
 
 ## 二步：拉取并写入
 

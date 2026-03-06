@@ -40,12 +40,14 @@ git push -u origin main
 ## 四、生成公网域名
 
 1. 在该服务的 **Settings** 里找到 **Networking** / **Public Networking**。
-2. 点击 **Generate domain**，会得到一个 `xxx.up.railway.app` 的地址。
+2. 点击 **Generate domain**，端口填日志里看到的端口（如 8080），会得到一个 `xxx.up.railway.app` 的地址。
 3. 浏览器打开该地址即可看到榜单页面。
 
 ## 五、接口说明
 
-- **榜单页面**：`https://你的域名/`  
+- **首页（欢迎页）**：`https://你的域名/`  
+  幻影领域欢迎页，点击「探索」进入榜单。
+- **榜单页面**：`https://你的域名/ranking`  
   展示前 20 条 Solana Pump 榜单（从 Supabase 读取）。
 - **JSON API**：`https://你的域名/api/ranking`  
   返回榜单 JSON，方便其他应用或前端调用。

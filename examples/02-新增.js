@@ -1,7 +1,7 @@
 /**
  * 示例：新增数据 (INSERT)
  */
-import { supabase } from '../index.js';
+import { supabase } from '../src/index.js';
 
 async function 新增一条() {
   const { data, error } = await supabase

@@ -2,7 +2,7 @@
  * 示例：查询数据 (SELECT)
  * 把 'tasks' 改成你在 Supabase 里创建的表名
  */
-import { supabase } from '../index.js';
+import { supabase } from '../src/index.js';
 
 async function 查询示例() {
   // 查全部
