@@ -80,6 +80,11 @@ const HTML_PAGE = `
 
 const server = http.createServer(async (req, res) => {
   const path = req.url?.split('?')[0] || '/';
+  if (path === '/health' || path === '/api/health') {
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ ok: true, port: PORT }));
+    return;
+  }
   if (path === '/api/ranking') {
     try {
       const data = await getRanking();
@@ -102,6 +107,7 @@ const server = http.createServer(async (req, res) => {
   res.end('Not Found');
 });
 
-server.listen(PORT, () => {
-  console.log('Server running on port', PORT);
+const HOST = '0.0.0.0';
+server.listen(PORT, HOST, () => {
+  console.log('Server running on', HOST + ':' + PORT);
 });
