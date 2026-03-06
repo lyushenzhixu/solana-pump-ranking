@@ -1,0 +1,20 @@
+{
+  "name": "superbase-experiment",
+  "version": "1.0.0",
+  "description": "Supabase 连接示例",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node server.js",
+    "example:query": "node examples/01-查询.js",
+    "example:insert": "node examples/02-新增.js",
+    "example:update": "node examples/03-更新与删除.js",
+    "example:demo": "node examples/04-完整演示.js",
+    "pump-ranking": "node scripts/fetch-pump-ranking.js",
+    "test": "node -e \"import('./index.js').then(m => console.log('Supabase 客户端已导出:', !!m.supabase))\""
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5"
+  }
+}
