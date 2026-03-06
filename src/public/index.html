@@ -17,6 +17,7 @@
   --phantom-deep: #1a0a2e;
   --warp-magenta: #FF00FF;
   --acid-yellow: #DFFF00;
+  --bn-yellow: #F0B90B;
 }
 
 html, body {
@@ -152,6 +153,182 @@ html, body {
 @keyframes orbPulse {
   0%, 100% { opacity: 0.1; transform: scale(1) rotate(0deg); }
   50% { opacity: 0.25; transform: scale(1.15) rotate(180deg); }
+}
+
+/* ========================================
+   FLOATING BRAND LOGOS - SOLANA / POLYMARKET / BINANCE
+   ======================================== */
+.brand-logos {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.brand-logo-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.brand-logo {
+  position: absolute;
+  display: block;
+  opacity: 1;
+  mix-blend-mode: screen;
+  will-change: transform;
+  transform: translate3d(var(--px, 0px), var(--py, 0px), 0);
+}
+
+.brand-logo .logo-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-logo .core {
+  opacity: 0.14;
+  filter: blur(0.4px);
+}
+
+.brand-logo .phantom {
+  opacity: 0;
+  filter: blur(2.2px);
+}
+
+.brand-logo .phantom-1 { animation: phantomFloat1 var(--pf1-dur, 14s) ease-in-out infinite var(--pf1-delay, 0s); }
+.brand-logo .phantom-2 { animation: phantomFloat2 var(--pf2-dur, 18s) ease-in-out infinite var(--pf2-delay, 0s); }
+.brand-logo .phantom-3 { animation: phantomFloat3 var(--pf3-dur, 16s) ease-in-out infinite var(--pf3-delay, 0s); }
+
+.brand-logo svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* --- Solana (紫绿渐变, 左上/右下/中上) --- */
+.logo-sol-1 {
+  width: 90px; height: 90px;
+  left: 8%; top: 18%;
+  --pf1-dur: 14s; --pf2-dur: 18s; --pf3-dur: 16s;
+  --pf1-delay: 0s; --pf2-delay: 1.6s; --pf3-delay: 3.8s;
+  animation: phantomSpin1 33s linear infinite;
+}
+.logo-sol-2 {
+  width: 55px; height: 55px;
+  right: 12%; bottom: 22%;
+  --pf1-dur: 15s; --pf2-dur: 18s; --pf3-dur: 20s;
+  --pf1-delay: 2.2s; --pf2-delay: 0.8s; --pf3-delay: 4.6s;
+  animation: phantomSpinReverse 41s linear infinite;
+}
+.logo-sol-3 {
+  width: 40px; height: 40px;
+  left: 55%; top: 8%;
+  --pf1-dur: 19s; --pf2-dur: 16s; --pf3-dur: 14s;
+  --pf1-delay: 4.8s; --pf2-delay: 1.2s; --pf3-delay: 0s;
+  animation: phantomSpin1 37s linear infinite;
+}
+
+/* --- Polymarket (冰蓝 P+圆环+虚线轨道) --- */
+.logo-poly-1 {
+  width: 80px; height: 80px;
+  right: 8%; top: 15%;
+  --pf1-dur: 17s; --pf2-dur: 16s; --pf3-dur: 21s;
+  --pf1-delay: 2.5s; --pf2-delay: 1s; --pf3-delay: 5.5s;
+  animation: phantomSpinReverse 29s linear infinite;
+}
+.logo-poly-2 {
+  width: 50px; height: 50px;
+  left: 15%; bottom: 18%;
+  --pf1-dur: 18s; --pf2-dur: 22s; --pf3-dur: 15s;
+  --pf1-delay: 0.6s; --pf2-delay: 4.2s; --pf3-delay: 5s;
+  animation: phantomSpin1 39s linear infinite;
+}
+.logo-poly-3 {
+  width: 35px; height: 35px;
+  right: 40%; bottom: 8%;
+  --pf1-dur: 20s; --pf2-dur: 16s; --pf3-dur: 19s;
+  --pf1-delay: 9s; --pf2-delay: 1.8s; --pf3-delay: 6.4s;
+  animation: phantomSpinReverse 45s linear infinite;
+}
+
+/* --- Binance (金黄菱形五钻) --- */
+.logo-bn-1 {
+  width: 75px; height: 75px;
+  left: 5%; top: 55%;
+  --pf1-dur: 15s; --pf2-dur: 21s; --pf3-dur: 17s;
+  --pf1-delay: 4.2s; --pf2-delay: 1.4s; --pf3-delay: 2s;
+  animation: phantomSpin1 32s linear infinite;
+}
+.logo-bn-2 {
+  width: 60px; height: 60px;
+  right: 6%; top: 50%;
+  --pf1-dur: 13s; --pf2-dur: 19s; --pf3-dur: 16s;
+  --pf1-delay: 4s; --pf2-delay: 1.8s; --pf3-delay: 6.2s;
+  animation: phantomSpinReverse 36s linear infinite;
+}
+.logo-bn-3 {
+  width: 42px; height: 42px;
+  left: 35%; top: 5%;
+  --pf1-dur: 17s; --pf2-dur: 19s; --pf3-dur: 15s;
+  --pf1-delay: 1.2s; --pf2-delay: 8s; --pf3-delay: 4.8s;
+  animation: phantomSpin1 42s linear infinite;
+}
+
+@keyframes phantomFloat1 {
+  0%, 100% { opacity: 0; transform: translate(0, 0) scale(0.6); filter: blur(4px); }
+  15% { opacity: 0.12; filter: blur(2px); }
+  30% { opacity: 0.06; transform: translate(25px, -35px) scale(0.9); filter: blur(1px); }
+  50% { opacity: 0.18; transform: translate(-15px, -50px) scale(1.1); filter: blur(0.5px); }
+  70% { opacity: 0.08; transform: translate(20px, -30px) scale(0.85); filter: blur(2px); }
+  85% { opacity: 0.14; filter: blur(1.5px); }
+}
+@keyframes phantomFloat2 {
+  0%, 100% { opacity: 0; transform: translate(0, 0) scale(0.7); filter: blur(3px); }
+  10% { opacity: 0.05; }
+  25% { opacity: 0.15; transform: translate(-30px, 20px) scale(1.05); filter: blur(0.5px); }
+  45% { opacity: 0.04; transform: translate(-40px, 40px) scale(0.75); filter: blur(3px); }
+  65% { opacity: 0.2; transform: translate(-10px, 25px) scale(1.15); filter: blur(0px); }
+  80% { opacity: 0.07; filter: blur(2px); }
+}
+@keyframes phantomFloat3 {
+  0%, 100% { opacity: 0; transform: translate(0, 0) scale(0.5); filter: blur(5px); }
+  20% { opacity: 0.1; transform: translate(15px, 30px) scale(0.95); filter: blur(1px); }
+  35% { opacity: 0.22; transform: translate(30px, 15px) scale(1.2); filter: blur(0px); }
+  55% { opacity: 0.03; transform: translate(40px, 45px) scale(0.7); filter: blur(4px); }
+  75% { opacity: 0.16; transform: translate(20px, 35px) scale(1); filter: blur(1px); }
+  90% { opacity: 0.05; filter: blur(3px); }
+}
+@keyframes phantomSpin1 {
+  from { rotate: 0deg; }
+  to { rotate: 360deg; }
+}
+@keyframes phantomSpinReverse {
+  from { rotate: 0deg; }
+  to { rotate: -360deg; }
+}
+
+.brand-logo::before {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle, currentColor, transparent 70%);
+  opacity: 0.15;
+  filter: blur(15px);
+  animation: logoGlowPulse 5s ease-in-out infinite;
+}
+.logo-sol-1, .logo-sol-2, .logo-sol-3 { color: var(--sol-purple); }
+.logo-sol-2::before { animation-delay: 1.5s; }
+.logo-poly-1, .logo-poly-2, .logo-poly-3 { color: var(--sol-blue); }
+.logo-poly-1::before { animation-delay: 0.8s; }
+.logo-bn-1, .logo-bn-2, .logo-bn-3 { color: var(--bn-yellow); }
+.logo-bn-1::before { animation-delay: 2s; }
+@keyframes logoGlowPulse {
+  0%, 100% { opacity: 0.08; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.3); }
 }
 
 /* === PHANTOM RING === */
@@ -737,6 +914,105 @@ html, body {
   <div class="light-streak"></div>
   <div class="light-streak-2"></div>
 
+  <!-- Brand logos: Solana ×3, Polymarket ×3, Binance ×3 -->
+  <div class="brand-logos">
+    <svg class="brand-logo-defs" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="solGrad" x1="0" y1="0" x2="400" y2="320" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#9945FF"/>
+          <stop offset="55%" stop-color="#00D1FF"/>
+          <stop offset="100%" stop-color="#14F195"/>
+        </linearGradient>
+        <linearGradient id="polyGrad" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#9AE6FF"/>
+          <stop offset="100%" stop-color="#4DA3FF"/>
+        </linearGradient>
+        <linearGradient id="bnGrad" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#F0B90B"/>
+          <stop offset="100%" stop-color="#FCD535"/>
+        </linearGradient>
+        <symbol id="mark-solana" viewBox="0 0 400 320">
+          <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" fill="url(#solGrad)" opacity="0.92"/>
+          <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" fill="url(#solGrad)" opacity="0.92"/>
+          <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="url(#solGrad)" opacity="0.92"/>
+        </symbol>
+        <symbol id="mark-poly" viewBox="0 0 200 200">
+          <circle cx="100" cy="100" r="90" stroke="url(#polyGrad)" stroke-width="6" fill="none" opacity="0.8"/>
+          <circle cx="100" cy="100" r="66" stroke="url(#polyGrad)" stroke-width="2.6" fill="none" opacity="0.42" stroke-dasharray="10 8" stroke-linecap="round"/>
+          <path d="M75 55h30c22 0 40 18 40 40s-18 40-40 40H95v25H75V55zm20 60h10c11 0 20-9 20-20s-9-20-20-20H95v40z" fill="url(#polyGrad)" opacity="0.86"/>
+        </symbol>
+        <symbol id="mark-bn" viewBox="0 0 200 200">
+          <polygon points="100,70 130,100 100,130 70,100" fill="url(#bnGrad)" opacity="0.88"/>
+          <polygon points="100,15 122,37 100,59 78,37" fill="url(#bnGrad)" opacity="0.74"/>
+          <polygon points="100,141 122,163 100,185 78,163" fill="url(#bnGrad)" opacity="0.74"/>
+          <polygon points="37,78 59,100 37,122 15,100" fill="url(#bnGrad)" opacity="0.74"/>
+          <polygon points="163,78 185,100 163,122 141,100" fill="url(#bnGrad)" opacity="0.74"/>
+          <line x1="100" y1="59" x2="100" y2="70" stroke="url(#bnGrad)" stroke-width="2" opacity="0.55"/>
+          <line x1="100" y1="130" x2="100" y2="141" stroke="url(#bnGrad)" stroke-width="2" opacity="0.55"/>
+          <line x1="59" y1="100" x2="70" y2="100" stroke="url(#bnGrad)" stroke-width="2" opacity="0.55"/>
+          <line x1="130" y1="100" x2="141" y2="100" stroke="url(#bnGrad)" stroke-width="2" opacity="0.55"/>
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="brand-logo logo-sol-1">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+    </div>
+    <div class="brand-logo logo-sol-2">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+    </div>
+    <div class="brand-logo logo-sol-3">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 400 320" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-solana"/></svg></span>
+    </div>
+
+    <div class="brand-logo logo-poly-1">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+    </div>
+    <div class="brand-logo logo-poly-2">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+    </div>
+    <div class="brand-logo logo-poly-3">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-poly"/></svg></span>
+    </div>
+
+    <div class="brand-logo logo-bn-1">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+    </div>
+    <div class="brand-logo logo-bn-2">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+    </div>
+    <div class="brand-logo logo-bn-3">
+      <span class="logo-layer phantom phantom-1"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer phantom phantom-2"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer phantom phantom-3"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+      <span class="logo-layer core"><svg viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg"><use href="#mark-bn"/></svg></span>
+    </div>
+  </div>
+
   <div class="glyphs">
     <div class="glyph">◆</div>
     <div class="glyph">⟐</div>
@@ -836,6 +1112,14 @@ document.addEventListener('mousemove', function(e) {
   if (content) {
     content.style.transform = `translate(${dx * 5}px, ${dy * 5}px)`;
   }
+
+  const logos = document.querySelectorAll('.brand-logo');
+  logos.forEach((logo, i) => {
+    const speed = (i % 3 + 1) * 4;
+    const dir = i % 2 === 0 ? 1 : -1;
+    logo.style.setProperty('--px', `${dx * speed * dir}px`);
+    logo.style.setProperty('--py', `${dy * speed * dir}px`);
+  });
 });
 </script>
 
