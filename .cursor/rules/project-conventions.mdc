@@ -1,0 +1,44 @@
+---
+description: 项目全局约定与编码规范（Supabase + Solana Pump 榜单）
+alwaysApply: true
+---
+
+# 项目约定
+
+## 模块与入口
+
+- 使用 **ES Modules**：`import`/`export`，不要使用 `require()`。
+- `package.json` 已设置 `"type": "module"`。
+- Supabase 客户端从 `src/index.js` 导出，其他模块通过 `import { supabase } from './src/index.js'` 或相对路径引用。
+
+## 目录职责
+
+| 目录 | 用途 |
+|------|------|
+| `src/` | 应用主代码（Supabase 客户端、Web 服务等）；`src/public/` 为前端静态页（如欢迎页） |
+| `examples/` | 可运行的增删改查示例，供学习/调试 |
+| `scripts/` | 一次性或定时脚本（如拉取 AVE 榜单） |
+| `config/` | 配置与 SQL（建表脚本在 `config/sql/`） |
+| `docs/` | 部署、协作等文档 |
+| `.cursor/skills/` | 项目级 Agent Skill（任务流程与领域能力），每 skill 一目录含 `SKILL.md` |
+| `knowledge/` | 项目知识库：设计决策、术语、运维说明等结构化知识 |
+
+- 新增建表或迁移 SQL 放在 `config/sql/`，并在 `config/README.md` 或相关文档中说明。
+
+## 环境与配置
+
+- 敏感配置通过 **环境变量** 提供，使用 `dotenv` 加载 `.env`。
+- 提供 `.env.example` 列出所需变量（如 `SUPABASE_URL`、`SUPABASE_ANON_KEY`），不要提交真实密钥。
+- 启动或脚本入口处校验必要环境变量，缺失时给出明确报错和设置指引。
+
+## 代码与风格
+
+- 与现有代码风格一致：可用中文注释与用户面向的 `console` 输出。
+- 异步逻辑使用 `async/await`，错误用 `try/catch` 或 `.catch()` 处理，避免未处理的 Promise。
+- 新增脚本若需独立运行，在 `package.json` 的 `scripts` 中增加对应命令。
+
+## 与 AI 协作
+
+- 修改或新增功能时，优先复用 `src/index.js` 的 Supabase 客户端与现有工具函数。
+- 涉及表结构变更时，在 `config/sql/` 中提供可执行的 SQL，并说明执行顺序或依赖。
+- 项目级任务流程与领域能力放在 `.cursor/skills/`；设计决策、术语、排错等沉淀放在 `knowledge/`，便于检索与引用。
