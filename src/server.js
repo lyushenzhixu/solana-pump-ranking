@@ -48,10 +48,12 @@ const HTML_PAGE = `
     .negative { color: #ef4444; }
     .num { text-align: right; font-variant-numeric: tabular-nums; }
     img { width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 0.5rem; }
+    .back-home { display: inline-block; margin-bottom: 1rem; padding: 0.5rem 1rem; background: #27272a; color: #e4e4e7; border-radius: 6px; text-decoration: none; font-size: 0.875rem; border: 1px solid #3f3f46; transition: background 0.2s, border-color 0.2s; }
+    .back-home:hover { background: #3f3f46; border-color: #60a5fa; color: #fff; }
   </style>
 </head>
 <body>
-  <p style="margin-bottom:0.5rem;"><a href="/">← 返回首页</a></p>
+  <a href="/" class="back-home">← 返回首页</a>
   <h1>Solana Pump 榜单</h1>
   <p style="color:#71717a;font-size:0.875rem;">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，按 24h 交易量排序</p>
   <div id="root">加载中…</div>
