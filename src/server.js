@@ -8,6 +8,8 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
+import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -48,10 +50,18 @@ const HTML_PAGE = `
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; background: #0f0f12; color: #e4e4e7; }
     h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-    .tabs { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
+    .tabs { display: flex; gap: 0.5rem; margin-bottom: 0; }
     .tabs button { padding: 0.5rem 1rem; background: #27272a; color: #a1a1aa; border: 1px solid #3f3f46; border-radius: 6px; cursor: pointer; font-size: 0.875rem; }
     .tabs button:hover { color: #e4e4e7; border-color: #52525b; }
     .tabs button.active { background: #3f3f46; color: #60a5fa; border-color: #60a5fa; }
+    .actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
+    .actions button { padding: 0.5rem 1rem; background: #1e40af; color: #fff; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
+    .actions button:hover { background: #2563eb; border-color: #60a5fa; }
+    .actions button:disabled { opacity: 0.6; cursor: not-allowed; background: #374151; }
+    .actions .status { font-size: 0.875rem; color: #a1a1aa; }
+    .action-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #27272a; }
+    .action-label { font-size: 0.875rem; color: #a1a1aa; }
     .desc { color: #71717a; font-size: 0.875rem; margin-bottom: 1rem; }
     table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
     th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #27272a; }
@@ -71,9 +81,19 @@ const HTML_PAGE = `
 <body>
   <a href="/" class="back-home">← 返回首页</a>
   <h1>榜单</h1>
-  <div class="tabs">
-    <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
-    <button type="button" class="tab-btn" data-tab="zhilabs">zhilabs精选</button>
+  <div class="topbar">
+    <div class="tabs">
+      <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
+      <button type="button" class="tab-btn" data-tab="zhilabs">zhilabs精选</button>
+    </div>
+  </div>
+  <div class="action-row">
+    <span class="action-label">刷新数据：</span>
+    <div class="actions">
+      <button type="button" id="updateBtn">更新 Pump 榜单</button>
+      <span class="status" id="updateStatus"></span>
+    </div>
+    <span class="status" id="lastSync"></span>
   </div>
   <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，按 24h 交易量排序</p>
   <div id="panel-pump" class="panel active"><div id="root-pump">加载中…</div></div>
@@ -117,15 +137,81 @@ const HTML_PAGE = `
       table += '</tbody></table>';
       root.innerHTML = table;
     }
+    function fetchJsonOrThrow(url, options) {
+      return fetch(url, options).then(function(r) {
+        return r.text().then(function(t) {
+          var json = null;
+          try { json = t ? JSON.parse(t) : null; } catch (e) {}
+          if (!r.ok) {
+            var msg = (json && (json.error || json.message)) ? (json.error || json.message) : (t || ('HTTP ' + r.status));
+            throw new Error(msg);
+          }
+          return json;
+        });
+      });
+    }
+    function refreshTab(tab) {
+      var url = tab === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
+      var rootId = tab === 'pump' ? 'root-pump' : 'root-zhilabs';
+      return fetchJsonOrThrow(url).then(function(list) {
+        if (Array.isArray(list)) renderTable(list, rootId);
+        else document.getElementById(rootId).innerHTML = '<p style="color:#ef4444">数据格式异常</p>';
+      }).catch(function(e) {
+        document.getElementById(rootId).innerHTML = '<p style="color:#ef4444">' + (e && e.message ? e.message : String(e)) + '</p>';
+      });
+    }
+    function setUpdateStatus(text, isError) {
+      var el = document.getElementById('updateStatus');
+      el.textContent = text || '';
+      el.style.color = isError ? '#ef4444' : '#a1a1aa';
+    }
+    function setLastSync(date) {
+      var el = document.getElementById('lastSync');
+      if (!el) return;
+      if (!date) { el.textContent = ''; return; }
+      var d = date instanceof Date ? date : new Date(date);
+      if (Number.isNaN(d.getTime())) { el.textContent = ''; return; }
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      var ss = String(d.getSeconds()).padStart(2, '0');
+      el.textContent = '最后同步：' + hh + ':' + mm + ':' + ss;
+    }
+    var currentTab = 'pump';
+    document.getElementById('updateBtn').textContent = '更新 Pump 榜单';
     function switchTab(tab) {
+      currentTab = tab;
       document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
       document.getElementById('desc').textContent = tab === 'pump'
         ? '已成功发射、上线 < 10 天、市值 > 100K，按 24h 交易量排序'
         : 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
+      document.getElementById('updateBtn').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
+      // 切换 Tab 时主动刷新一次，确保与数据库联动
+      refreshTab(tab).then(function(){ setLastSync(new Date()); }).catch(function(){});
     }
     document.querySelectorAll('.tab-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
+    });
+    document.getElementById('updateBtn').addEventListener('click', function() {
+      var btn = document.getElementById('updateBtn');
+      var tab = currentTab || 'pump';
+      btn.disabled = true;
+      setUpdateStatus('更新中…');
+      var started = Date.now();
+      fetchJsonOrThrow('/api/update?type=' + encodeURIComponent(tab), { method: 'POST' })
+        .then(function(out) {
+          var ms = Date.now() - started;
+          var updated = out && typeof out.updated === 'number' ? out.updated : null;
+          var dur = out && typeof out.durationMs === 'number' ? out.durationMs : ms;
+          setUpdateStatus('更新完成' + (updated != null ? ('：' + updated + ' 条') : '') + '，用时 ' + dur + 'ms');
+          return refreshTab(tab).then(function(){ setLastSync(new Date()); });
+        })
+        .catch(function(e) {
+          setUpdateStatus('更新失败：' + (e && e.message ? e.message : String(e)), true);
+        })
+        .finally(function() {
+          btn.disabled = false;
+        });
     });
     Promise.allSettled([
         fetch('/api/ranking').then(function(r){ return r.ok ? r.json() : r.text().then(function(t){ throw new Error(t); }); }),
@@ -136,17 +222,63 @@ const HTML_PAGE = `
         else document.getElementById('root-pump').innerHTML = '<p style="color:#ef4444">Pump 榜单: ' + (r0.status === 'rejected' && r0.reason ? (r0.reason.message || r0.reason) : '暂无数据') + '</p>';
         if (r1.status === 'fulfilled' && Array.isArray(r1.value)) renderTable(r1.value, 'root-zhilabs');
         else document.getElementById('root-zhilabs').innerHTML = '<p style="color:#ef4444">zhilabs 精选: ' + (r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</p>';
+        setLastSync(new Date());
       });
   </script>
 </body>
 </html>
 `;
 
+const updateRunning = { pump: false, zhilabs: false };
+
 const server = http.createServer(async (req, res) => {
-  const urlPath = req.url?.split('?')[0] || '/';
+  const u = new URL(req.url || '/', 'http://localhost');
+  const urlPath = u.pathname || '/';
   if (urlPath === '/health' || urlPath === '/api/health') {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ ok: true, port: PORT }));
+    return;
+  }
+  if (urlPath === '/api/update') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Cache-Control', 'no-store');
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204;
+      res.end();
+      return;
+    }
+    if (req.method !== 'POST') {
+      res.statusCode = 405;
+      res.end(JSON.stringify({ error: '仅支持 POST' }));
+      return;
+    }
+    const type = (u.searchParams.get('type') || '').toLowerCase();
+    if (type !== 'pump' && type !== 'zhilabs') {
+      res.statusCode = 400;
+      res.end(JSON.stringify({ error: '参数 type 必须为 pump 或 zhilabs' }));
+      return;
+    }
+    if (updateRunning[type]) {
+      res.statusCode = 409;
+      res.end(JSON.stringify({ error: '更新中，请稍后再试' }));
+      return;
+    }
+    updateRunning[type] = true;
+    const started = Date.now();
+    try {
+      const out = type === 'pump' ? await updatePumpRanking() : await updateZhilabsRanking();
+      const durationMs = Date.now() - started;
+      const updated = Array.isArray(out) ? out.length : 0;
+      res.end(JSON.stringify({ ok: true, type, updated, durationMs, at: new Date().toISOString() }));
+    } catch (e) {
+      res.statusCode = 500;
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
+    } finally {
+      updateRunning[type] = false;
+    }
     return;
   }
   if (urlPath === '/api/ranking') {
@@ -154,6 +286,7 @@ const server = http.createServer(async (req, res) => {
       const data = await getRanking();
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;
@@ -167,6 +300,7 @@ const server = http.createServer(async (req, res) => {
       const data = await getRankingZhilabs();
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;

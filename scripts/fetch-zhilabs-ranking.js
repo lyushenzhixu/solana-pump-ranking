@@ -6,7 +6,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CA_FILE = path.join(__dirname, '..', 'zhilabs meme榜单精选', 'ca.md');
@@ -130,6 +130,10 @@ function toRow(t, requestAddr) {
 }
 
 async function main() {
+  return updateZhilabsRanking();
+}
+
+export async function updateZhilabsRanking() {
   if (!AVE_API_KEY) throw new Error('缺少 AVE_API_KEY');
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('缺少 Supabase 配置');
 
@@ -190,9 +194,18 @@ async function main() {
   return data;
 }
 
-main()
-  .then((d) => console.log('完成'))
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  });
+function isDirectRun() {
+  const entry = process.argv?.[1];
+  if (!entry) return false;
+  const abs = path.resolve(entry);
+  return import.meta.url === pathToFileURL(abs).href;
+}
+
+if (isDirectRun()) {
+  main()
+    .then(() => console.log('完成'))
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}

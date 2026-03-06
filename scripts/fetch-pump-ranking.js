@@ -4,6 +4,8 @@
  */
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
+import path from 'path';
+import { pathToFileURL } from 'url';
 
 const AVE_API_KEY = process.env.AVE_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -92,7 +94,7 @@ function toRow(t, index) {
   };
 }
 
-async function main() {
+export async function updatePumpRanking() {
   if (!AVE_API_KEY) throw new Error('缺少 AVE_API_KEY');
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('缺少 Supabase 配置');
 
@@ -120,4 +122,18 @@ async function main() {
   return data;
 }
 
-main().then((d) => console.log('完成')).catch((e) => { console.error(e); process.exit(1); });
+function isDirectRun() {
+  const entry = process.argv?.[1];
+  if (!entry) return false;
+  const abs = path.resolve(entry);
+  return import.meta.url === pathToFileURL(abs).href;
+}
+
+if (isDirectRun()) {
+  updatePumpRanking()
+    .then(() => console.log('完成'))
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}
