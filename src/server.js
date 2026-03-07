@@ -440,11 +440,6 @@ const HTML_PAGE = `
       color: var(--sol-purple);
       box-shadow: 0 0 8px rgba(153,69,255,0.2);
     }
-    .copy-ca-btn.copied {
-      background: rgba(20,241,149,0.15);
-      border-color: rgba(20,241,149,0.3);
-      color: var(--positive);
-    }
     .copy-ca-btn svg {
       width: 12px; height: 12px;
       fill: none; stroke: currentColor; stroke-width: 2;
@@ -637,21 +632,12 @@ const HTML_PAGE = `
       e.preventDefault();
       var ca = btn.getAttribute('data-ca');
       if (!ca) return;
-      navigator.clipboard.writeText(ca).then(function() {
-        btn.classList.add('copied');
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
-        setTimeout(function() {
-          btn.classList.remove('copied');
-          btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
-        }, 1500);
-      }).catch(function() {
+      navigator.clipboard.writeText(ca).catch(function() {
         var ta = document.createElement('textarea');
         ta.value = ca; ta.style.position = 'fixed'; ta.style.opacity = '0';
         document.body.appendChild(ta); ta.select();
         try { document.execCommand('copy'); } catch(ex) {}
         document.body.removeChild(ta);
-        btn.classList.add('copied');
-        setTimeout(function() { btn.classList.remove('copied'); }, 1500);
       });
     });
     var currentTab = 'pump';
