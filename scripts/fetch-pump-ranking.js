@@ -50,23 +50,19 @@ async function fetchBinanceTokenInfo(contractAddress) {
 }
 
 /**
- * 从自研数据源拉取 hot + new + ranked Solana 代币，去重
+ * 从自研数据源并行拉取 hot + new + ranked Solana 代币，去重
  */
 async function fetchAllTokens() {
-  console.log('  → 拉取 new 代币 (GeckoTerminal new_pools)...');
-  const newList = await dataSource.getPlatformTokens('pump_in_new', 200);
-  console.log(`    拿到 ${newList.length} 条 new`);
-
-  console.log('  → 拉取 hot 代币 (GeckoTerminal trending + DexScreener boosts)...');
-  const hotList = await dataSource.getPlatformTokens('pump_in_hot', 200);
-  console.log(`    拿到 ${hotList.length} 条 hot`);
-
-  console.log('  → 拉取 ranked 代币...');
-  const ranksList = await dataSource.getRanks('solana');
-  console.log(`    拿到 ${ranksList.length} 条 ranked`);
+  console.log('  → 并行拉取 hot / new / ranked ...');
+  const [hotList, newList, ranksList] = await Promise.all([
+    dataSource.getPlatformTokens('pump_in_hot', 200),
+    dataSource.getPlatformTokens('pump_in_new', 200),
+    dataSource.getRanks('solana'),
+  ]);
+  console.log(`    hot: ${hotList.length}, new: ${newList.length}, ranked: ${ranksList.length}`);
 
   const byToken = new Map();
-  for (const t of [...newList, ...hotList, ...ranksList]) {
+  for (const t of [...hotList, ...newList, ...ranksList]) {
     if (t.chain !== 'solana') continue;
     const key = `${t.token}-${t.chain}`;
     if (!byToken.has(key)) byToken.set(key, t);
