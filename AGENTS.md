@@ -22,3 +22,5 @@ zhilabs 是一个 Solana meme 代币排行榜 Web 应用，使用 Node.js（ES M
 - 项目无 ESLint / Prettier / TypeScript / 测试框架配置。`npm test` 仅做基本 import 校验（也依赖 Supabase 凭证）。
 - `src/server.js` 使用原生 `node:http`，无 Express。代码中 HTML 页面内联在 JS 变量中。
 - Node.js >= 18（需要原生 `fetch`）。当前环境已有 v22。
+- 启动前必须确保 `.env` 存在且包含真实的 `SUPABASE_URL`（须为合法 URL）。Supabase SDK 对空字符串或无效 URL 会直接 `throw`，服务器立即崩溃。可通过 `printf 'SUPABASE_URL=%s\nSUPABASE_ANON_KEY=%s\nAVE_API_KEY=%s\n' "$SUPABASE_URL" "$SUPABASE_ANON_KEY" "$AVE_API_KEY" > .env` 从环境变量生成。
+- 重启服务器时先用 `lsof -ti :3000` 查找旧进程并 `kill`，否则会报 `EADDRINUSE`。
