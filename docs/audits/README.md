@@ -16,7 +16,10 @@
 ## 复跑审计
 
 ```bash
-# AVE
+# GoPlus（自研数据源，无需 API Key）
+node scripts/token-audit.js <合约地址> [链]
+
+# AVE（需 AVE_API_KEY）
 node scripts/ave-token-audit.js <合约地址> [链]
 
 # Binance（需网络可访问 web3.binance.com）
