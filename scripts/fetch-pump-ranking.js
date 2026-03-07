@@ -12,14 +12,14 @@ const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 const TEN_DAYS_SEC = 10 * 24 * 3600;
-// 要求市值 > 100K（当前 AVE 数据可能暂无，先用 10K 跑通流程，有数据后可改回 100_000）
 const MIN_MARKET_CAP = 100_000;
-// Top 10 持有人占比超过此阈值则从榜单中排除（Binance 数据）
 const MAX_TOP10_HOLDERS_PERCENT = 30;
-// 筛选前保留的候选数量，以便排除高集中度后仍能取满 20 条
 const CANDIDATE_POOL_SIZE = 80;
-// LP 规则：仅排除「明确未锁定」的；详情返回已 burn/锁定 或 未知（未返回）均允许入榜，避免 AVE 不返字段时整表为空
 const EXCLUDE_LP_NOT_LOCKED_ONLY = true;
+// 排除无 logo 的代币（无图片通常为低质量/疑似操控代币）
+const EXCLUDE_NO_LOGO = true;
+// insider_wallet_rate 阈值（AVE token 详情返回的原始值，0.5 = 50%；操控代币通常 >80）
+const MAX_INSIDER_RATE = 0.50;
 
 /** 解析 AVE 返回的 is_lp_not_locked（可能是 boolean 或字符串 "true"/"false"）
  * @returns true=LP 未锁定/未 burn（排除）, false=LP 已锁定或已 burn（通过）, null=未知 */
@@ -30,8 +30,11 @@ function parseLpNotLocked(t) {
   return null;
 }
 
-/** 从 AVE token 详情获取 LP 状态，回填到 t.is_lp_not_locked（布尔） */
-async function fetchAveTokenLpStatus(tokenAddress) {
+/**
+ * 从 AVE token 详情获取 LP 状态和 insider_wallet_rate 等风控数据
+ * @returns {{ lpNotLocked: boolean|null, insiderRate: number|null }} 或 null（接口失败）
+ */
+async function fetchAveTokenDetail(tokenAddress) {
   const url = `https://data.ave-api.xyz/v2/tokens/${tokenAddress}-solana`;
   try {
     const res = await fetch(url, { headers: { 'X-API-KEY': AVE_API_KEY } });
@@ -39,11 +42,21 @@ async function fetchAveTokenLpStatus(tokenAddress) {
     const json = await res.json();
     if (json.status !== 1 || !json.data) return null;
     const d = json.data;
-    const raw = d?.token && typeof d.token === 'object' ? { ...d, ...d.token } : d;
-    const v = raw?.is_lp_not_locked;
-    if (v === true || String(v).toLowerCase() === 'true' || v === 1 || v === '1') return true;
-    if (v === false || String(v).toLowerCase() === 'false' || v === 0 || v === '0') return false;
-    return null;
+    const tk = d?.token && typeof d.token === 'object' ? d.token : {};
+    const merged = { ...d, ...tk };
+
+    const v = merged.is_lp_not_locked;
+    let lpNotLocked = null;
+    if (v === true || String(v).toLowerCase() === 'true' || v === 1 || v === '1') lpNotLocked = true;
+    else if (v === false || String(v).toLowerCase() === 'false' || v === 0 || v === '0') lpNotLocked = false;
+
+    const rawRate = tk.insider_wallet_rate;
+    const insiderRate = rawRate != null && rawRate !== '' ? parseFloat(String(rawRate)) : null;
+
+    return {
+      lpNotLocked,
+      insiderRate: Number.isFinite(insiderRate) ? insiderRate : null,
+    };
   } catch {
     return null;
   }
@@ -117,9 +130,9 @@ function filterAndSort(tokens) {
       const cap = parseFloat(t.market_cap);
       if (isNaN(cap) || cap < MIN_MARKET_CAP) return false;
       const launched = Number(t.launch_at ?? t.created_at ?? 0);
-      if (launched < cutoff) return false; // 上线超过 10 天
-      // LP 未 burn/未锁定则不能入榜（支持 AVE 返回 boolean 或字符串）
+      if (launched < cutoff) return false;
       if (parseLpNotLocked(t) === true) return false;
+      if (EXCLUDE_NO_LOGO && !t.logo_url) return false;
       return true;
     })
     .sort((a, b) => {
@@ -158,20 +171,35 @@ export async function updatePumpRanking() {
 
   console.log('正在从 AVE 拉取 pump 代币 (new + hot)...');
   const raw = await fetchAllPumpTokens();
-  console.log('拉取到', raw.length, '条（去重后），筛选 Solana + 市值>100K + 上线<10天...');
+  console.log('拉取到', raw.length, '条（去重后），筛选 Solana + 市值>100K + 上线<10天 + 有图片...');
 
   let list = filterAndSort(raw);
-  // 对所有候选用 AVE token 详情校验 LP 状态；只排除「明确未锁定」的，未知的允许入榜（LP 列显示 —）
-  console.log('正在对', list.length, '条用 AVE token 详情校验 LP 状态（仅排除明确未锁定）...');
+  console.log('正在对', list.length, '条用 AVE token 详情校验 LP 状态 + insider 指数...');
   for (const t of list) {
-    const lpNotLocked = await fetchAveTokenLpStatus(t.token);
-    if (lpNotLocked === true) t.is_lp_not_locked = true;           // 未锁定 → 排除
-    else if (lpNotLocked === false) t.is_lp_not_locked = false;   // 已 burn/锁定 → 入榜，LP 列显示「已burn/锁」
-    else { t.is_lp_not_locked = undefined; }                       // 未知或接口失败 → 允许入榜，LP 列显示 —
+    const detail = await fetchAveTokenDetail(t.token);
+    if (detail) {
+      if (detail.lpNotLocked === true) t.is_lp_not_locked = true;
+      else if (detail.lpNotLocked === false) t.is_lp_not_locked = false;
+      else t.is_lp_not_locked = undefined;
+
+      t._insiderRate = detail.insiderRate;
+    } else {
+      t.is_lp_not_locked = undefined;
+      t._insiderRate = null;
+    }
     await new Promise((r) => setTimeout(r, 350));
   }
   list = list.filter((t) => !EXCLUDE_LP_NOT_LOCKED_ONLY || parseLpNotLocked(t) !== true);
-  console.log('排除 LP 明确未锁定 后候选:', list.length, '条，正在用 Binance 校验 Top10 持有人占比（排除 >' + MAX_TOP10_HOLDERS_PERCENT + '%）...');
+  const preInsiderCount = list.length;
+  list = list.filter((t) => {
+    if (t._insiderRate != null && t._insiderRate > MAX_INSIDER_RATE) return false;
+    return true;
+  });
+  console.log(
+    '排除 LP 明确未锁定 + insider >' + (MAX_INSIDER_RATE * 100) + '% 后候选:',
+    list.length, '条（insider 排除', preInsiderCount - list.length, '条）',
+    '，正在用 Binance 校验 Top10 持有人占比（排除 >' + MAX_TOP10_HOLDERS_PERCENT + '%）...'
+  );
 
   for (const t of list) {
     const pct = await fetchBinanceTop10Percent(t.token);
