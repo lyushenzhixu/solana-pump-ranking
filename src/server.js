@@ -72,6 +72,13 @@ const HTML_PAGE = `
     .actions button:hover { background: #2563eb; border-color: #60a5fa; }
     .actions button:disabled { opacity: 0.6; cursor: not-allowed; background: #374151; }
     .actions .status { font-size: 0.875rem; color: #a1a1aa; }
+    .scheduler-bar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #1a1a2e; border: 1px solid #27272a; border-radius: 6px; font-size: 0.8125rem; }
+    .scheduler-bar .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .scheduler-bar .dot.active { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+    .scheduler-bar .dot.running { background: #f59e0b; box-shadow: 0 0 6px #f59e0b88; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+    .scheduler-bar .label { color: #a1a1aa; }
+    .scheduler-bar .value { color: #e4e4e7; font-variant-numeric: tabular-nums; }
     .action-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #27272a; }
     .action-label { font-size: 0.875rem; color: #a1a1aa; }
     .desc { color: #71717a; font-size: 0.875rem; margin-bottom: 1rem; }
@@ -94,6 +101,17 @@ const HTML_PAGE = `
 <body>
   <a href="/" class="back-home">← 返回首页</a>
   <h1>榜单</h1>
+  <div class="scheduler-bar" id="schedulerBar">
+    <span class="dot active" id="schedulerDot"></span>
+    <span class="label">自动更新：</span>
+    <span class="value" id="schedulerInfo">加载中…</span>
+    <span class="label">|</span>
+    <span class="label">下次更新：</span>
+    <span class="value" id="schedulerCountdown">--:--</span>
+    <span class="label">|</span>
+    <span class="label">上次结果：</span>
+    <span class="value" id="schedulerLastResult">—</span>
+  </div>
   <div class="topbar">
     <div class="tabs">
       <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
@@ -234,6 +252,43 @@ const HTML_PAGE = `
           btn.disabled = false;
         });
     });
+    /* ── 调度器状态轮询与倒计时 ── */
+    var _schedState = { intervalMs: 300000, lastRun: null, running: false };
+    function fetchSchedulerStatus() {
+      return fetchJsonOrThrow('/api/scheduler/status').then(function(s) {
+        _schedState = s;
+        var dot = document.getElementById('schedulerDot');
+        var info = document.getElementById('schedulerInfo');
+        var lastEl = document.getElementById('schedulerLastResult');
+        dot.className = 'dot ' + (s.running ? 'running' : 'active');
+        info.textContent = s.running ? '更新中…' : '每 ' + s.intervalMin + ' 分钟';
+        if (s.lastResult) {
+          var parts = [];
+          if (s.lastResult.pump) parts.push('Pump ' + (s.lastResult.pump.ok ? s.lastResult.pump.count + '条' : '失败'));
+          if (s.lastResult.zhilabs) parts.push('zhilabs ' + (s.lastResult.zhilabs.ok ? s.lastResult.zhilabs.count + '条' : '失败'));
+          if (s.lastResult.durationMs) parts.push(s.lastResult.durationMs + 'ms');
+          lastEl.textContent = parts.join(' · ') || '—';
+        }
+        if (s.running) {
+          refreshTab(currentTab).then(function(){ setLastSync(new Date()); }).catch(function(){});
+        }
+      }).catch(function(){});
+    }
+    function updateCountdown() {
+      var el = document.getElementById('schedulerCountdown');
+      if (!_schedState.lastRun || !_schedState.intervalMs) { el.textContent = '--:--'; return; }
+      var next = new Date(_schedState.lastRun).getTime() + _schedState.intervalMs;
+      var diff = Math.max(0, Math.round((next - Date.now()) / 1000));
+      var mm = String(Math.floor(diff / 60)).padStart(2, '0');
+      var ss = String(diff % 60).padStart(2, '0');
+      el.textContent = mm + ':' + ss;
+      if (diff <= 0) fetchSchedulerStatus();
+    }
+    fetchSchedulerStatus();
+    setInterval(fetchSchedulerStatus, 15000);
+    setInterval(updateCountdown, 1000);
+    /* ── /调度器状态 ── */
+
     Promise.allSettled([
         fetch('/api/ranking').then(function(r){ return r.ok ? r.json() : r.text().then(function(t){ throw new Error(t); }); }),
         fetch('/api/ranking/zhilabs').then(function(r){ return r.ok ? r.json() : r.text().then(function(t){ throw new Error(t); }); })
@@ -252,12 +307,95 @@ const HTML_PAGE = `
 
 const updateRunning = { pump: false, zhilabs: false };
 
+/* ── 定时自动更新调度器 ── */
+const AUTO_UPDATE_INTERVAL_MS = Math.max(
+  60_000,
+  parseInt(process.env.AUTO_UPDATE_INTERVAL_MIN || '5', 10) * 60_000,
+);
+const scheduler = {
+  enabled: true,
+  intervalMs: AUTO_UPDATE_INTERVAL_MS,
+  lastRun: null,
+  lastResult: null,
+  running: false,
+  timer: null,
+};
+
+async function runScheduledUpdate() {
+  if (scheduler.running) {
+    console.log('[定时更新] 上一轮仍在执行，跳过');
+    return;
+  }
+  scheduler.running = true;
+  const started = Date.now();
+  console.log('[定时更新] 开始自动更新 Pump + zhilabs 榜单...');
+  const result = { pump: null, zhilabs: null, startedAt: new Date().toISOString() };
+  try {
+    if (!updateRunning.pump) {
+      updateRunning.pump = true;
+      try {
+        const out = await updatePumpRanking();
+        result.pump = { ok: true, count: Array.isArray(out) ? out.length : 0 };
+        console.log('[定时更新] Pump 榜单更新完成，共', result.pump.count, '条');
+      } catch (e) {
+        result.pump = { ok: false, error: e?.message || String(e) };
+        console.error('[定时更新] Pump 榜单更新失败:', e?.message);
+      } finally {
+        updateRunning.pump = false;
+      }
+    } else {
+      result.pump = { ok: false, error: '手动更新进行中，跳过' };
+    }
+    if (!updateRunning.zhilabs) {
+      updateRunning.zhilabs = true;
+      try {
+        const out = await updateZhilabsRanking();
+        result.zhilabs = { ok: true, count: Array.isArray(out) ? out.length : 0 };
+        console.log('[定时更新] zhilabs 精选更新完成，共', result.zhilabs.count, '条');
+      } catch (e) {
+        result.zhilabs = { ok: false, error: e?.message || String(e) };
+        console.error('[定时更新] zhilabs 精选更新失败:', e?.message);
+      } finally {
+        updateRunning.zhilabs = false;
+      }
+    } else {
+      result.zhilabs = { ok: false, error: '手动更新进行中，跳过' };
+    }
+  } finally {
+    scheduler.running = false;
+    scheduler.lastRun = new Date().toISOString();
+    scheduler.lastResult = { ...result, durationMs: Date.now() - started };
+    console.log('[定时更新] 完成，用时', Date.now() - started, 'ms');
+  }
+}
+
+function startScheduler() {
+  if (scheduler.timer) clearInterval(scheduler.timer);
+  scheduler.timer = setInterval(runScheduledUpdate, scheduler.intervalMs);
+  console.log(`[定时更新] 已启动，每 ${scheduler.intervalMs / 60000} 分钟自动更新`);
+  setTimeout(runScheduledUpdate, 3000);
+}
+
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url || '/', 'http://localhost');
   const urlPath = u.pathname || '/';
   if (urlPath === '/health' || urlPath === '/api/health') {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ ok: true, port: PORT }));
+    return;
+  }
+  if (urlPath === '/api/scheduler/status') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(JSON.stringify({
+      enabled: scheduler.enabled,
+      intervalMs: scheduler.intervalMs,
+      intervalMin: scheduler.intervalMs / 60000,
+      running: scheduler.running,
+      lastRun: scheduler.lastRun,
+      lastResult: scheduler.lastResult,
+    }));
     return;
   }
   if (urlPath === '/api/update') {
@@ -358,4 +496,5 @@ const server = http.createServer(async (req, res) => {
 const HOST = '0.0.0.0';
 server.listen(PORT, HOST, () => {
   console.log('Server running on', HOST + ':' + PORT);
+  startScheduler();
 });
