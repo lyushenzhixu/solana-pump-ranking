@@ -440,6 +440,11 @@ const HTML_PAGE = `
       color: var(--sol-purple);
       box-shadow: 0 0 8px rgba(153,69,255,0.2);
     }
+    .copy-ca-btn.copied {
+      background: rgba(20,241,149,0.15);
+      border-color: rgba(20,241,149,0.3);
+      color: var(--positive);
+    }
     .copy-ca-btn svg {
       width: 12px; height: 12px;
       fill: none; stroke: currentColor; stroke-width: 2;
@@ -572,7 +577,7 @@ const HTML_PAGE = `
         table += '<tr>';
         table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
         var caStr = typeof row.token === 'string' ? row.token : '';
-        var copyBtn = caStr ? '<button class="copy-ca-btn" title="复制 CA" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+        var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
         table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
         table += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
         table += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
@@ -626,18 +631,29 @@ const HTML_PAGE = `
       var ss = String(d.getSeconds()).padStart(2, '0');
       el.textContent = '同步 ' + hh + ':' + mm + ':' + ss;
     }
+    function showCopied(btn) {
+      btn.classList.add('copied');
+      btn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
+      setTimeout(function() {
+        btn.classList.remove('copied');
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      }, 1200);
+    }
     document.querySelector('.table-card').addEventListener('click', function(e) {
       var btn = e.target.closest('.copy-ca-btn');
       if (!btn) return;
       e.preventDefault();
       var ca = btn.getAttribute('data-ca');
       if (!ca) return;
-      navigator.clipboard.writeText(ca).catch(function() {
+      navigator.clipboard.writeText(ca).then(function() {
+        showCopied(btn);
+      }).catch(function() {
         var ta = document.createElement('textarea');
         ta.value = ca; ta.style.position = 'fixed'; ta.style.opacity = '0';
         document.body.appendChild(ta); ta.select();
         try { document.execCommand('copy'); } catch(ex) {}
         document.body.removeChild(ta);
+        showCopied(btn);
       });
     });
     var currentTab = 'pump';
