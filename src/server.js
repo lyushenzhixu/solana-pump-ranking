@@ -420,26 +420,30 @@ const HTML_PAGE = `
     .positive { color: var(--positive) !important; }
     .negative { color: var(--negative) !important; }
 
-    td .lp-tag {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.2rem 0.5rem;
-      border-radius: 6px;
-      font-size: 0.75rem; font-weight: 600;
-    }
-    td .lp-tag.burned {
-      background: rgba(20,241,149,0.1);
-      color: var(--positive);
-      border: 1px solid rgba(20,241,149,0.2);
-    }
-    td .lp-tag.not-burned {
-      background: rgba(255,77,106,0.1);
-      color: var(--negative);
-      border: 1px solid rgba(255,77,106,0.2);
-    }
-    td .lp-tag.unknown {
-      background: rgba(138,132,160,0.1);
+    .copy-ca-btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px;
+      margin-left: 4px;
+      padding: 0;
+      background: rgba(153,69,255,0.08);
+      border: 1px solid rgba(153,69,255,0.15);
+      border-radius: 5px;
       color: var(--text-muted);
-      border: 1px solid rgba(138,132,160,0.15);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      vertical-align: middle;
+    }
+    .copy-ca-btn:hover {
+      background: rgba(153,69,255,0.2);
+      border-color: var(--sol-purple);
+      color: var(--sol-purple);
+      box-shadow: 0 0 8px rgba(153,69,255,0.2);
+    }
+    .copy-ca-btn svg {
+      width: 12px; height: 12px;
+      fill: none; stroke: currentColor; stroke-width: 2;
+      stroke-linecap: round; stroke-linejoin: round;
     }
 
     a { color: var(--sol-blue); text-decoration: none; }
@@ -520,7 +524,7 @@ const HTML_PAGE = `
       </div>
     </div>
 
-    <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序</p>
+    <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
 
     <div class="table-card">
       <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
@@ -553,7 +557,7 @@ const HTML_PAGE = `
       if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>'; return; }
       var isPump = rootId === 'root-pump';
       var headers = ['#', '代币', '符号', '市值', '24h 交易量', '24h 涨跌', '持币地址'];
-      if (isPump) { headers.push('Top10%'); headers.push('LP'); }
+      if (isPump) { headers.push('Top10%'); }
       var numColIdx = { 3: true, 4: true, 5: true, 6: true };
       if (isPump) numColIdx[7] = true;
       var table = '<table><thead><tr>' + headers.map(function(h, idx){ return '<th' + (numColIdx[idx] ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
@@ -567,7 +571,9 @@ const HTML_PAGE = `
         if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
         table += '<tr>';
         table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
-        table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span></div></td>';
+        var caStr = typeof row.token === 'string' ? row.token : '';
+        var copyBtn = caStr ? '<button class="copy-ca-btn" title="复制 CA" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+        table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
         table += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
         table += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
         table += '<td class="num">' + formatCompact(row.tx_volume_u_24h) + '</td>';
@@ -575,11 +581,6 @@ const HTML_PAGE = `
         table += '<td class="num">' + (row.holders != null ? Number(row.holders).toLocaleString() : '—') + '</td>';
         if (isPump) {
           table += '<td class="num">' + (row.holders_top10_percent != null ? Number(row.holders_top10_percent).toFixed(1) + '%' : '—') + '</td>';
-          var lpText, lpCl;
-          if (row.lp_burned === true) { lpText = '✓ 已burn/锁'; lpCl = 'burned'; }
-          else if (row.lp_burned === false) { lpText = '✗ 否'; lpCl = 'not-burned'; }
-          else { lpText = '—'; lpCl = 'unknown'; }
-          table += '<td><span class="lp-tag ' + lpCl + '">' + lpText + '</span></td>';
         }
         table += '</tr>';
       });
@@ -625,6 +626,20 @@ const HTML_PAGE = `
       var ss = String(d.getSeconds()).padStart(2, '0');
       el.textContent = '同步 ' + hh + ':' + mm + ':' + ss;
     }
+    document.querySelector('.table-card').addEventListener('click', function(e) {
+      var btn = e.target.closest('.copy-ca-btn');
+      if (!btn) return;
+      e.preventDefault();
+      var ca = btn.getAttribute('data-ca');
+      if (!ca) return;
+      navigator.clipboard.writeText(ca).catch(function() {
+        var ta = document.createElement('textarea');
+        ta.value = ca; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); } catch(ex) {}
+        document.body.removeChild(ta);
+      });
+    });
     var currentTab = 'pump';
     document.getElementById('updateBtn').querySelector('span').textContent = '更新 Pump 榜单';
     function switchTab(tab) {
@@ -632,7 +647,7 @@ const HTML_PAGE = `
       document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
       document.getElementById('desc').textContent = tab === 'pump'
-        ? '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序'
+        ? '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序'
         : 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
       document.getElementById('updateBtn').querySelector('span').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
       refreshTab(tab).then(function(){ setLastSync(new Date()); }).catch(function(){});
