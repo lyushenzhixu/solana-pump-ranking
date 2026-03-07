@@ -16,10 +16,19 @@
 | 链 | `chain === 'solana'` | 仅 Solana。 |
 | 市值 | `market_cap >= 100_000`（MIN_MARKET_CAP） | 单位 USD。 |
 | 上线时间 | `launch_at` 在近 10 天内 | 超过 10 天剔除。 |
+| 有图片 | `logo_url` 非空 | 无图片代币通常为低质量或疑似操控。 |
 | LP 状态 | 非「明确未锁定」 | 见下节。 |
+| Insider 指数 | `insider_wallet_rate ≤ 0.5`（MAX_INSIDER_RATE） | AVE token 详情返回；操控代币通常 >80（即 8000%+），阈值 0.5 即 50%。 |
 | Top10 占比 | ≤ 30%（MAX_TOP10_HOLDERS_PERCENT） | 来自 Binance Web3 token dynamic；未取到则不因该条排除。 |
 
 最终按 `tx_volume_u_24h` 降序取前 20 条写入。
+
+## Insider 过滤规则（重要）
+
+- **数据来源**：AVE **token 详情** `GET /v2/tokens/{address}-solana` 中 `data.token.insider_wallet_rate` 字段。
+- **阈值**：`MAX_INSIDER_RATE = 0.50`（原始值，0.5 = 50%）。正常代币通常 0～0.2，被操控代币通常 >80。
+- **未返回时**：若 AVE 未返回该字段或接口失败，`insiderRate` 为 null，不因该条排除，避免误杀。
+- **背景**：Solana ranks 榜单中存在一类无图片、名称含 `_COIN`/`_NTWK` 等拼凑关键词的代币（如 `BILLIONS_NTWK_COIN`、`YELLOW_COIN`），insider_wallet_rate 极高（>8000%），属人为操控。
 
 ## LP 规则（重要）
 

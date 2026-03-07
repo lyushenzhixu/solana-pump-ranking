@@ -112,7 +112,7 @@ const HTML_PAGE = `
     </div>
     <span class="status" id="lastSync"></span>
   </div>
-  <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序</p>
+  <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序</p>
   <div id="panel-pump" class="panel active"><div id="root-pump">加载中…</div></div>
   <div id="panel-zhilabs" class="panel"><div id="root-zhilabs">加载中…</div></div>
   <script>
@@ -208,7 +208,7 @@ const HTML_PAGE = `
       document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
       document.getElementById('desc').textContent = tab === 'pump'
-        ? '已成功发射、上线 < 10 天、市值 > 100K，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序'
+        ? '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序'
         : 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
       document.getElementById('updateBtn').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
       // 切换 Tab 时主动刷新一次，确保与数据库联动
