@@ -34,6 +34,7 @@ git push -u origin main
 |--------|-----|------|
 | `SUPABASE_URL` | `https://rkzljtotquogikekxhcw.supabase.co` | 你的 Supabase 项目 URL |
 | `SUPABASE_ANON_KEY` | 你的 anon 公钥 | Supabase 项目设置 → API 里的 anon key |
+| `TOKEN_6551` | 你的 6551 API Token | 叙事总结 + 热门推特，获取：https://6551.io/mcp |
 
 保存后 Railway 会自动重新部署。
 

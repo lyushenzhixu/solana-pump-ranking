@@ -2059,7 +2059,7 @@ const server = http.createServer(async (req, res) => {
 
       const symbol = tokenInfo?.symbol || '';
       const name = tokenInfo?.name || '';
-      const narrative = await getTokenNarrative(symbol, name);
+      const narrative = await getTokenNarrative(symbol, name, address);
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=1800');
@@ -2094,8 +2094,11 @@ const server = http.createServer(async (req, res) => {
         }
       } catch { /* fallback */ }
 
-      const keyword = tokenInfo?.symbol || tokenInfo?.name || address.slice(0, 8);
-      const tweets = await getTokenHotTweets(keyword);
+      const keywords = [];
+      if (tokenInfo?.symbol) keywords.push(`$${tokenInfo.symbol}`);
+      if (tokenInfo?.name && tokenInfo.name !== tokenInfo?.symbol) keywords.push(tokenInfo.name);
+      if (keywords.length === 0) keywords.push(address.slice(0, 8));
+      const tweets = await getTokenHotTweets(keywords);
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=3600');

@@ -14,8 +14,8 @@ function getTwitterToken() {
 }
 
 const cache = new Map();
-const NEWS_CACHE_TTL = 30 * 60_000;   // 新闻缓存 30 分钟
-const TWEET_CACHE_TTL = 60 * 60_000;  // 推特缓存 60 分钟
+const NEWS_CACHE_TTL = 30 * 60_000;
+const TWEET_CACHE_TTL = 60 * 60_000;
 
 function cacheGet(key, ttl) {
   const entry = cache.get(key);
@@ -58,7 +58,7 @@ const SHILL_KEYWORDS_TEXT = [
   'join telegram', 'join discord', 'buy now', 'don\'t miss',
   'last chance', 'guaranteed', '100x gem', '1000x',
   'presale live', 'whitelist open', 'dm me',
-  'free airdrop', '🚨🚨', 'BREAKING:',
+  'free airdrop', '🚨🚨',
 ];
 
 function isLikelyShill(tweet) {
@@ -75,10 +75,10 @@ function isLikelyShill(tweet) {
 
   const followers = tweet.userFollowersCount || 0;
   const friends = tweet.userFriendsCount || 1;
-  if (followers < 100) return true;
-  if (friends > 0 && followers / friends < 0.1) return true;
+  if (followers < 50) return true;
+  if (friends > 0 && followers / friends < 0.05) return true;
 
-  if (screenName.match(/bot|shill|call|signal|gem|pump|alert/)) return true;
+  if (screenName.match(/bot|shill|call|signal|gem\d|pump.*alert/)) return true;
 
   return false;
 }
@@ -87,11 +87,9 @@ function isLikelyShill(tweet) {
 
 /**
  * 获取代币相关新闻并生成叙事总结
- * @param {string} symbol 代币符号
- * @param {string} [name] 代币名称（可选，用作关键词补充搜索）
- * @returns {{ summary: string, articles: Array, updatedAt: string }}
+ * 多轮搜索策略：coins 筛选 → 符号关键词 → 名称关键词
  */
-export async function getTokenNarrative(symbol, name) {
+export async function getTokenNarrative(symbol, name, contractAddress) {
   const newsToken = getNewsToken();
   if (!newsToken) {
     return { summary: '', articles: [], updatedAt: null, error: 'OPENNEWS_TOKEN 未配置' };
@@ -103,22 +101,40 @@ export async function getTokenNarrative(symbol, name) {
 
   try {
     const searches = [];
+
     if (symbol) {
       searches.push(
         fetchJson(`${NEWS_BASE}/open/news_search`, {
           coins: [symbol.toUpperCase()],
           limit: 20,
           page: 1,
-        }, newsToken)
+        }, newsToken).catch(() => ({ data: [] }))
+      );
+      searches.push(
+        fetchJson(`${NEWS_BASE}/open/news_search`, {
+          q: `$${symbol}`,
+          limit: 15,
+          page: 1,
+        }, newsToken).catch(() => ({ data: [] }))
       );
     }
     if (name && name !== symbol) {
       searches.push(
         fetchJson(`${NEWS_BASE}/open/news_search`, {
           q: name,
+          limit: 15,
+          page: 1,
+        }, newsToken).catch(() => ({ data: [] }))
+      );
+    }
+    if (contractAddress) {
+      const shortAddr = contractAddress.slice(0, 8);
+      searches.push(
+        fetchJson(`${NEWS_BASE}/open/news_search`, {
+          q: shortAddr,
           limit: 10,
           page: 1,
-        }, newsToken)
+        }, newsToken).catch(() => ({ data: [] }))
       );
     }
 
@@ -127,12 +143,12 @@ export async function getTokenNarrative(symbol, name) {
     const seenIds = new Set();
 
     for (const r of results) {
-      if (r.status === 'fulfilled' && r.value?.data) {
-        for (const article of r.value.data) {
-          if (!seenIds.has(article.id)) {
-            seenIds.add(article.id);
-            allArticles.push(article);
-          }
+      const data = r.status === 'fulfilled' ? r.value?.data : null;
+      if (!data) continue;
+      for (const article of data) {
+        if (!seenIds.has(article.id)) {
+          seenIds.add(article.id);
+          allArticles.push(article);
         }
       }
     }
@@ -181,55 +197,68 @@ export async function getTokenNarrative(symbol, name) {
 
 /**
  * 获取代币热门推特（过滤营销号/喊单号）
- * @param {string} keyword 搜索关键词（代币名称或符号）
- * @param {object} [options]
- * @returns {{ tweets: Array, updatedAt: string }}
+ * 多关键词搜索 + 渐进式时间窗口
  */
-export async function getTokenHotTweets(keyword, options = {}) {
+export async function getTokenHotTweets(keywords, options = {}) {
   const twitterToken = getTwitterToken();
   if (!twitterToken) {
     return { tweets: [], updatedAt: null, error: 'TWITTER_TOKEN 未配置' };
   }
 
-  const cacheKey = `tweets:${keyword}`;
+  const keywordsArr = Array.isArray(keywords) ? keywords : [keywords];
+  const cacheKey = `tweets:${keywordsArr.join(',')}`;
   const cached = cacheGet(cacheKey, TWEET_CACHE_TTL);
   if (cached) return cached;
 
   try {
     const today = new Date();
-    const sinceDate = new Date(today);
-    sinceDate.setDate(sinceDate.getDate() - 1);
-    const sinceDateStr = sinceDate.toISOString().slice(0, 10);
 
-    const searchParams = {
-      keywords: keyword,
-      product: 'Top',
-      maxResults: 50,
-      excludeReplies: true,
-      excludeRetweets: true,
-      minLikes: 5,
-      sinceDate: sinceDateStr,
-    };
+    const searches = [];
+    for (const kw of keywordsArr) {
+      if (!kw) continue;
 
-    const resp = await fetchJson(
-      `${NEWS_BASE}/open/twitter_search`,
-      searchParams,
-      twitterToken
-    );
+      const sinceDate3d = new Date(today);
+      sinceDate3d.setDate(sinceDate3d.getDate() - 3);
 
-    let tweets = resp?.data || [];
+      searches.push(
+        fetchJson(`${NEWS_BASE}/open/twitter_search`, {
+          keywords: kw,
+          product: 'Top',
+          maxResults: 40,
+          excludeReplies: true,
+          excludeRetweets: true,
+          minLikes: 3,
+          sinceDate: sinceDate3d.toISOString().slice(0, 10),
+        }, twitterToken).catch(() => ({ data: [] }))
+      );
+    }
 
-    tweets = tweets.filter(t => !isLikelyShill(t));
+    const results = await Promise.allSettled(searches);
+    const seenIds = new Set();
+    let allTweets = [];
 
-    tweets.sort((a, b) => {
-      const scoreA = (a.favoriteCount || 0) * 1 + (a.retweetCount || 0) * 2 + (a.replyCount || 0) * 0.5;
-      const scoreB = (b.favoriteCount || 0) * 1 + (b.retweetCount || 0) * 2 + (b.replyCount || 0) * 0.5;
+    for (const r of results) {
+      const data = r.status === 'fulfilled' ? r.value?.data : null;
+      if (!data) continue;
+      for (const t of data) {
+        if (t.id && !seenIds.has(t.id)) {
+          seenIds.add(t.id);
+          allTweets.push(t);
+        }
+      }
+    }
+
+    allTweets = allTweets.filter(t => !isLikelyShill(t));
+
+    allTweets.sort((a, b) => {
+      const scoreA = (a.favoriteCount || 0) + (a.retweetCount || 0) * 2 + (a.replyCount || 0) * 0.5;
+      const scoreB = (b.favoriteCount || 0) + (b.retweetCount || 0) * 2 + (b.replyCount || 0) * 0.5;
       return scoreB - scoreA;
     });
 
-    tweets = tweets.slice(0, 10);
+    allTweets = allTweets.slice(0, 10);
 
-    const tweetList = tweets.map(t => ({
+    const tweetList = allTweets.map(t => ({
       id: t.id,
       text: t.text,
       userName: t.userName || t.userScreenName,
