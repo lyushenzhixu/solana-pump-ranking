@@ -20,6 +20,7 @@
 - **pump-ranking-rules.md** — Pump 榜单入榜条件、LP/Top10 规则、数据源与运维排错（0 条、本地重启等）。
 - **auto-update-scheduler.md** — 定时自动更新调度器：配置、执行流程、API、前端状态栏、运维要点。
 - **google-analytics.md** — Google Analytics 集成：前端 gtag.js 动态注入、MCP 查询配置、环境变量、部署注意事项。
+- **meme-narrative-strategy.md** — Meme 代币叙事总结与热门推文方案：五层优化策略、成本控制、配置说明。
 
 ## 示例结构
 

@@ -7,6 +7,7 @@
   - `solana-pump-ranking-add-lp-burned.sql` — 为 pump 榜单表增加 LP 是否已 burn 列（已有表时执行）
   - `zhilabs-ranking.sql` — zhilabs 精选榜单表（zhilabs 拉取脚本写入）
   - `zhilabs-ranking-recreate.sql` — 重建该表（先 drop 再 create，数据错乱时用）
+  - `token-narrative-cache.sql` — 代币叙事与推文持久化缓存表（可选，启用后减少 API 调用）
   - `tasks.sql` — 示例用 tasks 表
 
 根目录的 `.env.example` 为环境变量示例，复制为 `.env` 后填入密钥。
