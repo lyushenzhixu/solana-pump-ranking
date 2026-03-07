@@ -10,6 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
+import { getTokenDetail, getKline } from './data-sources/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -420,6 +421,14 @@ const HTML_PAGE = `
     .positive { color: var(--positive) !important; }
     .negative { color: var(--negative) !important; }
 
+    tbody tr.clickable-row {
+      cursor: pointer;
+    }
+    tbody tr.clickable-row:hover {
+      background: var(--bg-card-hover);
+      box-shadow: inset 3px 0 0 var(--sol-purple);
+    }
+
     .copy-ca-btn {
       display: inline-flex; align-items: center; justify-content: center;
       width: 22px; height: 22px;
@@ -574,9 +583,9 @@ const HTML_PAGE = `
         var symbolStr = typeof row.symbol === 'string' ? row.symbol : (typeof row.token === 'string' ? row.token : '—');
         if (nameStr.length > 200) nameStr = nameStr.slice(0, 200) + '…';
         if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
-        table += '<tr>';
-        table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
         var caStr = typeof row.token === 'string' ? row.token : '';
+        table += '<tr class="clickable-row" data-token="' + esc(caStr) + '">';
+        table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
         var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
         table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
         table += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
@@ -641,20 +650,28 @@ const HTML_PAGE = `
     }
     document.querySelector('.table-card').addEventListener('click', function(e) {
       var btn = e.target.closest('.copy-ca-btn');
-      if (!btn) return;
-      e.preventDefault();
-      var ca = btn.getAttribute('data-ca');
-      if (!ca) return;
-      navigator.clipboard.writeText(ca).then(function() {
-        showCopied(btn);
-      }).catch(function() {
-        var ta = document.createElement('textarea');
-        ta.value = ca; ta.style.position = 'fixed'; ta.style.opacity = '0';
-        document.body.appendChild(ta); ta.select();
-        try { document.execCommand('copy'); } catch(ex) {}
-        document.body.removeChild(ta);
-        showCopied(btn);
-      });
+      if (btn) {
+        e.preventDefault();
+        e.stopPropagation();
+        var ca = btn.getAttribute('data-ca');
+        if (!ca) return;
+        navigator.clipboard.writeText(ca).then(function() {
+          showCopied(btn);
+        }).catch(function() {
+          var ta = document.createElement('textarea');
+          ta.value = ca; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch(ex) {}
+          document.body.removeChild(ta);
+          showCopied(btn);
+        });
+        return;
+      }
+      var row = e.target.closest('.clickable-row');
+      if (row) {
+        var token = row.getAttribute('data-token');
+        if (token) window.location.href = '/token/' + encodeURIComponent(token);
+      }
     });
     var currentTab = 'pump';
     document.getElementById('updateBtn').querySelector('span').textContent = '更新 Pump 榜单';
@@ -739,6 +756,642 @@ const HTML_PAGE = `
         setLastSync(new Date());
       });
   </script>
+</body>
+</html>
+`;
+
+const TOKEN_DETAIL_PAGE = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>代币详情 · zhilabs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"><\/script>
+  <style>
+    :root {
+      --sol-purple: #9945FF;
+      --sol-green: #14F195;
+      --sol-blue: #00D1FF;
+      --phantom-pink: #AB47FF;
+      --phantom-deep: #1a0a2e;
+      --warp-magenta: #FF00FF;
+      --bn-yellow: #F0B90B;
+      --bg-primary: #07060d;
+      --bg-card: rgba(15, 12, 30, 0.65);
+      --bg-card-hover: rgba(25, 20, 50, 0.8);
+      --border-subtle: rgba(153, 69, 255, 0.12);
+      --border-glow: rgba(153, 69, 255, 0.3);
+      --text-primary: #e8e6f0;
+      --text-secondary: #8a84a0;
+      --text-muted: #5c5672;
+      --positive: #14F195;
+      --negative: #ff4d6a;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { height: 100%; }
+    body {
+      min-height: 100%;
+      font-family: 'Exo 2', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow-x: hidden;
+    }
+    .bg-layer { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+    .bg-stars {
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(153,69,255,0.7), transparent),
+        radial-gradient(1px 1px at 30% 65%, rgba(20,241,149,0.5), transparent),
+        radial-gradient(1.2px 1.2px at 55% 12%, rgba(0,209,255,0.6), transparent),
+        radial-gradient(1px 1px at 72% 38%, rgba(255,255,255,0.35), transparent),
+        radial-gradient(1px 1px at 88% 75%, rgba(171,71,255,0.5), transparent),
+        radial-gradient(1px 1px at 15% 85%, rgba(255,0,255,0.3), transparent),
+        radial-gradient(1.2px 1.2px at 82% 18%, rgba(20,241,149,0.4), transparent),
+        radial-gradient(1px 1px at 48% 50%, rgba(153,69,255,0.5), transparent);
+      background-size: 280px 280px;
+      animation: starDrift 100s linear infinite;
+    }
+    @keyframes starDrift { to { background-position: 280px 280px; } }
+    .bg-nebula {
+      background:
+        radial-gradient(ellipse at 15% 25%, rgba(153,69,255,0.08), transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(20,241,149,0.05), transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(0,209,255,0.04), transparent 60%);
+    }
+    .bg-grid {
+      background:
+        linear-gradient(rgba(153,69,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(153,69,255,0.025) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, transparent 70%);
+    }
+    .bg-scanlines {
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px);
+      z-index: 1;
+    }
+    .page-wrapper {
+      position: relative; z-index: 2;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 3rem;
+    }
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1.25rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.8125rem; font-weight: 600;
+      color: var(--text-secondary);
+      text-decoration: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 100px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+    .back-btn:hover {
+      color: var(--sol-purple);
+      border-color: var(--border-glow);
+      box-shadow: 0 0 20px rgba(153,69,255,0.15);
+      transform: translateX(-3px);
+      text-decoration: none;
+    }
+
+    /* Token Header */
+    .token-header {
+      display: flex; align-items: center; gap: 1.25rem;
+      margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .token-logo {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      border: 2px solid var(--border-glow);
+      background: rgba(15,12,30,0.8);
+      object-fit: cover;
+      box-shadow: 0 0 24px rgba(153,69,255,0.2);
+    }
+    .token-logo-placeholder {
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      border: 2px solid var(--border-subtle);
+      background: linear-gradient(135deg, rgba(153,69,255,0.15), rgba(0,209,255,0.1));
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.25rem; font-weight: 700;
+      color: var(--sol-purple);
+    }
+    .token-info h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.1rem, 3vw, 1.6rem);
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .token-info h1 .symbol-badge {
+      font-size: 0.75em;
+      color: var(--sol-blue);
+      background: rgba(0,209,255,0.08);
+      padding: 0.15em 0.5em;
+      border-radius: 6px;
+      border: 1px solid rgba(0,209,255,0.15);
+    }
+    .token-price-row {
+      display: flex; align-items: baseline; gap: 0.75rem;
+      margin-top: 0.25rem; flex-wrap: wrap;
+    }
+    .token-price {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem; font-weight: 700;
+      color: var(--text-primary);
+    }
+    .token-change {
+      font-size: 1rem; font-weight: 600;
+      padding: 0.15em 0.6em;
+      border-radius: 6px;
+    }
+    .token-change.positive {
+      color: var(--positive);
+      background: rgba(20,241,149,0.1);
+    }
+    .token-change.negative {
+      color: var(--negative);
+      background: rgba(255,77,106,0.1);
+    }
+
+    /* Chart Card */
+    .chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 1.5rem;
+      padding: 1.25rem;
+    }
+    .chart-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(153,69,255,0.3), rgba(0,209,255,0.2), transparent);
+    }
+    .chart-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem; font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .chart-title .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--sol-green);
+      box-shadow: 0 0 8px rgba(20,241,149,0.5);
+      animation: dotPulse 2s ease-in-out infinite;
+    }
+    @keyframes dotPulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+    #kline-chart {
+      width: 100%;
+      height: 400px;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .chart-loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 400px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    .chart-loading::after {
+      content: '';
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--sol-purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 0.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .chart-error {
+      display: flex; align-items: center; justify-content: center;
+      height: 400px;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.25rem;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(153,69,255,0.2), transparent);
+    }
+    .stat-card:hover {
+      border-color: var(--border-glow);
+      box-shadow: 0 0 20px rgba(153,69,255,0.08);
+    }
+    .stat-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    .stat-value {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-value.positive { color: var(--positive); }
+    .stat-value.negative { color: var(--negative); }
+
+    /* Contract Address */
+    .contract-row {
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      padding: 0.875rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      font-size: 0.8125rem;
+    }
+    .contract-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .contract-addr {
+      font-family: 'Fira Code', 'Courier New', monospace;
+      color: var(--sol-blue);
+      word-break: break-all;
+      flex: 1;
+    }
+    .copy-btn {
+      padding: 0.35rem 0.75rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.75rem; font-weight: 600;
+      color: var(--text-secondary);
+      background: rgba(153,69,255,0.08);
+      border: 1px solid rgba(153,69,255,0.15);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .copy-btn:hover {
+      background: rgba(153,69,255,0.2);
+      border-color: var(--sol-purple);
+      color: var(--sol-purple);
+    }
+    .copy-btn.copied {
+      background: rgba(20,241,149,0.15);
+      border-color: rgba(20,241,149,0.3);
+      color: var(--positive);
+    }
+
+    /* Loading State */
+    .page-loading {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 60vh;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+    .page-loading::after {
+      content: '';
+      display: inline-block;
+      width: 20px; height: 20px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--sol-purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 0.75rem;
+    }
+    .page-error {
+      text-align: center;
+      padding: 4rem 1rem;
+      color: var(--negative);
+      font-size: 1rem;
+    }
+
+    /* Links */
+    .external-links {
+      display: flex; gap: 0.75rem; flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .ext-link {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      padding: 0.5rem 1rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.8125rem; font-weight: 600;
+      color: var(--text-secondary);
+      text-decoration: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+    .ext-link:hover {
+      color: var(--sol-purple);
+      border-color: var(--border-glow);
+      box-shadow: 0 0 16px rgba(153,69,255,0.1);
+      text-decoration: none;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .page-wrapper { padding: 1rem 0.75rem 2rem; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .token-header { gap: 0.75rem; }
+      .token-logo, .token-logo-placeholder { width: 44px; height: 44px; }
+      .token-price { font-size: 1.1rem; }
+      #kline-chart { height: 300px; }
+      .chart-loading, .chart-error { height: 300px; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+      .stat-card { padding: 1rem; }
+      .stat-value { font-size: 1rem; }
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(153,69,255,0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(153,69,255,0.35); }
+  </style>
+</head>
+<body>
+  <div class="bg-layer bg-stars"></div>
+  <div class="bg-layer bg-nebula"></div>
+  <div class="bg-layer bg-grid"></div>
+  <div class="bg-layer bg-scanlines"></div>
+
+  <div class="page-wrapper">
+    <div class="page-header">
+      <a href="/ranking" class="back-btn">← 返回榜单</a>
+    </div>
+
+    <div id="detail-content">
+      <div class="page-loading">加载中</div>
+    </div>
+  </div>
+
+  <script>
+    var tokenAddress = location.pathname.replace(/^\\/token\\//, '');
+    if (!tokenAddress) {
+      document.getElementById('detail-content').innerHTML = '<div class="page-error">无效的代币地址</div>';
+    }
+
+    function esc(s) {
+      if (s == null || s === '') return '';
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function formatPrice(n) {
+      if (n == null || isNaN(n)) return '—';
+      var num = Number(n);
+      if (num === 0) return '$0';
+      if (num < 0.000001) return '$' + num.toExponential(4);
+      if (num < 0.01) return '$' + num.toFixed(8);
+      if (num < 1) return '$' + num.toFixed(6);
+      if (num < 1000) return '$' + num.toFixed(4);
+      return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function formatCompact(n) {
+      if (n == null || isNaN(n)) return '—';
+      var num = Number(n);
+      if (num >= 1e9) return '$' + (num / 1e9).toFixed(2) + 'B';
+      if (num >= 1e6) return '$' + (num / 1e6).toFixed(2) + 'M';
+      if (num >= 1e3) return '$' + (num / 1e3).toFixed(2) + 'K';
+      return '$' + num.toFixed(0);
+    }
+    function formatNumber(n) {
+      if (n == null || isNaN(n)) return '—';
+      return Number(n).toLocaleString();
+    }
+
+    function renderDetail(token) {
+      var change = token.price_change_24h != null ? parseFloat(token.price_change_24h) : null;
+      var changeCl = change != null ? (change >= 0 ? 'positive' : 'negative') : '';
+      var changeStr = change != null ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '';
+      var nameStr = token.name || token.symbol || '—';
+      var symbolStr = token.symbol || '';
+
+      var logoHtml = token.logo_url
+        ? '<img class="token-logo" src="' + esc(token.logo_url) + '" alt="" onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'flex\\'"><div class="token-logo-placeholder" style="display:none">' + esc(symbolStr.charAt(0) || '?') + '</div>'
+        : '<div class="token-logo-placeholder">' + esc(symbolStr.charAt(0) || '?') + '</div>';
+
+      var html = '';
+
+      // Token header
+      html += '<div class="token-header">';
+      html += logoHtml;
+      html += '<div class="token-info">';
+      html += '<h1>' + esc(nameStr) + (symbolStr ? ' <span class="symbol-badge">' + esc(symbolStr) + '</span>' : '') + '</h1>';
+      html += '<div class="token-price-row">';
+      html += '<span class="token-price">' + formatPrice(token.current_price_usd) + '</span>';
+      if (changeStr) html += '<span class="token-change ' + changeCl + '">' + changeStr + '</span>';
+      html += '</div>';
+      html += '</div></div>';
+
+      // Contract address
+      html += '<div class="contract-row">';
+      html += '<span class="contract-label">合约地址</span>';
+      html += '<span class="contract-addr" id="ca-text">' + esc(token.token) + '</span>';
+      html += '<button class="copy-btn" id="copy-ca-btn">复制</button>';
+      html += '</div>';
+
+      // External links
+      html += '<div class="external-links">';
+      html += '<a class="ext-link" href="https://dexscreener.com/solana/' + esc(token.token) + '" target="_blank" rel="noopener">DexScreener ↗</a>';
+      html += '<a class="ext-link" href="https://www.geckoterminal.com/solana/tokens/' + esc(token.token) + '" target="_blank" rel="noopener">GeckoTerminal ↗</a>';
+      html += '<a class="ext-link" href="https://solscan.io/token/' + esc(token.token) + '" target="_blank" rel="noopener">Solscan ↗</a>';
+      html += '</div>';
+
+      // K-line chart
+      html += '<div class="chart-card">';
+      html += '<div class="chart-title"><span class="live-dot"></span>24H K线</div>';
+      html += '<div id="kline-chart"><div class="chart-loading">加载K线数据</div></div>';
+      html += '</div>';
+
+      // Stats grid
+      html += '<div class="stats-grid">';
+      html += '<div class="stat-card"><div class="stat-label">市值</div><div class="stat-value">' + formatCompact(token.market_cap) + '</div></div>';
+      html += '<div class="stat-card"><div class="stat-label">24H 交易量</div><div class="stat-value">' + formatCompact(token.tx_volume_u_24h) + '</div></div>';
+      html += '<div class="stat-card"><div class="stat-label">24H 涨跌</div><div class="stat-value ' + changeCl + '">' + (changeStr || '—') + '</div></div>';
+      html += '<div class="stat-card"><div class="stat-label">持币地址</div><div class="stat-value">' + formatNumber(token.holders) + '</div></div>';
+      if (token._liquidity_usd != null) {
+        html += '<div class="stat-card"><div class="stat-label">流动性</div><div class="stat-value">' + formatCompact(token._liquidity_usd) + '</div></div>';
+      }
+      if (token.launch_at) {
+        var launchDate = new Date(token.launch_at * 1000);
+        var launchStr = launchDate.getFullYear() + '-' + String(launchDate.getMonth()+1).padStart(2,'0') + '-' + String(launchDate.getDate()).padStart(2,'0');
+        html += '<div class="stat-card"><div class="stat-label">上线时间</div><div class="stat-value" style="font-size:1rem">' + launchStr + '</div></div>';
+      }
+      html += '</div>';
+
+      document.getElementById('detail-content').innerHTML = html;
+
+      // Copy CA button
+      var copyBtn = document.getElementById('copy-ca-btn');
+      if (copyBtn) {
+        copyBtn.addEventListener('click', function() {
+          navigator.clipboard.writeText(token.token).then(function() {
+            copyBtn.textContent = '已复制'; copyBtn.classList.add('copied');
+            setTimeout(function() { copyBtn.textContent = '复制'; copyBtn.classList.remove('copied'); }, 1500);
+          }).catch(function() {
+            var ta = document.createElement('textarea'); ta.value = token.token;
+            ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); } catch(ex) {}
+            document.body.removeChild(ta);
+            copyBtn.textContent = '已复制'; copyBtn.classList.add('copied');
+            setTimeout(function() { copyBtn.textContent = '复制'; copyBtn.classList.remove('copied'); }, 1500);
+          });
+        });
+      }
+
+      // Load K-line chart
+      loadKlineChart(token);
+    }
+
+    function loadKlineChart(token) {
+      var pairAddress = token.main_pair;
+      var chain = token.chain || 'solana';
+      if (!pairAddress) {
+        document.getElementById('kline-chart').innerHTML = '<div class="chart-error">无交易对数据，无法加载K线</div>';
+        return;
+      }
+      fetch('/api/kline/' + encodeURIComponent(pairAddress) + '?chain=' + encodeURIComponent(chain) + '&interval=15&size=96')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!Array.isArray(data) || data.length === 0) {
+            document.getElementById('kline-chart').innerHTML = '<div class="chart-error">暂无K线数据</div>';
+            return;
+          }
+          renderChart(data);
+        })
+        .catch(function(e) {
+          document.getElementById('kline-chart').innerHTML = '<div class="chart-error">K线加载失败：' + (e.message || e) + '</div>';
+        });
+    }
+
+    function renderChart(data) {
+      var container = document.getElementById('kline-chart');
+      container.innerHTML = '';
+      var chart = LightweightCharts.createChart(container, {
+        width: container.clientWidth,
+        height: container.clientHeight || 400,
+        layout: {
+          background: { type: 'solid', color: 'transparent' },
+          textColor: '#8a84a0',
+          fontFamily: "'Exo 2', system-ui, sans-serif",
+          fontSize: 11,
+        },
+        grid: {
+          vertLines: { color: 'rgba(153, 69, 255, 0.06)' },
+          horzLines: { color: 'rgba(153, 69, 255, 0.06)' },
+        },
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal,
+          vertLine: { color: 'rgba(153, 69, 255, 0.3)', labelBackgroundColor: '#9945FF' },
+          horzLine: { color: 'rgba(153, 69, 255, 0.3)', labelBackgroundColor: '#9945FF' },
+        },
+        rightPriceScale: {
+          borderColor: 'rgba(153, 69, 255, 0.1)',
+          scaleMargins: { top: 0.1, bottom: 0.1 },
+        },
+        timeScale: {
+          borderColor: 'rgba(153, 69, 255, 0.1)',
+          timeVisible: true,
+          secondsVisible: false,
+        },
+        handleScroll: { vertTouchDrag: false },
+      });
+
+      var candleSeries = chart.addCandlestickSeries({
+        upColor: '#14F195',
+        downColor: '#ff4d6a',
+        borderUpColor: '#14F195',
+        borderDownColor: '#ff4d6a',
+        wickUpColor: 'rgba(20, 241, 149, 0.6)',
+        wickDownColor: 'rgba(255, 77, 106, 0.6)',
+      });
+
+      var volumeSeries = chart.addHistogramSeries({
+        priceFormat: { type: 'volume' },
+        priceScaleId: 'volume',
+      });
+      chart.priceScale('volume').applyOptions({
+        scaleMargins: { top: 0.8, bottom: 0 },
+      });
+
+      var candleData = data.map(function(d) {
+        return { time: d.time, open: d.open, high: d.high, low: d.low, close: d.close };
+      }).sort(function(a, b) { return a.time - b.time; });
+
+      var volumeData = data.map(function(d) {
+        var color = d.close >= d.open ? 'rgba(20, 241, 149, 0.3)' : 'rgba(255, 77, 106, 0.3)';
+        return { time: d.time, value: d.volume || 0, color: color };
+      }).sort(function(a, b) { return a.time - b.time; });
+
+      candleSeries.setData(candleData);
+      volumeSeries.setData(volumeData);
+      chart.timeScale().fitContent();
+
+      window.addEventListener('resize', function() {
+        chart.applyOptions({ width: container.clientWidth });
+      });
+    }
+
+    // Fetch token detail
+    if (tokenAddress) {
+      fetch('/api/token/' + encodeURIComponent(tokenAddress) + '?chain=solana')
+        .then(function(r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
+        .then(function(token) {
+          if (!token || token.error) {
+            document.getElementById('detail-content').innerHTML = '<div class="page-error">未找到代币数据：' + (token && token.error ? token.error : '未知错误') + '</div>';
+            return;
+          }
+          renderDetail(token);
+        })
+        .catch(function(e) {
+          document.getElementById('detail-content').innerHTML = '<div class="page-error">加载失败：' + (e.message || e) + '</div>';
+        });
+    }
+  <\/script>
 </body>
 </html>
 `;
@@ -905,6 +1558,56 @@ const server = http.createServer(async (req, res) => {
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: e.message }));
     }
+    return;
+  }
+  // 代币详情 API
+  const tokenMatch = urlPath.match(/^\/api\/token\/(.+)$/);
+  if (tokenMatch && req.method === 'GET') {
+    const address = decodeURIComponent(tokenMatch[1]);
+    const chain = u.searchParams.get('chain') || 'solana';
+    try {
+      const detail = await getTokenDetail(address, chain);
+      if (!detail) {
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({ error: '未找到该代币' }));
+        return;
+      }
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(JSON.stringify(detail));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
+    }
+    return;
+  }
+  // K线 API
+  const klineMatch = urlPath.match(/^\/api\/kline\/(.+)$/);
+  if (klineMatch && req.method === 'GET') {
+    const pairAddress = decodeURIComponent(klineMatch[1]);
+    const chain = u.searchParams.get('chain') || 'solana';
+    const interval = parseInt(u.searchParams.get('interval') || '15', 10);
+    const size = parseInt(u.searchParams.get('size') || '96', 10);
+    try {
+      const data = await getKline(pairAddress, chain, interval, size);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(JSON.stringify(data));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
+    }
+    return;
+  }
+  // 代币详情页
+  if (urlPath.startsWith('/token/') && urlPath.length > 7) {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.end(TOKEN_DETAIL_PAGE);
     return;
   }
   // 欢迎页：根路径
