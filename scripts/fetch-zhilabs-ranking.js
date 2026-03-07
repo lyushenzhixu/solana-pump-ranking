@@ -1,21 +1,37 @@
 /**
  * 从 zhilabs meme榜单精选/ca.md 读取 Solana meme 代币 CA，
- * 调用 AVE token 详情接口获取数据，按 24h 交易量排序后写入 zhilabs_ranking 表
+ * 调用自研数据源（DexScreener + GeckoTerminal + Jupiter）获取数据，
+ * 按 24h 交易量排序后写入 zhilabs_ranking 表
+ *
+ * 替代原 AVE 数据源，无需 AVE_API_KEY，无请求限制/收费
  */
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
+import * as dataSource from '../src/data-sources/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CA_FILE = path.join(__dirname, '..', 'zhilabs meme榜单精选', 'ca.md');
 
-const AVE_API_KEY = process.env.AVE_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
-const AVE_BASE = 'https://data.ave-api.xyz/v2';
+async function fetchBinanceHolders(contractAddress) {
+  const url = new URL('https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info');
+  url.searchParams.set('chainId', 'CT_501');
+  url.searchParams.set('contractAddress', contractAddress);
+  try {
+    const res = await fetch(url.toString(), { headers: { 'Accept-Encoding': 'identity' } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const holders = parseInt(json?.data?.holders);
+    return Number.isFinite(holders) ? holders : null;
+  } catch {
+    return null;
+  }
+}
 
 function parseCaList(content) {
   return content
@@ -24,35 +40,6 @@ function parseCaList(content) {
     .filter((s) => s && !s.startsWith('#'));
 }
 
-async function fetchTokenDetail(address) {
-  const url = `${AVE_BASE}/tokens/${address}-solana`;
-  const res = await fetch(url, {
-    headers: { 'X-API-KEY': AVE_API_KEY },
-  });
-  if (!res.ok) {
-    throw new Error(`AVE token ${res.status}: ${await res.text()}`);
-  }
-  const json = await res.json();
-  if (json.status !== 1 || !json.data) {
-    throw new Error(json.msg || 'AVE 返回异常');
-  }
-  const d = json.data;
-  if (d && typeof d === 'object') {
-    const flat = { ...d };
-    if (d.token && typeof d.token === 'object' && !Array.isArray(d.token)) {
-      Object.assign(flat, d.token);
-    }
-    for (const key of ['token_info', 'market', 'price_info', 'price', 'market_info']) {
-      if (d[key] && typeof d[key] === 'object' && !Array.isArray(d[key])) {
-        Object.assign(flat, d[key]);
-      }
-    }
-    return flat;
-  }
-  return d;
-}
-
-/** 从对象中取第一个存在的数字，支持 AVE 多种返回键名 */
 function pickNum(obj, ...keys) {
   for (const k of keys) {
     const v = obj?.[k];
@@ -64,67 +51,29 @@ function pickNum(obj, ...keys) {
   return null;
 }
 
-/** 从对象中取第一个存在的字符串（或可转字符串），用于 name/symbol */
-function pickStr(obj, ...keys) {
-  for (const k of keys) {
-    const v = obj?.[k];
-    if (v === undefined || v === null) continue;
-    if (typeof v === 'string' && v.length > 0 && v.length < 500) return v;
-    if (typeof v === 'object' && typeof v.en === 'string') return v.en;
-    if (typeof v === 'object' && typeof v.symbol === 'string') return v.symbol;
-  }
-  return null;
-}
-
-/** 兼容 AVE token 详情接口多种字段名，把能拿到的字段都拉全到统一结构（与 solana_pump_ranking 一致） */
-function normalizeToken(t) {
-  const tokenStr = typeof t.token === 'string' ? t.token : (t.address || '');
-  return {
-    ...t,
-    token: tokenStr,
-    name: pickStr(t, 'name', 'symbol', 'title') || (t.intro_en && typeof t.intro_en === 'string' ? t.intro_en.slice(0, 200) : null),
-    symbol: pickStr(t, 'symbol', 'name'),
-    market_cap: pickNum(t, 'market_cap', 'market_cap_usd', 'fdv', 'cap'),
-    tx_volume_u_24h: pickNum(t, 'tx_volume_u_24h', 'volume_24h', 'tx_volume_24h', 'volume', 'tx_volume_u_24h'),
-    current_price_usd: pickNum(t, 'current_price_usd', 'current_price', 'price', 'price_usd'),
-    price_change_24h: (() => {
-      const v = t.price_change_24h ?? t.price_change_1d ?? t.change_24h ?? t.change_1d;
-      if (v === undefined || v === null) return null;
-      if (typeof v === 'number' && !Number.isNaN(v)) return String(v);
-      if (typeof v === 'string') return v;
-      const n = parseFloat(v);
-      return Number.isNaN(n) ? null : String(n);
-    })(),
-    holders: (() => {
-      const n = pickNum(t, 'holders', 'holder_count', 'holders_count', 'holder_count');
-      return n != null && Number.isInteger(n) ? n : (typeof t.holders === 'number' ? t.holders : null);
-    })(),
-  };
-}
-
-/** 与 fetch-pump-ranking.js 的 toRow 字段一致。requestAddr 为 ca.md 中的 CA，保证 token 列一定是地址字符串 */
 function toRow(t, requestAddr) {
-  const x = normalizeToken(t);
-  const token = (requestAddr && typeof requestAddr === 'string') ? requestAddr.trim() : (x.token || '');
-  const nameStr = typeof x.name === 'string' ? x.name : (x.name && typeof x.name === 'object' && typeof x.name.en === 'string' ? x.name.en : null);
-  const symbolStr = typeof x.symbol === 'string' ? x.symbol : (x.symbol && typeof x.symbol === 'object' && typeof x.symbol.en === 'string' ? x.symbol.en : null);
-  const marketCap = x.market_cap != null ? Number(x.market_cap) : null;
-  const volume24h = x.tx_volume_u_24h != null ? Number(x.tx_volume_u_24h) : null;
-  const priceUsd = x.current_price_usd != null ? Number(x.current_price_usd) : null;
-  const holdersVal = x.holders != null ? (typeof x.holders === 'number' ? x.holders : parseInt(x.holders, 10)) : null;
+  const token = (requestAddr && typeof requestAddr === 'string') ? requestAddr.trim() : (t.token || '');
+  const nameStr = typeof t.name === 'string' ? t.name : null;
+  const symbolStr = typeof t.symbol === 'string' ? t.symbol : null;
+  const marketCap = pickNum(t, 'market_cap');
+  const volume24h = pickNum(t, 'tx_volume_u_24h');
+  const priceUsd = pickNum(t, 'current_price_usd');
+  const holdersVal = t.holders != null ? (typeof t.holders === 'number' ? t.holders : parseInt(t.holders, 10)) : null;
+  const priceChange = t.price_change_24h != null && t.price_change_24h !== '' ? String(t.price_change_24h) : null;
+
   return {
     token,
-    chain: x.chain || 'solana',
+    chain: t.chain || 'solana',
     name: nameStr || null,
     symbol: symbolStr || null,
     market_cap: Number.isFinite(marketCap) ? marketCap : null,
     tx_volume_u_24h: Number.isFinite(volume24h) ? volume24h : null,
     current_price_usd: Number.isFinite(priceUsd) ? priceUsd : null,
-    price_change_24h: x.price_change_24h != null && x.price_change_24h !== '' ? String(x.price_change_24h) : null,
+    price_change_24h: priceChange,
     holders: Number.isFinite(holdersVal) ? holdersVal : null,
-    main_pair: typeof x.main_pair === 'string' ? x.main_pair : null,
-    logo_url: typeof x.logo_url === 'string' ? x.logo_url : null,
-    launch_at: x.launch_at ? new Date(Number(x.launch_at) * 1000).toISOString() : null,
+    main_pair: typeof t.main_pair === 'string' ? t.main_pair : null,
+    logo_url: typeof t.logo_url === 'string' ? t.logo_url : null,
+    launch_at: t.launch_at ? new Date(Number(t.launch_at) * 1000).toISOString() : null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -134,7 +83,6 @@ async function main() {
 }
 
 export async function updateZhilabsRanking() {
-  if (!AVE_API_KEY) throw new Error('缺少 AVE_API_KEY');
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('缺少 Supabase 配置');
 
   if (!fs.existsSync(CA_FILE)) {
@@ -146,21 +94,46 @@ export async function updateZhilabsRanking() {
     throw new Error('ca.md 中无有效 CA');
   }
 
-  console.log('正在从 AVE 拉取', addresses.length, '个代币详情...');
+  console.log('正在从自研数据源拉取', addresses.length, '个代币详情 (DexScreener + GeckoTerminal)...');
   const list = [];
   for (let i = 0; i < addresses.length; i++) {
     const addr = addresses[i];
     try {
-      const t = await fetchTokenDetail(addr);
-      list.push({ ...t, _requestAddr: addr });
-      const sym = [t.symbol, t.token, addr].find((v) => typeof v === 'string');
-      console.log(`  [${i + 1}/${addresses.length}] ${sym || addr}`);
+      const t = await dataSource.getTokenDetail(addr, 'solana');
+      if (t) {
+        list.push({ ...t, _requestAddr: addr });
+        const sym = t.symbol || t.name || addr;
+        console.log(`  [${i + 1}/${addresses.length}] ${sym}`);
+      } else {
+        console.warn(`  [${i + 1}/${addresses.length}] 跳过 ${addr}: 未找到数据`);
+      }
     } catch (e) {
-      console.warn(`  跳过 ${addr}:`, e.message);
+      console.warn(`  [${i + 1}/${addresses.length}] 跳过 ${addr}:`, e.message);
     }
-    if (i < addresses.length - 1) {
-      await new Promise((r) => setTimeout(r, 600));
+  }
+
+  console.log('正在查询持币地址数 (GoPlus + Binance)...');
+  const validAddrs = list.map((t) => t._requestAddr || t.token).filter(Boolean);
+  if (validAddrs.length > 0) {
+    const secMap = await dataSource.batchGetTokenSecurity('solana', validAddrs);
+    for (const t of list) {
+      const addr = (t._requestAddr || t.token || '').toLowerCase();
+      const sec = secMap.get(addr);
+      if (sec?.holder_count && t.holders == null) {
+        t.holders = sec.holder_count;
+      }
     }
+  }
+
+  for (const t of list) {
+    if (t.holders != null && t.holders > 0) continue;
+    const addr = t._requestAddr || t.token;
+    if (!addr) continue;
+    try {
+      const info = await fetchBinanceHolders(addr);
+      if (info != null) t.holders = info;
+    } catch { /* 忽略 */ }
+    await new Promise((r) => setTimeout(r, 250));
   }
 
   const sorted = [...list].sort((a, b) => {

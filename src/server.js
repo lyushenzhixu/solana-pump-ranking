@@ -28,11 +28,7 @@ if (!supabaseUrl || !supabaseKey || isPlaceholder) {
   process.exit(1);
 }
 
-const aveApiKey = (process.env.AVE_API_KEY || '').trim();
-if (!aveApiKey) {
-  console.warn('[提示] 未配置 AVE_API_KEY，榜单页「更新 Pump 榜单 / 更新 zhilabs 精选」将不可用。');
-  console.warn('  请在项目根目录 .env 中设置 AVE_API_KEY=你的key，或部署时在环境变量中配置并重启服务。');
-}
+console.log('[数据源] 使用自研数据源（DexScreener + GeckoTerminal + Jupiter + GoPlus），无需 AVE_API_KEY');
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -300,10 +296,7 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ ok: true, type, updated, durationMs, at: new Date().toISOString() }));
     } catch (e) {
       res.statusCode = 500;
-      let errMsg = e?.message || String(e);
-      if (/AVE_API_KEY|AVE API/i.test(errMsg)) {
-        errMsg += '。请确认 .env 中已设置 AVE_API_KEY 且已重启服务；若为线上部署，请在平台环境变量中配置 AVE_API_KEY。';
-      }
+      const errMsg = e?.message || String(e);
       res.end(JSON.stringify({ error: errMsg }));
     } finally {
       updateRunning[type] = false;

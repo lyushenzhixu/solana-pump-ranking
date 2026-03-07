@@ -1,13 +1,16 @@
 /**
- * 从 AVE 拉取：Solana、已成功发射、上线<10天、市值>100K 的 pump 代币，
+ * 从自研数据源（DexScreener + GeckoTerminal + GoPlus）拉取：
+ * Solana、已成功发射、上线<10天、市值>100K 的代币，
  * 按 24h 交易量排序取前 20，写入 Supabase
+ *
+ * 替代原 AVE 数据源，无需 AVE_API_KEY，无请求限制/收费
  */
 import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { pathToFileURL } from 'url';
+import * as dataSource from '../src/data-sources/index.js';
 
-const AVE_API_KEY = process.env.AVE_API_KEY;
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
@@ -15,55 +18,13 @@ const TEN_DAYS_SEC = 10 * 24 * 3600;
 const MIN_MARKET_CAP = 100_000;
 const MAX_TOP10_HOLDERS_PERCENT = 30;
 const CANDIDATE_POOL_SIZE = 80;
-const EXCLUDE_LP_NOT_LOCKED_ONLY = true;
-// 排除无 logo 的代币（无图片通常为低质量/疑似操控代币）
 const EXCLUDE_NO_LOGO = true;
-// insider_wallet_rate 阈值（AVE token 详情返回的原始值，0.5 = 50%；操控代币通常 >80）
-const MAX_INSIDER_RATE = 0.50;
-
-/** 解析 AVE 返回的 is_lp_not_locked（可能是 boolean 或字符串 "true"/"false"）
- * @returns true=LP 未锁定/未 burn（排除）, false=LP 已锁定或已 burn（通过）, null=未知 */
-function parseLpNotLocked(t) {
-  const v = t?.is_lp_not_locked;
-  if (v === true || String(v).toLowerCase() === 'true' || v === 1 || v === '1') return true;
-  if (v === false || String(v).toLowerCase() === 'false' || v === 0 || v === '0') return false;
-  return null;
-}
 
 /**
- * 从 AVE token 详情获取 LP 状态和 insider_wallet_rate 等风控数据
- * @returns {{ lpNotLocked: boolean|null, insiderRate: number|null }} 或 null（接口失败）
+ * 从 Binance Web3 获取 Solana 代币的市场动态数据
+ * 返回 { top10Percent, holders, insiderPercent } 或 null
  */
-async function fetchAveTokenDetail(tokenAddress) {
-  const url = `https://data.ave-api.xyz/v2/tokens/${tokenAddress}-solana`;
-  try {
-    const res = await fetch(url, { headers: { 'X-API-KEY': AVE_API_KEY } });
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (json.status !== 1 || !json.data) return null;
-    const d = json.data;
-    const tk = d?.token && typeof d.token === 'object' ? d.token : {};
-    const merged = { ...d, ...tk };
-
-    const v = merged.is_lp_not_locked;
-    let lpNotLocked = null;
-    if (v === true || String(v).toLowerCase() === 'true' || v === 1 || v === '1') lpNotLocked = true;
-    else if (v === false || String(v).toLowerCase() === 'false' || v === 0 || v === '0') lpNotLocked = false;
-
-    const rawRate = tk.insider_wallet_rate;
-    const insiderRate = rawRate != null && rawRate !== '' ? parseFloat(String(rawRate)) : null;
-
-    return {
-      lpNotLocked,
-      insiderRate: Number.isFinite(insiderRate) ? insiderRate : null,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/** 从 Binance Web3 获取 Solana 代币的 Top 10 持有人占比（%），失败或缺失时返回 null */
-async function fetchBinanceTop10Percent(contractAddress) {
+async function fetchBinanceTokenInfo(contractAddress) {
   const url = new URL('https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info');
   url.searchParams.set('chainId', 'CT_501');
   url.searchParams.set('contractAddress', contractAddress);
@@ -71,48 +32,37 @@ async function fetchBinanceTop10Percent(contractAddress) {
     const res = await fetch(url.toString(), { headers: { 'Accept-Encoding': 'identity' } });
     if (!res.ok) return null;
     const json = await res.json();
-    const pct = json?.data?.top10HoldersPercentage ?? json?.data?.holdersTop10Percent;
-    if (pct == null || pct === '') return null;
-    const num = parseFloat(String(pct));
-    return Number.isFinite(num) ? num : null;
+    const d = json?.data;
+    if (!d) return null;
+
+    const top10 = parseFloat(String(d.top10HoldersPercentage ?? ''));
+    const holders = parseInt(d.holders);
+    const insiderPct = parseFloat(String(d.insiderHoldingPercent ?? ''));
+
+    return {
+      top10Percent: Number.isFinite(top10) ? top10 : null,
+      holders: Number.isFinite(holders) ? holders : null,
+      insiderPercent: Number.isFinite(insiderPct) ? insiderPct : null,
+    };
   } catch {
     return null;
   }
 }
 
-async function fetchAvePumpTokens(tag, limit = 200) {
-  const url = new URL('https://data.ave-api.xyz/v2/tokens/platform');
-  url.searchParams.set('tag', tag);
-  url.searchParams.set('limit', String(limit));
-  url.searchParams.set('orderby', 'tx_volume_u_24h');
+/**
+ * 从自研数据源并行拉取 hot + new + ranked Solana 代币，去重
+ */
+async function fetchAllTokens() {
+  console.log('  → 并行拉取 hot / new / ranked ...');
+  const [hotList, newList, ranksList] = await Promise.all([
+    dataSource.getPlatformTokens('pump_in_hot', 200),
+    dataSource.getPlatformTokens('pump_in_new', 200),
+    dataSource.getRanks('solana'),
+  ]);
+  console.log(`    hot: ${hotList.length}, new: ${newList.length}, ranked: ${ranksList.length}`);
 
-  const res = await fetch(url.toString(), {
-    headers: { 'X-API-KEY': AVE_API_KEY },
-  });
-  if (!res.ok) throw new Error(`AVE API ${res.status}: ${await res.text()}`);
-  const json = await res.json();
-  if (json.status !== 1 || !Array.isArray(json.data)) throw new Error(json.msg || 'AVE 返回异常');
-  return json.data;
-}
-
-async function fetchAveRanks(topic) {
-  const url = `https://data.ave-api.xyz/v2/ranks?topic=${encodeURIComponent(topic)}`;
-  const res = await fetch(url, { headers: { 'X-API-KEY': AVE_API_KEY } });
-  if (!res.ok) throw new Error(`AVE ranks ${res.status}: ${await res.text()}`);
-  const json = await res.json();
-  if (json.status !== 1 || !Array.isArray(json.data)) return [];
-  return json.data;
-}
-
-/** 拉取 new + hot + solana ranks，去重（按 token 留一条），顺序请求避免限流 */
-async function fetchAllPumpTokens() {
-  const newList = await fetchAvePumpTokens('pump_in_new', 200);
-  await new Promise((r) => setTimeout(r, 1100));
-  const hotList = await fetchAvePumpTokens('pump_in_hot', 200);
-  await new Promise((r) => setTimeout(r, 1100));
-  const ranksList = await fetchAveRanks('solana');
   const byToken = new Map();
-  for (const t of [...newList, ...hotList, ...ranksList]) {
+  for (const t of [...hotList, ...newList, ...ranksList]) {
     if (t.chain !== 'solana') continue;
     const key = `${t.token}-${t.chain}`;
     if (!byToken.has(key)) byToken.set(key, t);
@@ -129,9 +79,8 @@ function filterAndSort(tokens) {
       if (t.chain !== 'solana') return false;
       const cap = parseFloat(t.market_cap);
       if (isNaN(cap) || cap < MIN_MARKET_CAP) return false;
-      const launched = Number(t.launch_at ?? t.created_at ?? 0);
-      if (launched < cutoff) return false;
-      if (parseLpNotLocked(t) === true) return false;
+      const launched = Number(t.launch_at ?? 0);
+      if (launched > 0 && launched < cutoff) return false;
       if (EXCLUDE_NO_LOGO && !t.logo_url) return false;
       return true;
     })
@@ -143,8 +92,8 @@ function filterAndSort(tokens) {
     .slice(0, CANDIDATE_POOL_SIZE);
 }
 
-function toRow(t, index) {
-  const lpNotLocked = parseLpNotLocked(t);
+function toRow(t) {
+  const lpNotLocked = t._securityDetail?.lpNotLocked;
   const lpBurned = lpNotLocked === false ? true : (lpNotLocked === true ? false : null);
   return {
     token: t.token,
@@ -155,7 +104,7 @@ function toRow(t, index) {
     tx_volume_u_24h: parseFloat(t.tx_volume_u_24h) || null,
     current_price_usd: parseFloat(t.current_price_usd) || null,
     price_change_24h: t.price_change_24h ?? null,
-    holders: t.holders ?? null,
+    holders: t.holders ?? t._securityDetail?.holderCount ?? null,
     main_pair: t.main_pair ?? null,
     logo_url: t.logo_url ?? null,
     launch_at: t.launch_at ? new Date(Number(t.launch_at) * 1000).toISOString() : null,
@@ -166,45 +115,59 @@ function toRow(t, index) {
 }
 
 export async function updatePumpRanking() {
-  if (!AVE_API_KEY) throw new Error('缺少 AVE_API_KEY');
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('缺少 Supabase 配置');
 
-  console.log('正在从 AVE 拉取 pump 代币 (new + hot)...');
-  const raw = await fetchAllPumpTokens();
+  console.log('正在从自研数据源拉取 Solana 代币 (new + hot + ranked)...');
+  const raw = await fetchAllTokens();
   console.log('拉取到', raw.length, '条（去重后），筛选 Solana + 市值>100K + 上线<10天 + 有图片...');
 
   let list = filterAndSort(raw);
-  console.log('正在对', list.length, '条用 AVE token 详情校验 LP 状态 + insider 指数...');
-  for (const t of list) {
-    const detail = await fetchAveTokenDetail(t.token);
-    if (detail) {
-      if (detail.lpNotLocked === true) t.is_lp_not_locked = true;
-      else if (detail.lpNotLocked === false) t.is_lp_not_locked = false;
-      else t.is_lp_not_locked = undefined;
+  console.log('初筛后:', list.length, '条候选');
 
-      t._insiderRate = detail.insiderRate;
+  console.log('正在批量查询 GoPlus 安全数据 (LP 状态 + 蜜罐检测)...');
+  const addresses = list.map((t) => t.token);
+  const securityMap = await dataSource.batchGetTokenSecurity('solana', addresses);
+
+  for (const t of list) {
+    const sec = securityMap.get(t.token.toLowerCase());
+    if (sec) {
+      t._securityDetail = {
+        lpNotLocked: sec.is_lp_locked === true ? false : (sec.is_lp_locked === false ? true : null),
+        insiderRate: null,
+        holderCount: sec.holder_count,
+        riskLevel: sec.risk_level,
+        isHoneypot: sec.is_honeypot,
+      };
     } else {
-      t.is_lp_not_locked = undefined;
-      t._insiderRate = null;
+      t._securityDetail = { lpNotLocked: null, insiderRate: null, holderCount: null };
     }
-    await new Promise((r) => setTimeout(r, 350));
   }
-  list = list.filter((t) => !EXCLUDE_LP_NOT_LOCKED_ONLY || parseLpNotLocked(t) !== true);
-  const preInsiderCount = list.length;
+
+  const preHoneypotCount = list.length;
   list = list.filter((t) => {
-    if (t._insiderRate != null && t._insiderRate > MAX_INSIDER_RATE) return false;
+    if (t._securityDetail?.isHoneypot === true) return false;
+    if (t._securityDetail?.riskLevel === 'CRITICAL') return false;
     return true;
   });
   console.log(
-    '排除 LP 明确未锁定 + insider >' + (MAX_INSIDER_RATE * 100) + '% 后候选:',
-    list.length, '条（insider 排除', preInsiderCount - list.length, '条）',
-    '，正在用 Binance 校验 Top10 持有人占比（排除 >' + MAX_TOP10_HOLDERS_PERCENT + '%）...'
+    '排除蜜罐/高风险后:', list.length, '条（排除', preHoneypotCount - list.length, '条）',
   );
 
+  console.log('正在用 Binance 校验 Top10 占比 + 持币地址数 + insider 占比...');
   for (const t of list) {
-    const pct = await fetchBinanceTop10Percent(t.token);
-    t._top10HoldersPercent = pct ?? null;
-    if (pct != null && pct > MAX_TOP10_HOLDERS_PERCENT) t._excludeByTop10 = true;
+    const info = await fetchBinanceTokenInfo(t.token);
+    if (info) {
+      t._top10HoldersPercent = info.top10Percent;
+      if (info.holders != null && (t.holders == null || t.holders === 0)) {
+        t.holders = info.holders;
+      }
+      t._insiderPercent = info.insiderPercent;
+      if (info.top10Percent != null && info.top10Percent > MAX_TOP10_HOLDERS_PERCENT) {
+        t._excludeByTop10 = true;
+      }
+    } else {
+      t._top10HoldersPercent = null;
+    }
     await new Promise((r) => setTimeout(r, 220));
   }
   list = list.filter((t) => !t._excludeByTop10).slice(0, 20);
@@ -212,9 +175,8 @@ export async function updatePumpRanking() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const rows = list.map((t, i) => toRow(t, i));
+  const rows = list.map((t) => toRow(t));
 
-  // 无论是否有新数据都先清空表，避免「更新 0 条」时仍显示旧数据
   const { error: delErr } = await supabase
     .from('solana_pump_ranking')
     .delete()
@@ -222,7 +184,7 @@ export async function updatePumpRanking() {
   if (delErr) console.warn('清理旧行时警告:', delErr.message);
 
   if (rows.length === 0) {
-    console.log('当前无符合条件的数据，表已清空。可放宽 MIN_MARKET_CAP 或 LP 规则再试。');
+    console.log('当前无符合条件的数据，表已清空。可放宽 MIN_MARKET_CAP 规则再试。');
     return [];
   }
 
