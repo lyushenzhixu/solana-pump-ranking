@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
 import { getTokenDetail, getKline, getTokenSecurityDetail } from './data-sources/index.js';
+import { buildSeoMeta, buildHomepageJsonLd, buildOrganizationJsonLd, buildSitemap, SITE_URL, SITE_NAME } from './seo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -61,12 +62,26 @@ async function getRankingZhilabs() {
 }
 
 function buildRankingPage() {
+const seoMeta = buildSeoMeta({
+  title: 'Solana Meme 代币榜单 | Zhizhi Labs',
+  description: '实时 Solana Meme 代币排行榜 — 按 24h 交易量排序，查看市值、涨跌、持仓分布等关键指标。由 Zhizhi Labs 提供。',
+  canonicalPath: '/ranking',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: 'Solana Meme 代币榜单',
+    description: '实时 Solana Meme 代币排行榜，按 24h 交易量排序',
+    url: `${SITE_URL}/ranking`,
+    isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL },
+  },
+});
 return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>榜单 · zhilabs</title>
+  <title>Solana Meme 代币榜单 | Zhizhi Labs</title>
+  ${seoMeta}
   ${gaSnippet()}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -520,7 +535,7 @@ return `<!DOCTYPE html>
   <div class="page-wrapper">
     <div class="page-header">
       <a href="/" class="back-home">← 返回首页</a>
-      <h1 class="page-title">⟡ 榜单</h1>
+      <h1 class="page-title">⟡ Zhizhi Labs 榜单</h1>
     </div>
 
     <div class="scheduler-bar" id="schedulerBar">
@@ -769,13 +784,37 @@ return `<!DOCTYPE html>
 </html>
 `;
 }
-function buildTokenDetailPage() {
+function buildTokenDetailPage(tokenInfo = {}) {
+const tokenName = tokenInfo.name || tokenInfo.symbol || '代币详情';
+const tokenSymbol = tokenInfo.symbol || '';
+const tokenAddr = tokenInfo.token || '';
+const pageTitle = tokenSymbol
+  ? `${tokenName} (${tokenSymbol}) 行情与数据 | Zhizhi Labs`
+  : `${tokenName} | Zhizhi Labs`;
+const pageDesc = tokenSymbol
+  ? `查看 ${tokenName} (${tokenSymbol}) 的实时价格、K线图、市值、24h 交易量和持仓分布。由 Zhizhi Labs 提供链上数据分析。`
+  : `在 Zhizhi Labs 查看代币的实时行情、K线图和链上数据分析。`;
+const seoMeta = buildSeoMeta({
+  title: pageTitle,
+  description: pageDesc,
+  canonicalPath: tokenAddr ? `/token/${encodeURIComponent(tokenAddr)}` : '/ranking',
+  ogType: 'article',
+  jsonLd: {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: pageTitle,
+    description: pageDesc,
+    url: tokenAddr ? `${SITE_URL}/token/${encodeURIComponent(tokenAddr)}` : `${SITE_URL}/ranking`,
+    isPartOf: { '@type': 'WebSite', name: SITE_NAME, url: SITE_URL },
+  },
+});
 return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>代币详情 · zhilabs</title>
+  <title>${pageTitle.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</title>
+  ${seoMeta}
   ${gaSnippet()}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1481,6 +1520,39 @@ function startScheduler() {
 const server = http.createServer(async (req, res) => {
   const u = new URL(req.url || '/', 'http://localhost');
   const urlPath = u.pathname || '/';
+  // robots.txt
+  if (urlPath === '/robots.txt') {
+    try {
+      const robotsPath = path.join(PUBLIC_DIR, 'robots.txt');
+      const content = fs.readFileSync(robotsPath, 'utf8');
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.end(content);
+    } catch (_) {
+      res.setHeader('Content-Type', 'text/plain');
+      res.end('User-agent: *\nAllow: /\n');
+    }
+    return;
+  }
+  // sitemap.xml（动态生成，包含数据库中的代币页面）
+  if (urlPath === '/sitemap.xml') {
+    let tokenAddresses = [];
+    try {
+      const [zhilabs, pump] = await Promise.all([
+        supabase.from('zhilabs_ranking').select('token').limit(100),
+        supabase.from('solana_pump_ranking').select('token').limit(100),
+      ]);
+      const addrSet = new Set();
+      for (const row of (zhilabs.data || [])) { if (row.token) addrSet.add(row.token); }
+      for (const row of (pump.data || [])) { if (row.token) addrSet.add(row.token); }
+      tokenAddresses = [...addrSet];
+    } catch (_) { /* 降级为仅静态页 */ }
+    const xml = buildSitemap(tokenAddresses);
+    res.setHeader('Content-Type', 'application/xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.end(xml);
+    return;
+  }
   if (urlPath === '/health' || urlPath === '/api/health') {
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ ok: true, port: PORT }));
@@ -1625,10 +1697,29 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
-  // 代币详情页
+  // 代币详情页（服务端预取代币信息用于 SEO meta 标签）
   if (urlPath.startsWith('/token/') && urlPath.length > 7) {
+    const address = decodeURIComponent(urlPath.slice(7));
+    let tokenInfo = {};
+    try {
+      const rows = await supabase
+        .from('zhilabs_ranking')
+        .select('name, symbol, token')
+        .eq('token', address)
+        .maybeSingle();
+      if (rows.data) tokenInfo = rows.data;
+      if (!tokenInfo.name) {
+        const pumpRows = await supabase
+          .from('solana_pump_ranking')
+          .select('name, symbol, token')
+          .eq('token', address)
+          .maybeSingle();
+        if (pumpRows.data) tokenInfo = pumpRows.data;
+      }
+    } catch (_) { /* 降级为默认 SEO 信息 */ }
+    if (!tokenInfo.token) tokenInfo.token = address;
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(buildTokenDetailPage());
+    res.end(buildTokenDetailPage(tokenInfo));
     return;
   }
   // 欢迎页：根路径
@@ -1652,6 +1743,28 @@ const server = http.createServer(async (req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.end(buildRankingPage());
     return;
+  }
+  // 静态文件服务（favicon.ico 等 public 目录下的文件）
+  const safeName = path.normalize(urlPath).replace(/^(\.\.[\/\\])+/, '');
+  const filePath = path.join(PUBLIC_DIR, safeName);
+  if (filePath.startsWith(PUBLIC_DIR)) {
+    try {
+      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+        const ext = path.extname(filePath).toLowerCase();
+        const mimeTypes = {
+          '.html': 'text/html', '.css': 'text/css', '.js': 'application/javascript',
+          '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg',
+          '.jpeg': 'image/jpeg', '.gif': 'image/gif', '.svg': 'image/svg+xml',
+          '.ico': 'image/x-icon', '.webp': 'image/webp', '.woff2': 'font/woff2',
+          '.woff': 'font/woff', '.ttf': 'font/ttf', '.txt': 'text/plain',
+          '.xml': 'application/xml', '.webmanifest': 'application/manifest+json',
+        };
+        res.setHeader('Content-Type', mimeTypes[ext] || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.end(fs.readFileSync(filePath));
+        return;
+      }
+    } catch (_) { /* fall through to 404 */ }
   }
   res.statusCode = 404;
   res.end('Not Found');
