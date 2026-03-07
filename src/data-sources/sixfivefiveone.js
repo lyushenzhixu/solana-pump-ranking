@@ -4,8 +4,14 @@
  */
 
 const NEWS_BASE = 'https://ai.6551.io';
-const OPENNEWS_TOKEN = (process.env.OPENNEWS_TOKEN || '').trim();
-const TWITTER_TOKEN = (process.env.TWITTER_TOKEN || '').trim();
+
+function getNewsToken() {
+  return (process.env.OPENNEWS_TOKEN || process.env.TWITTER_TOKEN || process.env.TOKEN_6551 || '').trim();
+}
+
+function getTwitterToken() {
+  return (process.env.TWITTER_TOKEN || process.env.OPENNEWS_TOKEN || process.env.TOKEN_6551 || '').trim();
+}
 
 const cache = new Map();
 const NEWS_CACHE_TTL = 30 * 60_000;   // 新闻缓存 30 分钟
@@ -86,7 +92,8 @@ function isLikelyShill(tweet) {
  * @returns {{ summary: string, articles: Array, updatedAt: string }}
  */
 export async function getTokenNarrative(symbol, name) {
-  if (!OPENNEWS_TOKEN) {
+  const newsToken = getNewsToken();
+  if (!newsToken) {
     return { summary: '', articles: [], updatedAt: null, error: 'OPENNEWS_TOKEN 未配置' };
   }
 
@@ -102,7 +109,7 @@ export async function getTokenNarrative(symbol, name) {
           coins: [symbol.toUpperCase()],
           limit: 20,
           page: 1,
-        }, OPENNEWS_TOKEN)
+        }, newsToken)
       );
     }
     if (name && name !== symbol) {
@@ -111,7 +118,7 @@ export async function getTokenNarrative(symbol, name) {
           q: name,
           limit: 10,
           page: 1,
-        }, OPENNEWS_TOKEN)
+        }, newsToken)
       );
     }
 
@@ -179,7 +186,8 @@ export async function getTokenNarrative(symbol, name) {
  * @returns {{ tweets: Array, updatedAt: string }}
  */
 export async function getTokenHotTweets(keyword, options = {}) {
-  if (!TWITTER_TOKEN) {
+  const twitterToken = getTwitterToken();
+  if (!twitterToken) {
     return { tweets: [], updatedAt: null, error: 'TWITTER_TOKEN 未配置' };
   }
 
@@ -206,7 +214,7 @@ export async function getTokenHotTweets(keyword, options = {}) {
     const resp = await fetchJson(
       `${NEWS_BASE}/open/twitter_search`,
       searchParams,
-      TWITTER_TOKEN
+      twitterToken
     );
 
     let tweets = resp?.data || [];
