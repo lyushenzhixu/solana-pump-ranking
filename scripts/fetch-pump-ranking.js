@@ -20,8 +20,11 @@ const MAX_TOP10_HOLDERS_PERCENT = 30;
 const CANDIDATE_POOL_SIZE = 80;
 const EXCLUDE_NO_LOGO = true;
 
-/** 从 Binance Web3 获取 Solana 代币的 Top 10 持有人占比（%），失败或缺失时返回 null */
-async function fetchBinanceTop10Percent(contractAddress) {
+/**
+ * 从 Binance Web3 获取 Solana 代币的市场动态数据
+ * 返回 { top10Percent, holders, insiderPercent } 或 null
+ */
+async function fetchBinanceTokenInfo(contractAddress) {
   const url = new URL('https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info');
   url.searchParams.set('chainId', 'CT_501');
   url.searchParams.set('contractAddress', contractAddress);
@@ -29,10 +32,18 @@ async function fetchBinanceTop10Percent(contractAddress) {
     const res = await fetch(url.toString(), { headers: { 'Accept-Encoding': 'identity' } });
     if (!res.ok) return null;
     const json = await res.json();
-    const pct = json?.data?.top10HoldersPercentage ?? json?.data?.holdersTop10Percent;
-    if (pct == null || pct === '') return null;
-    const num = parseFloat(String(pct));
-    return Number.isFinite(num) ? num : null;
+    const d = json?.data;
+    if (!d) return null;
+
+    const top10 = parseFloat(String(d.top10HoldersPercentage ?? ''));
+    const holders = parseInt(d.holders);
+    const insiderPct = parseFloat(String(d.insiderHoldingPercent ?? ''));
+
+    return {
+      top10Percent: Number.isFinite(top10) ? top10 : null,
+      holders: Number.isFinite(holders) ? holders : null,
+      insiderPercent: Number.isFinite(insiderPct) ? insiderPct : null,
+    };
   } catch {
     return null;
   }
@@ -146,11 +157,21 @@ export async function updatePumpRanking() {
     '排除蜜罐/高风险后:', list.length, '条（排除', preHoneypotCount - list.length, '条）',
   );
 
-  console.log('正在用 Binance 校验 Top10 持有人占比（排除 >' + MAX_TOP10_HOLDERS_PERCENT + '%）...');
+  console.log('正在用 Binance 校验 Top10 占比 + 持币地址数 + insider 占比...');
   for (const t of list) {
-    const pct = await fetchBinanceTop10Percent(t.token);
-    t._top10HoldersPercent = pct ?? null;
-    if (pct != null && pct > MAX_TOP10_HOLDERS_PERCENT) t._excludeByTop10 = true;
+    const info = await fetchBinanceTokenInfo(t.token);
+    if (info) {
+      t._top10HoldersPercent = info.top10Percent;
+      if (info.holders != null && (t.holders == null || t.holders === 0)) {
+        t.holders = info.holders;
+      }
+      t._insiderPercent = info.insiderPercent;
+      if (info.top10Percent != null && info.top10Percent > MAX_TOP10_HOLDERS_PERCENT) {
+        t._excludeByTop10 = true;
+      }
+    } else {
+      t._top10HoldersPercent = null;
+    }
     await new Promise((r) => setTimeout(r, 220));
   }
   list = list.filter((t) => !t._excludeByTop10).slice(0, 20);

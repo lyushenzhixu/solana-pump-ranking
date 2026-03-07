@@ -78,9 +78,11 @@ export async function searchTokens(keyword, chain, limit = 100) {
 /**
  * 获取平台/标签代币列表（等价 AVE /v2/tokens/platform?tag=）
  * 映射逻辑：
- *   - pump_in_hot / hot → GeckoTerminal trending + DexScreener boosts
- *   - pump_in_new / new → GeckoTerminal new_pools
- *   - 其他 → GeckoTerminal trending
+ *   - pump_in_hot / hot → GeckoTerminal trending + DexScreener boosts + DexScreener search
+ *   - pump_in_new / new → GeckoTerminal new_pools + DexScreener search
+ *   - 其他 → GeckoTerminal trending + DexScreener search
+ *
+ * 多源聚合确保候选池足够大
  */
 export async function getPlatformTokens(tag, limit = 200) {
   const cacheKey = `platform:${tag}:${limit}`;
@@ -91,19 +93,29 @@ export async function getPlatformTokens(tag, limit = 200) {
   const isNew = /new/i.test(tag);
   const chain = extractChainFromTag(tag) || 'solana';
   const pages = Math.ceil(limit / 20);
+  const dsChain = chain === 'solana' ? 'solana' : chain;
 
   let tokens = [];
 
   if (isNew) {
-    tokens = await geckoterminal.getNewPools(chain, pages);
+    const [gtNew, dsSearchNew] = await Promise.all([
+      geckoterminal.getNewPools(chain, pages).catch(() => []),
+      dexscreener.search(`new ${dsChain}`).catch(() => []),
+    ]);
+    const dsNormalized = dsSearchNew
+      .filter((p) => fromChain(p.chainId) === chain)
+      .map(dexscreener.normalizePair);
+    tokens = [...gtNew, ...dsNormalized];
   } else if (isHot) {
-    const [trending, boosts] = await Promise.all([
-      geckoterminal.getTrendingPools(chain, pages),
+    const [trending, boosts, dsSearch1, dsSearch2] = await Promise.all([
+      geckoterminal.getTrendingPools(chain, pages).catch(() => []),
       dexscreener.getLatestBoosts().catch(() => []),
+      dexscreener.search(`trending ${dsChain}`).catch(() => []),
+      dexscreener.search('pump solana').catch(() => []),
     ]);
 
     const boostAddrs = boosts
-      .filter((b) => b.chainId === chain || b.chainId === toGeckoTerminal(chain))
+      .filter((b) => fromChain(b.chainId) === chain)
       .map((b) => b.tokenAddress)
       .filter(Boolean);
 
@@ -111,12 +123,22 @@ export async function getPlatformTokens(tag, limit = 200) {
     if (boostAddrs.length > 0) {
       const boostPairs = await dexscreener.batchGetTokenPairs(boostAddrs.slice(0, 60));
       boostTokens = boostPairs
-        .filter((p) => p.chainId === chain || fromChain(p.chainId) === chain)
+        .filter((p) => fromChain(p.chainId) === chain)
         .map(dexscreener.normalizePair);
     }
-    tokens = [...trending, ...boostTokens];
+
+    const dsNorm1 = dsSearch1.filter((p) => fromChain(p.chainId) === chain).map(dexscreener.normalizePair);
+    const dsNorm2 = dsSearch2.filter((p) => fromChain(p.chainId) === chain).map(dexscreener.normalizePair);
+    tokens = [...trending, ...boostTokens, ...dsNorm1, ...dsNorm2];
   } else {
-    tokens = await geckoterminal.getTrendingPools(chain, pages);
+    const [gtTrending, dsSearch] = await Promise.all([
+      geckoterminal.getTrendingPools(chain, pages).catch(() => []),
+      dexscreener.search(`${dsChain} meme`).catch(() => []),
+    ]);
+    const dsNormalized = dsSearch
+      .filter((p) => fromChain(p.chainId) === chain)
+      .map(dexscreener.normalizePair);
+    tokens = [...gtTrending, ...dsNormalized];
   }
 
   tokens = tokens.filter((t) => t.chain === chain);

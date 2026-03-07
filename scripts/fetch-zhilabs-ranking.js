@@ -18,6 +18,21 @@ const CA_FILE = path.join(__dirname, '..', 'zhilabs meme榜单精选', 'ca.md');
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
+async function fetchBinanceHolders(contractAddress) {
+  const url = new URL('https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info');
+  url.searchParams.set('chainId', 'CT_501');
+  url.searchParams.set('contractAddress', contractAddress);
+  try {
+    const res = await fetch(url.toString(), { headers: { 'Accept-Encoding': 'identity' } });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const holders = parseInt(json?.data?.holders);
+    return Number.isFinite(holders) ? holders : null;
+  } catch {
+    return null;
+  }
+}
+
 function parseCaList(content) {
   return content
     .split(/\n/)
@@ -79,7 +94,7 @@ export async function updateZhilabsRanking() {
     throw new Error('ca.md 中无有效 CA');
   }
 
-  console.log('正在从自研数据源拉取', addresses.length, '个代币详情 (DexScreener + GeckoTerminal + Jupiter)...');
+  console.log('正在从自研数据源拉取', addresses.length, '个代币详情 (DexScreener + GeckoTerminal)...');
   const list = [];
   for (let i = 0; i < addresses.length; i++) {
     const addr = addresses[i];
@@ -95,6 +110,30 @@ export async function updateZhilabsRanking() {
     } catch (e) {
       console.warn(`  [${i + 1}/${addresses.length}] 跳过 ${addr}:`, e.message);
     }
+  }
+
+  console.log('正在查询持币地址数 (GoPlus + Binance)...');
+  const validAddrs = list.map((t) => t._requestAddr || t.token).filter(Boolean);
+  if (validAddrs.length > 0) {
+    const secMap = await dataSource.batchGetTokenSecurity('solana', validAddrs);
+    for (const t of list) {
+      const addr = (t._requestAddr || t.token || '').toLowerCase();
+      const sec = secMap.get(addr);
+      if (sec?.holder_count && t.holders == null) {
+        t.holders = sec.holder_count;
+      }
+    }
+  }
+
+  for (const t of list) {
+    if (t.holders != null && t.holders > 0) continue;
+    const addr = t._requestAddr || t.token;
+    if (!addr) continue;
+    try {
+      const info = await fetchBinanceHolders(addr);
+      if (info != null) t.holders = info;
+    } catch { /* 忽略 */ }
+    await new Promise((r) => setTimeout(r, 250));
   }
 
   const sorted = [...list].sort((a, b) => {
