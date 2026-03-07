@@ -15,13 +15,18 @@
 - 文件名与标题清晰，便于搜索和 AI 检索。
 - 与 `docs/` 区分：`docs/` 偏操作类（如 RAILWAY.md、PUSH-TO-GITHUB.md）；`knowledge/` 偏概念与沉淀。
 
+## 已有条目
+
+- **pump-ranking-rules.md** — Pump 榜单入榜条件、LP/Top10 规则、数据源与运维排错（0 条、本地重启等）。
+
 ## 示例结构
 
 ```
 knowledge/
-├── README.md           # 本说明
-├── design-decisions.md # 设计决策记录
-├── glossary.md         # 术语表
-└── runbooks/           # 可选：运维手册
+├── README.md             # 本说明
+├── pump-ranking-rules.md # Pump 榜单筛选规则与实现
+├── design-decisions.md   # 设计决策记录
+├── glossary.md           # 术语表
+└── runbooks/             # 可选：运维手册
     └── deploy-checklist.md
 ```

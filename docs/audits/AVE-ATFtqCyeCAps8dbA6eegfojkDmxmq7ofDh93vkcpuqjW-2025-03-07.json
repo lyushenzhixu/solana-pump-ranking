@@ -1,0 +1,120 @@
+{
+  "source": "AVE Cloud API",
+  "endpoint": "GET /v2/contracts/{token}-{chain}",
+  "token_address": "ATFtqCyeCAps8dbA6eegfojkDmxmq7ofDh93vkcpuqjW",
+  "chain": "solana",
+  "audit_at": "2025-03-07",
+  "status": 1,
+  "msg": "SUCCESS",
+  "data_type": 1,
+  "data": {
+    "analysis_big_wallet": "0",
+    "analysis_risk_score": 55,
+    "analysis_scam_wallet": "0",
+    "approve_gas": "",
+    "burn_amount": 0,
+    "buy_gas": "",
+    "chain": "solana",
+    "decimal": "6",
+    "dex": [
+      {
+        "amm": "meteoradammv2",
+        "liquidity": "46444.416726156",
+        "name": "Meteoradammv2: BILl/SOL",
+        "pair": "3K46Yyp4t7b4j3WP1111yXau4JNka8tBcjA4DYiSKMFi"
+      }
+    ],
+    "err_code": "",
+    "err_msg": "",
+    "has_black_method": 0,
+    "has_code": 1,
+    "has_mint_method": 0,
+    "has_not_burned_lp": 0,
+    "has_owner_removed_risk": 1,
+    "holders": 2001,
+    "lock_amount": 0,
+    "owner": "0x0000000000000000000000000000000000000000",
+    "pair_holders": 0,
+    "pair_total": 0,
+    "query_count": 36,
+    "risk_score": 55,
+    "sell_gas": "",
+    "token": "ATFtqCyeCAps8dbA6eegfojkDmxmq7ofDh93vkcpuqjW",
+    "token_holders_rank": [
+      {
+        "address": "EgwtUCxGN7PK8TVCQDQLK2JerWw8UsGFE3xQ8qdbmY1n",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.042826198822432",
+        "quantity": "42826198.822432"
+      },
+      {
+        "address": "HLnpSz9h2S4hiLQ43rnSD9XkcUThA7B8hQMKmDaiTLcC",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.037453150088434",
+        "quantity": "37453150.088434"
+      },
+      {
+        "address": "CaQwkomh5FgmzRW28wQsZ6YPMoK938v4v8CFWJ4vLgYn",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.028392692555179",
+        "quantity": "28392692.555179"
+      },
+      {
+        "address": "ExCZTxX1gV27Aeg7jb4hQBqkwDKHZnETEeWb9otCNBc",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.025592628155227",
+        "quantity": "25592628.155227"
+      },
+      {
+        "address": "6VbZcZpDZWGyuKFqNcEPu4a6ZrMB7C9R892b6T4c1HM",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.024988884478581",
+        "quantity": "24988884.478581"
+      },
+      {
+        "address": "ABLrfmtZ4LZQfbzZEVQwFbgh13baUKFTEJhfSJwayS88",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.024963617738715",
+        "quantity": "24963617.738715"
+      },
+      {
+        "address": "DHrPHLqpk4uF9Qq2XEg5RWnVCw1pdj3VQNFgnvoM3v29",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.024402422444634",
+        "quantity": "24402422.444634"
+      },
+      {
+        "address": "A6m2M7om56YomueB1vUmURGSMeUaBRGen51tFoE4AcuW",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.024263512907824",
+        "quantity": "24263512.907824"
+      },
+      {
+        "address": "FfNLMd6iLdhKWeHNvDhLAf5D4A15B6xtXbpqnK3GoCo4",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.023866700081618",
+        "quantity": "23866700.081618"
+      },
+      {
+        "address": "9mcUSSDb4FfXdySfzTFC3wifurHEYptnZVtY3aWdMvgL",
+        "is_contract": null,
+        "mark": null,
+        "percent": "0.022702913217068",
+        "quantity": "22702913.217068"
+      }
+    ],
+    "token_lock_percent": 0,
+    "token_name": "momentum DEX BILLIONS_NTWK_COIN",
+    "token_symbol": "BILl",
+    "total": "1000000000.000000"
+  }
+}

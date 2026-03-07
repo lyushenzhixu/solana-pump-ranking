@@ -2,7 +2,7 @@
  * 榜单 Web 服务：从 Supabase 读取 solana_pump_ranking 并对外提供 API + 简单页面
  * 根路径 / 为欢迎页，/ranking 为榜单页。Railway 部署时通过 PORT 启动
  */
-import 'dotenv/config';
+import './load-env.js';
 import { createClient } from '@supabase/supabase-js';
 import http from 'http';
 import fs from 'fs';
@@ -15,10 +15,26 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const PORT = process.env.PORT || 3000;
-const supabase = createClient(
-  process.env.SUPABASE_URL || '',
-  process.env.SUPABASE_ANON_KEY || ''
-);
+
+const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
+const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').trim();
+const isPlaceholder = /你的|项目ID|anon|公钥/i.test(supabaseUrl + supabaseKey);
+if (!supabaseUrl || !supabaseKey || isPlaceholder) {
+  console.error('[错误] 未配置 Supabase，无法启动服务。');
+  console.error('请编辑项目根目录的 .env 文件，填入：');
+  console.error('  SUPABASE_URL=https://你的项目ID.supabase.co');
+  console.error('  SUPABASE_ANON_KEY=你的 anon 公钥');
+  console.error('从 Supabase 控制台获取：项目设置 -> API → https://app.supabase.com/project/_/settings/api');
+  process.exit(1);
+}
+
+const aveApiKey = (process.env.AVE_API_KEY || '').trim();
+if (!aveApiKey) {
+  console.warn('[提示] 未配置 AVE_API_KEY，榜单页「更新 Pump 榜单 / 更新 zhilabs 精选」将不可用。');
+  console.warn('  请在项目根目录 .env 中设置 AVE_API_KEY=你的key，或部署时在环境变量中配置并重启服务。');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function getRanking() {
   const { data, error } = await supabase
@@ -64,8 +80,9 @@ const HTML_PAGE = `
     .action-label { font-size: 0.875rem; color: #a1a1aa; }
     .desc { color: #71717a; font-size: 0.875rem; margin-bottom: 1rem; }
     table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    th, td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid #27272a; }
-    th { color: #a1a1aa; font-weight: 500; }
+    th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #27272a; }
+    th { color: #a1a1aa; font-weight: 500; text-align: left; }
+    th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
     a { color: #60a5fa; text-decoration: none; }
     a:hover { text-decoration: underline; }
     .positive { color: #22c55e; }
@@ -95,7 +112,7 @@ const HTML_PAGE = `
     </div>
     <span class="status" id="lastSync"></span>
   </div>
-  <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，按 24h 交易量排序</p>
+  <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序</p>
   <div id="panel-pump" class="panel active"><div id="root-pump">加载中…</div></div>
   <div id="panel-zhilabs" class="panel"><div id="root-zhilabs">加载中…</div></div>
   <script>
@@ -114,8 +131,12 @@ const HTML_PAGE = `
     function renderTable(list, rootId) {
       var root = document.getElementById(rootId);
       if (!list.length) { root.innerHTML = '<p>暂无数据</p>'; return; }
+      var isPump = rootId === 'root-pump';
       var headers = ['#', '代币', '符号', '市值', '24h 交易量', '24h 涨跌', '持币地址'];
-      var table = '<table><thead><tr>' + headers.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+      if (isPump) { headers.push('Top10%'); headers.push('LP'); }
+      var numColIdx = { 3: true, 4: true, 5: true, 6: true };
+      if (isPump) numColIdx[7] = true;
+      var table = '<table><thead><tr>' + headers.map(function(h, idx){ return '<th' + (numColIdx[idx] ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
       list.forEach(function(row, i) {
         var change = row.price_change_24h != null ? parseFloat(row.price_change_24h) : null;
         var changeCl = change != null ? (change >= 0 ? 'positive' : 'negative') : '';
@@ -132,6 +153,10 @@ const HTML_PAGE = `
         table += '<td class="num">' + formatCompact(row.tx_volume_u_24h) + '</td>';
         table += '<td class="num ' + changeCl + '">' + changeStr + '</td>';
         table += '<td class="num">' + (row.holders != null ? row.holders : '—') + '</td>';
+        if (isPump) {
+          table += '<td class="num">' + (row.holders_top10_percent != null ? Number(row.holders_top10_percent).toFixed(1) + '%' : '—') + '</td>';
+          table += '<td>' + (row.lp_burned === true ? '已burn/锁' : (row.lp_burned === false ? '否' : '—')) + '</td>';
+        }
         table += '</tr>';
       });
       table += '</tbody></table>';
@@ -183,7 +208,7 @@ const HTML_PAGE = `
       document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
       document.getElementById('desc').textContent = tab === 'pump'
-        ? '已成功发射、上线 < 10 天、市值 > 100K，按 24h 交易量排序'
+        ? '已成功发射、上线 < 10 天、市值 > 100K，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序'
         : 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
       document.getElementById('updateBtn').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
       // 切换 Tab 时主动刷新一次，确保与数据库联动
@@ -275,7 +300,11 @@ const server = http.createServer(async (req, res) => {
       res.end(JSON.stringify({ ok: true, type, updated, durationMs, at: new Date().toISOString() }));
     } catch (e) {
       res.statusCode = 500;
-      res.end(JSON.stringify({ error: e?.message || String(e) }));
+      let errMsg = e?.message || String(e);
+      if (/AVE_API_KEY|AVE API/i.test(errMsg)) {
+        errMsg += '。请确认 .env 中已设置 AVE_API_KEY 且已重启服务；若为线上部署，请在平台环境变量中配置 AVE_API_KEY。';
+      }
+      res.end(JSON.stringify({ error: errMsg }));
     } finally {
       updateRunning[type] = false;
     }

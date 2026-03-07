@@ -10,6 +10,8 @@ create table if not exists solana_pump_ranking (
   current_price_usd numeric,
   price_change_24h text,
   holders int,
+  holders_top10_percent numeric,
+  lp_burned boolean,
   main_pair text,
   logo_url text,
   launch_at timestamptz,
