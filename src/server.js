@@ -769,14 +769,14 @@ return `<!DOCTYPE html>
 </html>
 `;
 }
-
-const TOKEN_DETAIL_PAGE = `
-<!DOCTYPE html>
+function buildTokenDetailPage() {
+return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>代币详情 · zhilabs</title>
+  ${gaSnippet()}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -1405,6 +1405,7 @@ const TOKEN_DETAIL_PAGE = `
 </body>
 </html>
 `;
+}
 
 const updateRunning = { pump: false, zhilabs: false };
 
@@ -1627,7 +1628,7 @@ const server = http.createServer(async (req, res) => {
   // 代币详情页
   if (urlPath.startsWith('/token/') && urlPath.length > 7) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(TOKEN_DETAIL_PAGE);
+    res.end(buildTokenDetailPage());
     return;
   }
   // 欢迎页：根路径
