@@ -13,6 +13,9 @@
     "pump-ranking": "node scripts/fetch-pump-ranking.js",
     "zhilabs-ranking": "node scripts/fetch-zhilabs-ranking.js",
     "zhilabs-to-local": "node scripts/fetch-zhilabs-to-local.js",
+    "token-audit": "node scripts/token-audit.js",
+    "check-token": "node scripts/check-token-eligibility.js",
+    "test-data-source": "node scripts/test-data-source.js",
     "test": "node -e \"import('./src/index.js').then(m => console.log('Supabase 客户端已导出:', !!m.supabase))\""
   },
   "dependencies": {
