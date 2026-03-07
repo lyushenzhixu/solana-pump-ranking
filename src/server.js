@@ -10,7 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
-import { getTokenDetail, getKline } from './data-sources/index.js';
+import { getTokenDetail, getKline, getTokenSecurityDetail } from './data-sources/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -1566,12 +1566,22 @@ const server = http.createServer(async (req, res) => {
     const address = decodeURIComponent(tokenMatch[1]);
     const chain = u.searchParams.get('chain') || 'solana';
     try {
-      const detail = await getTokenDetail(address, chain);
+      const [detail, dbRow, secDetail] = await Promise.all([
+        getTokenDetail(address, chain),
+        supabase.from('zhilabs_ranking').select('holders').eq('token', address).maybeSingle().then(r => r.data),
+        getTokenSecurityDetail(address, chain).catch(() => null),
+      ]);
       if (!detail) {
         res.statusCode = 404;
         res.setHeader('Content-Type', 'application/json');
         res.end(JSON.stringify({ error: '未找到该代币' }));
         return;
+      }
+      if (detail.holders == null && dbRow?.holders != null) {
+        detail.holders = dbRow.holders;
+      }
+      if (detail.holders == null && secDetail?.holderCount != null) {
+        detail.holders = secDetail.holderCount;
       }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
