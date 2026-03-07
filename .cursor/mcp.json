@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "google-analytics": {
+      "command": "python3",
+      "args": ["-m", "ga4_mcp"],
+      "env": {
+        "GOOGLE_APPLICATION_CREDENTIALS": "${GA_SERVICE_ACCOUNT_KEY_PATH}",
+        "GA4_PROPERTY_ID": "${GA4_PROPERTY_ID}"
+      }
+    }
+  }
+}

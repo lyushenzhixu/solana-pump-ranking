@@ -15,6 +15,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, 'public');
 
 const PORT = process.env.PORT || 3000;
+const GA_MEASUREMENT_ID = (process.env.GA_MEASUREMENT_ID || '').trim();
+
+function gaSnippet() {
+  if (!GA_MEASUREMENT_ID) return '';
+  return `<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_MEASUREMENT_ID}');</script>`;
+}
 
 const supabaseUrl = (process.env.SUPABASE_URL || '').trim();
 const supabaseKey = (process.env.SUPABASE_ANON_KEY || '').trim();
@@ -51,13 +59,14 @@ async function getRankingZhilabs() {
   return data || [];
 }
 
-const HTML_PAGE = `
-<!DOCTYPE html>
+function buildRankingPage() {
+return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>榜单 · zhilabs</title>
+  ${gaSnippet()}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -742,6 +751,7 @@ const HTML_PAGE = `
 </body>
 </html>
 `;
+}
 
 const updateRunning = { pump: false, zhilabs: false };
 
@@ -911,7 +921,9 @@ const server = http.createServer(async (req, res) => {
   if (urlPath === '/' || urlPath === '/index.html') {
     try {
       const welcomePath = path.join(PUBLIC_DIR, 'index.html');
-      const html = fs.readFileSync(welcomePath, 'utf8');
+      let html = fs.readFileSync(welcomePath, 'utf8');
+      const ga = gaSnippet();
+      if (ga) html = html.replace('</head>', ga + '\n</head>');
       res.setHeader('Content-Type', 'text/html; charset=utf-8');
       res.end(html);
     } catch (e) {
@@ -924,7 +936,7 @@ const server = http.createServer(async (req, res) => {
   // 榜单页
   if (urlPath === '/ranking') {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.end(HTML_PAGE);
+    res.end(buildRankingPage());
     return;
   }
   res.statusCode = 404;
