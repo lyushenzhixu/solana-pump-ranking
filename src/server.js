@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
 import { getTokenDetail, getKline, getTokenSecurityDetail } from './data-sources/index.js';
+import { getTokenNarrative, getTokenHotTweets } from './data-sources/sixfivefiveone.js';
 import { buildSeoMeta, buildHomepageJsonLd, buildOrganizationJsonLd, buildSitemap, SITE_URL, SITE_NAME } from './seo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1179,7 +1180,254 @@ return `<!DOCTYPE html>
       text-decoration: none;
     }
 
+    /* Two-column layout */
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    .detail-main { min-width: 0; }
+    .detail-sidebar { min-width: 0; }
+
+    /* Narrative Summary */
+    .narrative-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      position: relative;
+      overflow: hidden;
+    }
+    .narrative-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(153,69,255,0.2), transparent);
+    }
+    .narrative-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .narrative-title .icon { font-size: 0.875rem; }
+    .narrative-text {
+      font-size: 0.875rem;
+      line-height: 1.65;
+      color: var(--text-secondary);
+    }
+    .narrative-articles {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .narrative-article {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.625rem;
+      padding: 0.5rem 0;
+      font-size: 0.8125rem;
+      color: var(--text-secondary);
+      border-bottom: 1px solid rgba(153,69,255,0.04);
+    }
+    .narrative-article:last-child { border-bottom: none; }
+    .narrative-article .signal-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .signal-dot.long { background: var(--positive); box-shadow: 0 0 6px rgba(20,241,149,0.4); }
+    .signal-dot.short { background: var(--negative); box-shadow: 0 0 6px rgba(255,77,106,0.4); }
+    .signal-dot.neutral { background: var(--text-muted); }
+    .narrative-article a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .narrative-article a:hover { color: var(--sol-blue); }
+    .narrative-article .source-tag {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      background: rgba(153,69,255,0.06);
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      flex-shrink: 0;
+      margin-left: auto;
+    }
+    .narrative-loading, .narrative-empty {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      padding: 0.5rem 0;
+    }
+    .narrative-loading::after {
+      content: '';
+      display: inline-block;
+      width: 12px; height: 12px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--sol-purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+
+    /* Hot Tweets Sidebar */
+    .tweets-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      overflow: hidden;
+      position: relative;
+      padding: 1.25rem;
+    }
+    .tweets-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,209,255,0.3), rgba(153,69,255,0.2), transparent);
+    }
+    .tweets-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .tweets-title .icon { font-size: 0.875rem; }
+    .tweets-title .update-tag {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--sol-blue);
+      background: rgba(0,209,255,0.08);
+      padding: 0.15em 0.5em;
+      border-radius: 4px;
+      border: 1px solid rgba(0,209,255,0.12);
+      margin-left: auto;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+    .tweet-item {
+      padding: 0.875rem 0;
+      border-bottom: 1px solid rgba(153,69,255,0.06);
+      transition: background 0.2s;
+    }
+    .tweet-item:last-child { border-bottom: none; }
+    .tweet-item:hover { background: rgba(153,69,255,0.03); margin: 0 -0.5rem; padding-left: 0.5rem; padding-right: 0.5rem; border-radius: 8px; }
+    .tweet-user {
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .tweet-avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15,12,30,0.5);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .tweet-avatar-placeholder {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background: linear-gradient(135deg, rgba(0,209,255,0.15), rgba(153,69,255,0.1));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700;
+      color: var(--sol-blue);
+      flex-shrink: 0;
+    }
+    .tweet-user-info { min-width: 0; }
+    .tweet-user-name {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex; align-items: center; gap: 0.3rem;
+    }
+    .tweet-user-name .verified {
+      color: var(--sol-blue);
+      font-size: 0.75rem;
+    }
+    .tweet-user-handle {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+    }
+    .tweet-text {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
+    .tweet-media {
+      margin-top: 0.5rem;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-subtle);
+    }
+    .tweet-media img {
+      width: 100%;
+      height: auto;
+      max-height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    .tweet-stats {
+      display: flex; gap: 1rem;
+      margin-top: 0.5rem;
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+    }
+    .tweet-stats span {
+      display: flex; align-items: center; gap: 0.25rem;
+    }
+    .tweet-stats .likes:hover { color: var(--negative); }
+    .tweet-stats .retweets:hover { color: var(--positive); }
+    .tweet-stats .replies:hover { color: var(--sol-blue); }
+    .tweets-loading, .tweets-empty {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      text-align: center;
+      padding: 2rem 0;
+    }
+    .tweets-loading::after {
+      content: '';
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--sol-blue);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 0.4rem;
+      vertical-align: middle;
+    }
+
     /* Mobile */
+    @media (max-width: 1024px) {
+      .detail-layout {
+        grid-template-columns: 1fr;
+      }
+      .detail-sidebar {
+        order: 10;
+      }
+    }
     @media (max-width: 768px) {
       .page-wrapper { padding: 1rem 0.75rem 2rem; }
       .page-header { flex-direction: column; align-items: flex-start; }
@@ -1261,7 +1509,7 @@ return `<!DOCTYPE html>
 
       var html = '';
 
-      // Token header
+      // Token header (full width)
       html += '<div class="token-header">';
       html += logoHtml;
       html += '<div class="token-info">';
@@ -1272,19 +1520,31 @@ return `<!DOCTYPE html>
       html += '</div>';
       html += '</div></div>';
 
-      // Contract address
+      // Contract address (full width)
       html += '<div class="contract-row">';
       html += '<span class="contract-label">合约地址</span>';
       html += '<span class="contract-addr" id="ca-text">' + esc(token.token) + '</span>';
       html += '<button class="copy-btn" id="copy-ca-btn">复制</button>';
       html += '</div>';
 
-      // External links
+      // External links (full width)
       html += '<div class="external-links">';
       html += '<a class="ext-link" href="https://dexscreener.com/solana/' + esc(token.token) + '" target="_blank" rel="noopener">DexScreener ↗</a>';
       html += '<a class="ext-link" href="https://www.geckoterminal.com/solana/tokens/' + esc(token.token) + '" target="_blank" rel="noopener">GeckoTerminal ↗</a>';
       html += '<a class="ext-link" href="https://solscan.io/token/' + esc(token.token) + '" target="_blank" rel="noopener">Solscan ↗</a>';
       html += '</div>';
+
+      // Narrative summary (full width, below contract)
+      html += '<div class="narrative-card" id="narrative-section">';
+      html += '<div class="narrative-title"><span class="icon">📰</span>叙事总结</div>';
+      html += '<div id="narrative-content"><div class="narrative-loading">分析中</div></div>';
+      html += '</div>';
+
+      // Two-column layout starts
+      html += '<div class="detail-layout">';
+
+      // Left column: main content
+      html += '<div class="detail-main">';
 
       // K-line chart
       html += '<div class="chart-card">';
@@ -1307,6 +1567,17 @@ return `<!DOCTYPE html>
         html += '<div class="stat-card"><div class="stat-label">上线时间</div><div class="stat-value" style="font-size:1rem">' + launchStr + '</div></div>';
       }
       html += '</div>';
+      html += '</div>'; // end detail-main
+
+      // Right column: hot tweets sidebar
+      html += '<div class="detail-sidebar">';
+      html += '<div class="tweets-card" id="tweets-section">';
+      html += '<div class="tweets-title"><span class="icon">𝕏</span>热门推特<span class="update-tag">每日更新</span></div>';
+      html += '<div id="tweets-content"><div class="tweets-loading">加载中</div></div>';
+      html += '</div>';
+      html += '</div>'; // end detail-sidebar
+
+      html += '</div>'; // end detail-layout
 
       document.getElementById('detail-content').innerHTML = html;
 
@@ -1331,6 +1602,12 @@ return `<!DOCTYPE html>
 
       // Load K-line chart
       loadKlineChart(token);
+
+      // Load narrative summary
+      loadNarrative(token);
+
+      // Load hot tweets
+      loadTweets(token);
     }
 
     function loadKlineChart(token) {
@@ -1420,6 +1697,120 @@ return `<!DOCTYPE html>
       window.addEventListener('resize', function() {
         chart.applyOptions({ width: container.clientWidth });
       });
+    }
+
+    function loadNarrative(token) {
+      fetch('/api/token/' + encodeURIComponent(token.token) + '/narrative')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var el = document.getElementById('narrative-content');
+          if (!el) return;
+          if (!data.summary && (!data.articles || data.articles.length === 0)) {
+            el.innerHTML = '<div class="narrative-empty">暂无该代币的相关新闻叙事</div>';
+            return;
+          }
+          var html = '';
+          if (data.summary) {
+            html += '<div class="narrative-text">' + esc(data.summary) + '</div>';
+          }
+          if (data.articles && data.articles.length > 0) {
+            html += '<div class="narrative-articles">';
+            data.articles.forEach(function(a) {
+              var sig = a.signal || 'neutral';
+              var dotClass = sig === 'long' ? 'long' : (sig === 'short' ? 'short' : 'neutral');
+              var textContent = a.text || '';
+              if (textContent.length > 120) textContent = textContent.slice(0, 117) + '…';
+              html += '<div class="narrative-article">';
+              html += '<span class="signal-dot ' + dotClass + '"></span>';
+              html += '<div style="flex:1;min-width:0">';
+              if (a.link) {
+                html += '<a href="' + esc(a.link) + '" target="_blank" rel="noopener">' + esc(textContent) + '</a>';
+              } else {
+                html += '<span>' + esc(textContent) + '</span>';
+              }
+              html += '</div>';
+              if (a.source) {
+                html += '<span class="source-tag">' + esc(a.source) + '</span>';
+              }
+              html += '</div>';
+            });
+            html += '</div>';
+          }
+          el.innerHTML = html;
+        })
+        .catch(function() {
+          var el = document.getElementById('narrative-content');
+          if (el) el.innerHTML = '<div class="narrative-empty">暂无该代币的相关新闻叙事</div>';
+        });
+    }
+
+    function formatTimeAgo(dateStr) {
+      if (!dateStr) return '';
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      var now = Date.now();
+      var diffSec = Math.floor((now - d.getTime()) / 1000);
+      if (diffSec < 60) return '刚刚';
+      if (diffSec < 3600) return Math.floor(diffSec / 60) + '分钟前';
+      if (diffSec < 86400) return Math.floor(diffSec / 3600) + '小时前';
+      return Math.floor(diffSec / 86400) + '天前';
+    }
+
+    function formatCount(n) {
+      if (n == null) return '0';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return String(n);
+    }
+
+    function hideTweetsSidebar() {
+      var sidebar = document.querySelector('.detail-sidebar');
+      if (sidebar) sidebar.style.display = 'none';
+      var layout = document.querySelector('.detail-layout');
+      if (layout) layout.style.gridTemplateColumns = '1fr';
+    }
+
+    function loadTweets(token) {
+      fetch('/api/token/' + encodeURIComponent(token.token) + '/tweets')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var el = document.getElementById('tweets-content');
+          if (!el) return;
+          if (!data.tweets || data.tweets.length === 0) {
+            hideTweetsSidebar();
+            return;
+          }
+          var html = '';
+          data.tweets.forEach(function(t) {
+            var avatarHtml = t.userAvatar
+              ? '<img class="tweet-avatar" src="' + esc(t.userAvatar) + '" alt="" onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'flex\\'">'
+                + '<div class="tweet-avatar-placeholder" style="display:none">' + esc((t.userScreenName || '?').charAt(0).toUpperCase()) + '</div>'
+              : '<div class="tweet-avatar-placeholder">' + esc((t.userScreenName || '?').charAt(0).toUpperCase()) + '</div>';
+            html += '<div class="tweet-item">';
+            html += '<div class="tweet-user">';
+            html += avatarHtml;
+            html += '<div class="tweet-user-info">';
+            html += '<div class="tweet-user-name">' + esc(t.userName || t.userScreenName);
+            if (t.userVerified) html += ' <span class="verified">✓</span>';
+            html += '</div>';
+            html += '<div class="tweet-user-handle">@' + esc(t.userScreenName) + ' · ' + formatTimeAgo(t.createdAt) + '</div>';
+            html += '</div></div>';
+            html += '<div class="tweet-text">' + esc(t.text) + '</div>';
+            if (t.mediaUrls && t.mediaUrls.length > 0) {
+              html += '<div class="tweet-media"><img src="' + esc(t.mediaUrls[0]) + '" alt="" loading="lazy" onerror="this.parentElement.style.display=\\'none\\'"></div>';
+            }
+            html += '<div class="tweet-stats">';
+            html += '<span class="likes">♡ ' + formatCount(t.likes) + '</span>';
+            html += '<span class="retweets">⟲ ' + formatCount(t.retweets) + '</span>';
+            html += '<span class="replies">💬 ' + formatCount(t.replies) + '</span>';
+            html += '</div>';
+            html += '</div>';
+          });
+          el.innerHTML = html;
+        })
+        .catch(function() {
+          hideTweetsSidebar();
+        });
     }
 
     // Fetch token detail
@@ -1640,6 +2031,79 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+  // 代币叙事总结 API（必须在通用 /api/token/:address 之前匹配）
+  const narrativeMatchApi = urlPath.match(/^\/api\/token\/(.+)\/narrative$/);
+  if (narrativeMatchApi && req.method === 'GET') {
+    const address = decodeURIComponent(narrativeMatchApi[1]);
+    try {
+      let tokenInfo = null;
+      try {
+        const row = await supabase
+          .from('zhilabs_ranking')
+          .select('name, symbol')
+          .eq('token', address)
+          .maybeSingle();
+        tokenInfo = row.data;
+        if (!tokenInfo) {
+          const pumpRow = await supabase
+            .from('solana_pump_ranking')
+            .select('name, symbol')
+            .eq('token', address)
+            .maybeSingle();
+          tokenInfo = pumpRow.data;
+        }
+      } catch { /* fallback */ }
+
+      const symbol = tokenInfo?.symbol || '';
+      const name = tokenInfo?.name || '';
+      const narrative = await getTokenNarrative(symbol, name);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, max-age=1800');
+      res.end(JSON.stringify(narrative));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
+    }
+    return;
+  }
+  // 代币热门推特 API（必须在通用 /api/token/:address 之前匹配）
+  const tweetsMatchApi = urlPath.match(/^\/api\/token\/(.+)\/tweets$/);
+  if (tweetsMatchApi && req.method === 'GET') {
+    const address = decodeURIComponent(tweetsMatchApi[1]);
+    try {
+      let tokenInfo = null;
+      try {
+        const row = await supabase
+          .from('zhilabs_ranking')
+          .select('name, symbol')
+          .eq('token', address)
+          .maybeSingle();
+        tokenInfo = row.data;
+        if (!tokenInfo) {
+          const pumpRow = await supabase
+            .from('solana_pump_ranking')
+            .select('name, symbol')
+            .eq('token', address)
+            .maybeSingle();
+          tokenInfo = pumpRow.data;
+        }
+      } catch { /* fallback */ }
+
+      const keyword = tokenInfo?.symbol || tokenInfo?.name || address.slice(0, 8);
+      const tweets = await getTokenHotTweets(keyword);
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.end(JSON.stringify(tweets));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
     }
     return;
   }
