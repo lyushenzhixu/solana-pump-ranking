@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
 import { getTokenDetail, getKline, getTokenSecurityDetail } from './data-sources/index.js';
-import { getTokenNarrative, getTokenHotTweets } from './data-sources/sixfivefiveone.js';
+import { getTokenNarrative, getTokenHotTweets, batchPrefetch } from './data-sources/sixfivefiveone.js';
 import { buildSeoMeta, buildHomepageJsonLd, buildOrganizationJsonLd, buildSitemap, SITE_URL, SITE_NAME } from './seo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -42,6 +42,105 @@ if (!supabaseUrl || !supabaseKey || isPlaceholder) {
 console.log('[数据源] 使用自研数据源（DexScreener + GeckoTerminal + Jupiter + GoPlus），无需 AVE_API_KEY');
 
 const supabase = createClient(supabaseUrl, supabaseKey);
+
+// ─── 叙事/推文 Supabase 持久化缓存 ─────────────────
+const NARRATIVE_CACHE_TTL_MS = parseInt(process.env.NARRATIVE_CACHE_TTL_HOURS || '4', 10) * 3600_000;
+const TWEET_CACHE_TTL_MS = parseInt(process.env.TWEET_CACHE_TTL_HOURS || '2', 10) * 3600_000;
+const ENABLE_TWEET_PREFETCH = (process.env.ENABLE_TWEET_PREFETCH || 'false').toLowerCase() === 'true';
+
+let narrativeCacheAvailable = null; // null = 未检测, true/false
+
+async function checkNarrativeCacheTable() {
+  if (narrativeCacheAvailable !== null) return narrativeCacheAvailable;
+  try {
+    await supabase.from('token_narratives').select('token').limit(1);
+    narrativeCacheAvailable = true;
+    console.log('[缓存] token_narratives 表可用，启用持久化缓存');
+  } catch {
+    narrativeCacheAvailable = false;
+    console.log('[缓存] token_narratives 表不存在，仅使用内存缓存（可执行 config/sql/token-narrative-cache.sql 创建）');
+  }
+  return narrativeCacheAvailable;
+}
+
+async function getCachedNarrative(tokenAddr) {
+  if (!(await checkNarrativeCacheTable())) return null;
+  try {
+    const { data } = await supabase
+      .from('token_narratives')
+      .select('*')
+      .eq('token', tokenAddr)
+      .maybeSingle();
+    if (!data) return null;
+    const age = Date.now() - new Date(data.fetched_at).getTime();
+    if (age > NARRATIVE_CACHE_TTL_MS) return null;
+    return {
+      summary: data.summary || '',
+      articles: data.articles || [],
+      sentiment: data.sentiment || 'neutral',
+      sourceCount: data.source_count || 0,
+      updatedAt: data.fetched_at,
+      cached: true,
+    };
+  } catch { return null; }
+}
+
+async function saveNarrativeCache(tokenAddr, symbol, name, narrative) {
+  if (!(await checkNarrativeCacheTable())) return;
+  try {
+    await supabase.from('token_narratives').upsert({
+      token: tokenAddr,
+      symbol: symbol || '',
+      name: name || '',
+      summary: narrative.summary || '',
+      articles: narrative.articles || [],
+      sentiment: narrative.sentiment || 'neutral',
+      source_count: narrative.sourceCount || 0,
+      fetched_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'token' });
+  } catch (e) {
+    console.error('[缓存] 保存叙事缓存失败:', e?.message);
+  }
+}
+
+async function getCachedTweets(tokenAddr) {
+  if (!(await checkNarrativeCacheTable())) return null;
+  try {
+    const { data } = await supabase
+      .from('token_tweets')
+      .select('*')
+      .eq('token', tokenAddr)
+      .maybeSingle();
+    if (!data) return null;
+    const age = Date.now() - new Date(data.fetched_at).getTime();
+    if (age > TWEET_CACHE_TTL_MS) return null;
+    return {
+      tweets: data.tweets || [],
+      searchQueries: [],
+      updatedAt: data.fetched_at,
+      cached: true,
+    };
+  } catch { return null; }
+}
+
+async function saveTweetsCache(tokenAddr, symbol, name, tweetsResult) {
+  if (!(await checkNarrativeCacheTable())) return;
+  try {
+    await supabase.from('token_tweets').upsert({
+      token: tokenAddr,
+      symbol: symbol || '',
+      name: name || '',
+      tweets: tweetsResult.tweets || [],
+      tweet_count: (tweetsResult.tweets || []).length,
+      search_query: (tweetsResult.searchQueries || []).join(' | '),
+      fetched_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'token' });
+  } catch (e) {
+    console.error('[缓存] 保存推文缓存失败:', e?.message);
+  }
+}
 
 async function getRanking() {
   const { data, error } = await supabase
@@ -1899,6 +1998,71 @@ async function runScheduledUpdate() {
     scheduler.lastResult = { ...result, durationMs: Date.now() - started };
     console.log('[定时更新] 完成，用时', Date.now() - started, 'ms');
   }
+
+  // 后台预取叙事/推文（不阻塞下次更新周期）
+  scheduleNarrativePrefetch().catch(e =>
+    console.error('[预取] 叙事预取出错:', e?.message)
+  );
+}
+
+async function scheduleNarrativePrefetch() {
+  try {
+    const [zhilabs, pump] = await Promise.all([
+      supabase.from('zhilabs_ranking').select('token, symbol, name').limit(50),
+      supabase.from('solana_pump_ranking').select('token, symbol, name').limit(20),
+    ]);
+    const seen = new Set();
+    const tokens = [];
+    for (const row of [...(zhilabs.data || []), ...(pump.data || [])]) {
+      if (row.token && !seen.has(row.token)) {
+        seen.add(row.token);
+        tokens.push(row);
+      }
+    }
+    if (tokens.length === 0) return;
+
+    // 仅预取未缓存或已过期的代币
+    const toFetch = [];
+    for (const t of tokens) {
+      const cached = await getCachedNarrative(t.token);
+      if (!cached) toFetch.push(t);
+    }
+
+    if (toFetch.length === 0) {
+      console.log('[预取] 所有代币叙事缓存均有效，跳过预取');
+      return;
+    }
+
+    console.log(`[预取] 开始为 ${toFetch.length} 个代币预取叙事…`);
+    const prefetchResult = await batchPrefetch(toFetch, {
+      fetchTweets: ENABLE_TWEET_PREFETCH,
+      concurrency: 2,
+      delayMs: 3000,
+    });
+    console.log(`[预取] 完成：叙事 ${prefetchResult.narratives} 条，推文 ${prefetchResult.tweets} 条，错误 ${prefetchResult.errors}`);
+
+    // 将预取结果保存到 Supabase
+    for (const t of toFetch) {
+      try {
+        const narrative = await getTokenNarrative(t.symbol, t.name, { contractAddress: t.token });
+        if (narrative && !narrative.error) {
+          await saveNarrativeCache(t.token, t.symbol, t.name, narrative);
+        }
+        if (ENABLE_TWEET_PREFETCH) {
+          const tweets = await getTokenHotTweets(t.symbol, {
+            contractAddress: t.token,
+            symbol: t.symbol,
+            name: t.name,
+          });
+          if (tweets && !tweets.error) {
+            await saveTweetsCache(t.token, t.symbol, t.name, tweets);
+          }
+        }
+      } catch { /* 单个代币失败不影响整体 */ }
+    }
+  } catch (e) {
+    console.error('[预取] 获取榜单代币失败:', e?.message);
+  }
 }
 
 function startScheduler() {
@@ -2039,6 +2203,17 @@ const server = http.createServer(async (req, res) => {
   if (narrativeMatchApi && req.method === 'GET') {
     const address = decodeURIComponent(narrativeMatchApi[1]);
     try {
+      // 1. 检查 Supabase 持久化缓存
+      const cached = await getCachedNarrative(address);
+      if (cached) {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=1800');
+        res.end(JSON.stringify(cached));
+        return;
+      }
+
+      // 2. 从数据库获取代币元数据
       let tokenInfo = null;
       try {
         const row = await supabase
@@ -2059,7 +2234,13 @@ const server = http.createServer(async (req, res) => {
 
       const symbol = tokenInfo?.symbol || '';
       const name = tokenInfo?.name || '';
-      const narrative = await getTokenNarrative(symbol, name);
+
+      // 3. 调用增强版叙事搜索（传入合约地址）
+      const narrative = await getTokenNarrative(symbol, name, { contractAddress: address });
+
+      // 4. 保存到 Supabase 持久化缓存
+      saveNarrativeCache(address, symbol, name, narrative).catch(() => {});
+
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=1800');
@@ -2076,6 +2257,17 @@ const server = http.createServer(async (req, res) => {
   if (tweetsMatchApi && req.method === 'GET') {
     const address = decodeURIComponent(tweetsMatchApi[1]);
     try {
+      // 1. 检查 Supabase 持久化缓存
+      const cached = await getCachedTweets(address);
+      if (cached) {
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.end(JSON.stringify(cached));
+        return;
+      }
+
+      // 2. 从数据库获取代币元数据
       let tokenInfo = null;
       try {
         const row = await supabase
@@ -2094,8 +2286,20 @@ const server = http.createServer(async (req, res) => {
         }
       } catch { /* fallback */ }
 
-      const keyword = tokenInfo?.symbol || tokenInfo?.name || address.slice(0, 8);
-      const tweets = await getTokenHotTweets(keyword);
+      const symbol = tokenInfo?.symbol || '';
+      const name = tokenInfo?.name || '';
+      const keyword = symbol || name || address.slice(0, 8);
+
+      // 3. 调用增强版推特搜索（传入合约地址 + 元数据）
+      const tweets = await getTokenHotTweets(keyword, {
+        contractAddress: address,
+        symbol,
+        name,
+      });
+
+      // 4. 保存到 Supabase 持久化缓存
+      saveTweetsCache(address, symbol, name, tweets).catch(() => {});
+
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=3600');
