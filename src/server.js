@@ -58,81 +58,481 @@ const HTML_PAGE = `
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>榜单 · zhilabs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: system-ui, sans-serif; margin: 0; padding: 1rem; background: #0f0f12; color: #e4e4e7; }
-    h1 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-    .topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
-    .tabs { display: flex; gap: 0.5rem; margin-bottom: 0; }
-    .tabs button { padding: 0.5rem 1rem; background: #27272a; color: #a1a1aa; border: 1px solid #3f3f46; border-radius: 6px; cursor: pointer; font-size: 0.875rem; }
-    .tabs button:hover { color: #e4e4e7; border-color: #52525b; }
-    .tabs button.active { background: #3f3f46; color: #60a5fa; border-color: #60a5fa; }
-    .actions { display: flex; align-items: center; gap: 0.75rem; flex-shrink: 0; }
-    .actions button { padding: 0.5rem 1rem; background: #1e40af; color: #fff; border: 1px solid #3b82f6; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
-    .actions button:hover { background: #2563eb; border-color: #60a5fa; }
-    .actions button:disabled { opacity: 0.6; cursor: not-allowed; background: #374151; }
-    .actions .status { font-size: 0.875rem; color: #a1a1aa; }
-    .scheduler-bar { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.5rem; padding: 0.5rem 0.75rem; background: #1a1a2e; border: 1px solid #27272a; border-radius: 6px; font-size: 0.8125rem; }
-    .scheduler-bar .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .scheduler-bar .dot.active { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
-    .scheduler-bar .dot.running { background: #f59e0b; box-shadow: 0 0 6px #f59e0b88; animation: pulse 1s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-    .scheduler-bar .label { color: #a1a1aa; }
-    .scheduler-bar .value { color: #e4e4e7; font-variant-numeric: tabular-nums; }
-    .action-row { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1rem; padding: 0.5rem 0; border-bottom: 1px solid #27272a; }
-    .action-label { font-size: 0.875rem; color: #a1a1aa; }
-    .desc { color: #71717a; font-size: 0.875rem; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    th, td { padding: 0.5rem 0.75rem; border-bottom: 1px solid #27272a; }
-    th { color: #a1a1aa; font-weight: 500; text-align: left; }
-    th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    a { color: #60a5fa; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    .positive { color: #22c55e; }
-    .negative { color: #ef4444; }
-    .num { text-align: right; font-variant-numeric: tabular-nums; }
-    img { width: 24px; height: 24px; border-radius: 50%; vertical-align: middle; margin-right: 0.5rem; }
-    .back-home { display: inline-block; margin-bottom: 1rem; padding: 0.5rem 1rem; background: #27272a; color: #e4e4e7; border-radius: 6px; text-decoration: none; font-size: 0.875rem; border: 1px solid #3f3f46; transition: background 0.2s, border-color 0.2s; }
-    .back-home:hover { background: #3f3f46; border-color: #60a5fa; color: #fff; }
+    :root {
+      --sol-purple: #9945FF;
+      --sol-green: #14F195;
+      --sol-blue: #00D1FF;
+      --phantom-pink: #AB47FF;
+      --phantom-deep: #1a0a2e;
+      --warp-magenta: #FF00FF;
+      --bn-yellow: #F0B90B;
+      --bg-primary: #07060d;
+      --bg-card: rgba(15, 12, 30, 0.65);
+      --bg-card-hover: rgba(25, 20, 50, 0.8);
+      --border-subtle: rgba(153, 69, 255, 0.12);
+      --border-glow: rgba(153, 69, 255, 0.3);
+      --text-primary: #e8e6f0;
+      --text-secondary: #8a84a0;
+      --text-muted: #5c5672;
+      --positive: #14F195;
+      --negative: #ff4d6a;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { height: 100%; }
+    body {
+      min-height: 100%;
+      font-family: 'Exo 2', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow-x: hidden;
+    }
+
+    .bg-layer {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    }
+    .bg-stars {
+      background-image:
+        radial-gradient(1px 1px at 10% 20%, rgba(153,69,255,0.7), transparent),
+        radial-gradient(1px 1px at 30% 65%, rgba(20,241,149,0.5), transparent),
+        radial-gradient(1.2px 1.2px at 55% 12%, rgba(0,209,255,0.6), transparent),
+        radial-gradient(1px 1px at 72% 38%, rgba(255,255,255,0.35), transparent),
+        radial-gradient(1px 1px at 88% 75%, rgba(171,71,255,0.5), transparent),
+        radial-gradient(1px 1px at 15% 85%, rgba(255,0,255,0.3), transparent),
+        radial-gradient(1.2px 1.2px at 82% 18%, rgba(20,241,149,0.4), transparent),
+        radial-gradient(1px 1px at 48% 50%, rgba(153,69,255,0.5), transparent);
+      background-size: 280px 280px;
+      animation: starDrift 100s linear infinite;
+    }
+    @keyframes starDrift { to { background-position: 280px 280px; } }
+
+    .bg-nebula {
+      background:
+        radial-gradient(ellipse at 15% 25%, rgba(153,69,255,0.08), transparent 55%),
+        radial-gradient(ellipse at 85% 75%, rgba(20,241,149,0.05), transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(0,209,255,0.04), transparent 60%);
+    }
+
+    .bg-grid {
+      background:
+        linear-gradient(rgba(153,69,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(153,69,255,0.025) 1px, transparent 1px);
+      background-size: 80px 80px;
+      mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,0.3) 0%, transparent 70%);
+    }
+
+    .bg-scanlines {
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.02) 2px, rgba(0,0,0,0.02) 4px);
+      z-index: 1;
+    }
+
+    .page-wrapper {
+      position: relative; z-index: 2;
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1.5rem 1.5rem 3rem;
+    }
+
+    /* === HEADER === */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      margin-bottom: 1.5rem; flex-wrap: wrap;
+    }
+    .back-home {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 1.25rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.8125rem; font-weight: 600;
+      color: var(--text-secondary);
+      text-decoration: none;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 100px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+    }
+    .back-home:hover {
+      color: var(--sol-purple);
+      border-color: var(--border-glow);
+      box-shadow: 0 0 20px rgba(153,69,255,0.15);
+      transform: translateX(-3px);
+    }
+
+    .page-title {
+      display: flex; align-items: center; gap: 0.75rem;
+      font-family: 'Orbitron', sans-serif;
+      font-size: clamp(1.1rem, 3vw, 1.6rem); font-weight: 700;
+      background: linear-gradient(135deg, var(--sol-purple) 0%, var(--sol-blue) 50%, var(--sol-green) 100%);
+      background-size: 200% 200%;
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: titleShift 6s ease-in-out infinite;
+    }
+    @keyframes titleShift {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+
+    /* === SCHEDULER BAR === */
+    .scheduler-bar {
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      font-size: 0.8125rem;
+    }
+    .scheduler-bar .dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+    .scheduler-bar .dot.active {
+      background: var(--sol-green);
+      box-shadow: 0 0 8px rgba(20,241,149,0.6), 0 0 20px rgba(20,241,149,0.2);
+    }
+    .scheduler-bar .dot.running {
+      background: var(--bn-yellow);
+      box-shadow: 0 0 8px rgba(240,185,11,0.6), 0 0 20px rgba(240,185,11,0.2);
+      animation: dotPulse 1s ease-in-out infinite;
+    }
+    @keyframes dotPulse { 0%,100%{opacity:1; transform:scale(1);} 50%{opacity:0.4; transform:scale(0.8);} }
+    .scheduler-bar .label { color: var(--text-muted); }
+    .scheduler-bar .sep { color: rgba(153,69,255,0.2); }
+    .scheduler-bar .value {
+      color: var(--text-primary);
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* === TABS + ACTIONS ROW === */
+    .controls-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+      flex-wrap: wrap; margin-bottom: 1rem;
+    }
+    .tabs { display: flex; gap: 0.25rem; position: relative; }
+    .tabs::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; right: 0;
+      height: 1px;
+      background: var(--border-subtle);
+    }
+    .tabs button {
+      position: relative;
+      padding: 0.625rem 1.25rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.875rem; font-weight: 600;
+      color: var(--text-secondary);
+      background: transparent;
+      border: none; border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      z-index: 1;
+    }
+    .tabs button:hover {
+      color: var(--text-primary);
+      background: rgba(153,69,255,0.05);
+    }
+    .tabs button.active {
+      color: var(--sol-purple);
+      border-bottom-color: var(--sol-purple);
+      text-shadow: 0 0 20px rgba(153,69,255,0.3);
+    }
+
+    .actions {
+      display: flex; align-items: center; gap: 0.75rem;
+    }
+    .actions button {
+      position: relative;
+      padding: 0.5rem 1.25rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.8125rem; font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, rgba(153,69,255,0.3), rgba(0,209,255,0.2));
+      border: 1px solid rgba(153,69,255,0.3);
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    .actions button::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, var(--sol-purple), var(--sol-blue));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .actions button:hover::before { opacity: 0.3; }
+    .actions button:hover {
+      border-color: var(--sol-purple);
+      box-shadow: 0 0 20px rgba(153,69,255,0.2), 0 4px 16px rgba(0,0,0,0.3);
+      transform: translateY(-1px);
+    }
+    .actions button:active { transform: translateY(0); }
+    .actions button:disabled {
+      opacity: 0.4; cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+    .actions button span { position: relative; z-index: 1; }
+    .actions .status {
+      font-size: 0.8125rem; color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .sync-label {
+      font-size: 0.8125rem; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* === DESCRIPTION === */
+    .desc {
+      color: var(--text-muted);
+      font-size: 0.8125rem;
+      margin-bottom: 1rem;
+      padding: 0.625rem 1rem;
+      background: rgba(153,69,255,0.03);
+      border-left: 2px solid rgba(153,69,255,0.2);
+      border-radius: 0 8px 8px 0;
+    }
+
+    /* === TABLE CONTAINER === */
+    .table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      overflow: hidden;
+      position: relative;
+    }
+    .table-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(153,69,255,0.3), rgba(0,209,255,0.2), transparent);
+    }
+
     .panel { display: none; }
     .panel.active { display: block; }
+    .panel > div { padding: 0; }
+
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    thead { position: sticky; top: 0; z-index: 2; }
+    th {
+      padding: 0.875rem 1rem;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      text-align: left;
+      background: rgba(10, 8, 20, 0.9);
+      border-bottom: 1px solid var(--border-subtle);
+      white-space: nowrap;
+    }
+    th.num { text-align: right; }
+
+    td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(153,69,255,0.06);
+      vertical-align: middle;
+      transition: background 0.2s ease;
+    }
+    td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      font-weight: 600;
+    }
+    tbody tr {
+      transition: all 0.2s ease;
+    }
+    tbody tr:hover {
+      background: var(--bg-card-hover);
+    }
+    tbody tr:hover td {
+      border-bottom-color: rgba(153,69,255,0.12);
+    }
+
+    /* Rank column */
+    td .rank {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.75rem; font-weight: 700;
+      background: rgba(153,69,255,0.08);
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+    }
+    td .rank.gold {
+      background: linear-gradient(135deg, rgba(240,185,11,0.2), rgba(240,185,11,0.05));
+      color: var(--bn-yellow);
+      border-color: rgba(240,185,11,0.3);
+      box-shadow: 0 0 12px rgba(240,185,11,0.15);
+    }
+    td .rank.silver {
+      background: linear-gradient(135deg, rgba(192,192,210,0.15), rgba(192,192,210,0.05));
+      color: #c0c0d2;
+      border-color: rgba(192,192,210,0.25);
+    }
+    td .rank.bronze {
+      background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(205,127,50,0.05));
+      color: #cd7f32;
+      border-color: rgba(205,127,50,0.25);
+    }
+
+    /* Token name + logo */
+    td .token-cell {
+      display: flex; align-items: center; gap: 0.625rem;
+    }
+    td .token-cell img {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15,12,30,0.5);
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    td .token-cell .token-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      max-width: 200px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Symbol */
+    td .symbol {
+      font-weight: 700;
+      color: var(--sol-blue);
+      font-size: 0.8125rem;
+      letter-spacing: 0.02em;
+    }
+
+    .positive { color: var(--positive) !important; }
+    .negative { color: var(--negative) !important; }
+
+    td .lp-tag {
+      display: inline-flex; align-items: center; gap: 0.25rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem; font-weight: 600;
+    }
+    td .lp-tag.burned {
+      background: rgba(20,241,149,0.1);
+      color: var(--positive);
+      border: 1px solid rgba(20,241,149,0.2);
+    }
+    td .lp-tag.not-burned {
+      background: rgba(255,77,106,0.1);
+      color: var(--negative);
+      border: 1px solid rgba(255,77,106,0.2);
+    }
+    td .lp-tag.unknown {
+      background: rgba(138,132,160,0.1);
+      color: var(--text-muted);
+      border: 1px solid rgba(138,132,160,0.15);
+    }
+
+    a { color: var(--sol-blue); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .loading-text {
+      text-align: center; padding: 3rem 1rem;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+    .loading-text::after {
+      content: '';
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border-subtle);
+      border-top-color: var(--sol-purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-left: 0.5rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* === MOBILE === */
+    @media (max-width: 768px) {
+      .page-wrapper { padding: 1rem 0.75rem 2rem; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .controls-row { flex-direction: column; align-items: flex-start; }
+      .tabs button { padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+      th, td { padding: 0.5rem 0.625rem; font-size: 0.8125rem; }
+      .table-card { border-radius: 12px; overflow-x: auto; }
+      table { min-width: 640px; }
+    }
+
+    /* === SCROLLBAR === */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(153,69,255,0.2);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(153,69,255,0.35); }
   </style>
 </head>
 <body>
-  <a href="/" class="back-home">← 返回首页</a>
-  <h1>榜单</h1>
-  <div class="scheduler-bar" id="schedulerBar">
-    <span class="dot active" id="schedulerDot"></span>
-    <span class="label">自动更新：</span>
-    <span class="value" id="schedulerInfo">加载中…</span>
-    <span class="label">|</span>
-    <span class="label">下次更新：</span>
-    <span class="value" id="schedulerCountdown">--:--</span>
-    <span class="label">|</span>
-    <span class="label">上次结果：</span>
-    <span class="value" id="schedulerLastResult">—</span>
-  </div>
-  <div class="topbar">
-    <div class="tabs">
-      <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
-      <button type="button" class="tab-btn" data-tab="zhilabs">zhilabs精选</button>
+  <div class="bg-layer bg-stars"></div>
+  <div class="bg-layer bg-nebula"></div>
+  <div class="bg-layer bg-grid"></div>
+  <div class="bg-layer bg-scanlines"></div>
+
+  <div class="page-wrapper">
+    <div class="page-header">
+      <a href="/" class="back-home">← 返回首页</a>
+      <h1 class="page-title">⟡ 榜单</h1>
+    </div>
+
+    <div class="scheduler-bar" id="schedulerBar">
+      <span class="dot active" id="schedulerDot"></span>
+      <span class="label">自动更新</span>
+      <span class="value" id="schedulerInfo">加载中…</span>
+      <span class="sep">|</span>
+      <span class="label">下次更新</span>
+      <span class="value" id="schedulerCountdown">--:--</span>
+      <span class="sep">|</span>
+      <span class="label">上次结果</span>
+      <span class="value" id="schedulerLastResult">—</span>
+    </div>
+
+    <div class="controls-row">
+      <div class="tabs">
+        <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
+        <button type="button" class="tab-btn" data-tab="zhilabs">zhilabs 精选</button>
+      </div>
+      <div class="actions">
+        <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
+        <span class="status" id="updateStatus"></span>
+        <span class="sync-label" id="lastSync"></span>
+      </div>
+    </div>
+
+    <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序</p>
+
+    <div class="table-card">
+      <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-zhilabs" class="panel"><div id="root-zhilabs"><div class="loading-text">加载中</div></div></div>
     </div>
   </div>
-  <div class="action-row">
-    <span class="action-label">刷新数据：</span>
-    <div class="actions">
-      <button type="button" id="updateBtn">更新 Pump 榜单</button>
-      <span class="status" id="updateStatus"></span>
-    </div>
-    <span class="status" id="lastSync"></span>
-  </div>
-  <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序</p>
-  <div id="panel-pump" class="panel active"><div id="root-pump">加载中…</div></div>
-  <div id="panel-zhilabs" class="panel"><div id="root-zhilabs">加载中…</div></div>
+
   <script>
     function formatCompact(n) {
       if (n == null || Number.isNaN(n)) return '—';
       var num = Number(n);
+      if (num >= 1e9) return '$' + (num / 1e9).toFixed(2) + 'B';
       if (num >= 1e6) return '$' + (num / 1e6).toFixed(2) + 'M';
       if (num >= 1e3) return '$' + (num / 1e3).toFixed(2) + 'k';
       return '$' + num.toFixed(0);
@@ -142,9 +542,15 @@ const HTML_PAGE = `
       var str = String(s);
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+    function rankClass(i) {
+      if (i === 0) return 'rank gold';
+      if (i === 1) return 'rank silver';
+      if (i === 2) return 'rank bronze';
+      return 'rank';
+    }
     function renderTable(list, rootId) {
       var root = document.getElementById(rootId);
-      if (!list.length) { root.innerHTML = '<p>暂无数据</p>'; return; }
+      if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>'; return; }
       var isPump = rootId === 'root-pump';
       var headers = ['#', '代币', '符号', '市值', '24h 交易量', '24h 涨跌', '持币地址'];
       if (isPump) { headers.push('Top10%'); headers.push('LP'); }
@@ -160,16 +566,20 @@ const HTML_PAGE = `
         if (nameStr.length > 200) nameStr = nameStr.slice(0, 200) + '…';
         if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
         table += '<tr>';
-        table += '<td>' + (i + 1) + '</td>';
-        table += '<td>' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="">' : '') + esc(nameStr) + '</td>';
-        table += '<td>' + esc(symbolStr) + '</td>';
+        table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
+        table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span></div></td>';
+        table += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
         table += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
         table += '<td class="num">' + formatCompact(row.tx_volume_u_24h) + '</td>';
         table += '<td class="num ' + changeCl + '">' + changeStr + '</td>';
-        table += '<td class="num">' + (row.holders != null ? row.holders : '—') + '</td>';
+        table += '<td class="num">' + (row.holders != null ? Number(row.holders).toLocaleString() : '—') + '</td>';
         if (isPump) {
           table += '<td class="num">' + (row.holders_top10_percent != null ? Number(row.holders_top10_percent).toFixed(1) + '%' : '—') + '</td>';
-          table += '<td>' + (row.lp_burned === true ? '已burn/锁' : (row.lp_burned === false ? '否' : '—')) + '</td>';
+          var lpText, lpCl;
+          if (row.lp_burned === true) { lpText = '✓ 已burn/锁'; lpCl = 'burned'; }
+          else if (row.lp_burned === false) { lpText = '✗ 否'; lpCl = 'not-burned'; }
+          else { lpText = '—'; lpCl = 'unknown'; }
+          table += '<td><span class="lp-tag ' + lpCl + '">' + lpText + '</span></td>';
         }
         table += '</tr>';
       });
@@ -194,15 +604,15 @@ const HTML_PAGE = `
       var rootId = tab === 'pump' ? 'root-pump' : 'root-zhilabs';
       return fetchJsonOrThrow(url).then(function(list) {
         if (Array.isArray(list)) renderTable(list, rootId);
-        else document.getElementById(rootId).innerHTML = '<p style="color:#ef4444">数据格式异常</p>';
+        else document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
       }).catch(function(e) {
-        document.getElementById(rootId).innerHTML = '<p style="color:#ef4444">' + (e && e.message ? e.message : String(e)) + '</p>';
+        document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
       });
     }
     function setUpdateStatus(text, isError) {
       var el = document.getElementById('updateStatus');
       el.textContent = text || '';
-      el.style.color = isError ? '#ef4444' : '#a1a1aa';
+      el.style.color = isError ? 'var(--negative)' : 'var(--text-secondary)';
     }
     function setLastSync(date) {
       var el = document.getElementById('lastSync');
@@ -213,10 +623,10 @@ const HTML_PAGE = `
       var hh = String(d.getHours()).padStart(2, '0');
       var mm = String(d.getMinutes()).padStart(2, '0');
       var ss = String(d.getSeconds()).padStart(2, '0');
-      el.textContent = '最后同步：' + hh + ':' + mm + ':' + ss;
+      el.textContent = '同步 ' + hh + ':' + mm + ':' + ss;
     }
     var currentTab = 'pump';
-    document.getElementById('updateBtn').textContent = '更新 Pump 榜单';
+    document.getElementById('updateBtn').querySelector('span').textContent = '更新 Pump 榜单';
     function switchTab(tab) {
       currentTab = tab;
       document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
@@ -224,8 +634,7 @@ const HTML_PAGE = `
       document.getElementById('desc').textContent = tab === 'pump'
         ? '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，LP 已 burn/锁定，按 24h 交易量排序'
         : 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
-      document.getElementById('updateBtn').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
-      // 切换 Tab 时主动刷新一次，确保与数据库联动
+      document.getElementById('updateBtn').querySelector('span').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
       refreshTab(tab).then(function(){ setLastSync(new Date()); }).catch(function(){});
     }
     document.querySelectorAll('.tab-btn').forEach(function(btn) {
@@ -252,7 +661,6 @@ const HTML_PAGE = `
           btn.disabled = false;
         });
     });
-    /* ── 调度器状态轮询与倒计时 ── */
     var _schedState = { intervalMs: 300000, lastRun: null, running: false };
     function fetchSchedulerStatus() {
       return fetchJsonOrThrow('/api/scheduler/status').then(function(s) {
@@ -287,7 +695,6 @@ const HTML_PAGE = `
     fetchSchedulerStatus();
     setInterval(fetchSchedulerStatus, 15000);
     setInterval(updateCountdown, 1000);
-    /* ── /调度器状态 ── */
 
     Promise.allSettled([
         fetch('/api/ranking').then(function(r){ return r.ok ? r.json() : r.text().then(function(t){ throw new Error(t); }); }),
@@ -295,9 +702,9 @@ const HTML_PAGE = `
       ]).then(function(results) {
         var r0 = results[0], r1 = results[1];
         if (r0.status === 'fulfilled' && Array.isArray(r0.value)) renderTable(r0.value, 'root-pump');
-        else document.getElementById('root-pump').innerHTML = '<p style="color:#ef4444">Pump 榜单: ' + (r0.status === 'rejected' && r0.reason ? (r0.reason.message || r0.reason) : '暂无数据') + '</p>';
+        else document.getElementById('root-pump').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">Pump 榜单: ' + (r0.status === 'rejected' && r0.reason ? (r0.reason.message || r0.reason) : '暂无数据') + '</div>';
         if (r1.status === 'fulfilled' && Array.isArray(r1.value)) renderTable(r1.value, 'root-zhilabs');
-        else document.getElementById('root-zhilabs').innerHTML = '<p style="color:#ef4444">zhilabs 精选: ' + (r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</p>';
+        else document.getElementById('root-zhilabs').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">zhilabs 精选: ' + (r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</div>';
         setLastSync(new Date());
       });
   </script>
