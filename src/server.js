@@ -11,6 +11,7 @@ import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
 import { getTokenDetail, getKline, getTokenSecurityDetail, fetchSmartMoneySignals } from './data-sources/index.js';
+import * as dexscreener from './data-sources/dexscreener.js';
 import { getTokenNarrative, getTokenHotTweets, batchPrefetch } from './data-sources/sixfivefiveone.js';
 import { refreshZhilabsNarratives } from '../scripts/refresh-zhilabs-narratives.js';
 import { buildSeoMeta, buildHomepageJsonLd, buildOrganizationJsonLd, buildSitemap, SITE_URL, SITE_NAME } from './seo.js';
@@ -666,6 +667,20 @@ return `<!DOCTYPE html>
       object-fit: cover;
       flex-shrink: 0;
     }
+    .signal-card-logo-placeholder {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background: oklch(35% 0.06 290 / 0.6);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
     .signal-card-head .token-name {
       font-weight: 600;
       color: var(--text-primary);
@@ -913,7 +928,14 @@ return `<!DOCTYPE html>
         var smartCount = item.smartMoneyCount != null ? Number(item.smartMoneyCount) : 0;
         html += '<div class="signal-card clickable-signal-card" data-token="' + esc(ca) + '" tabindex="0">';
         html += '<div class="signal-card-head">';
-        if (logoUrl) html += '<img src="' + esc(logoUrl) + '" alt="" loading="lazy">';
+        var logoFallback = item.logoUrlFallback || '';
+        if (logoUrl) {
+          html += '<img src="' + esc(logoUrl) + '" alt="" loading="lazy" referrerpolicy="no-referrer" data-fallback="' + esc(logoFallback) + '" onerror="var fb=this.dataset.fallback;if(fb){this.src=fb;this.dataset.fallback=\\'\\';}else{this.style.display=\\'none\\';var p=this.nextElementSibling;if(p)p.style.display=\\'flex\\'}"><div class="signal-card-logo-placeholder" style="display:none">' + esc((name || '?').charAt(0)) + '</div>';
+        } else if (logoFallback) {
+          html += '<img src="' + esc(logoFallback) + '" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.style.display=\\'none\\';var p=this.nextElementSibling;if(p)p.style.display=\\'flex\\'"><div class="signal-card-logo-placeholder" style="display:none">' + esc((name || '?').charAt(0)) + '</div>';
+        } else {
+          html += '<div class="signal-card-logo-placeholder">' + esc((name || '?').charAt(0)) + '</div>';
+        }
         html += '<span class="token-name">' + esc(name) + '</span>' + copyBtn + '</div>';
         html += '<div class="signal-card-ca"><span>' + esc(ca ? (ca.length > 16 ? ca.slice(0, 8) + '…' + ca.slice(-6) : ca) : '—') + '</span></div>';
         html += '<div class="signal-card-data">';
@@ -2968,7 +2990,27 @@ const server = http.createServer(async (req, res) => {
       const page = parseInt(u.searchParams.get('page') || '1', 10) || 1;
       const pageSize = Math.min(parseInt(u.searchParams.get('pageSize') || '100', 10) || 100, 100);
       const chainId = u.searchParams.get('chainId') || 'CT_501';
-      const data = await fetchSmartMoneySignals({ page, pageSize, chainId });
+      let data = await fetchSmartMoneySignals({ page, pageSize, chainId });
+      // 用 DexScreener 补充 logo 备用源（Binance CDN 可能因 Referer 等策略加载失败）
+      if (Array.isArray(data) && data.length > 0 && chainId === 'CT_501') {
+        const addrs = data.map((d) => d.contractAddress || d.contract_address).filter(Boolean);
+        if (addrs.length > 0) {
+          try {
+            const pairs = await dexscreener.getTokenPairs(addrs);
+            const logoByAddr = new Map();
+            for (const p of pairs || []) {
+              const addr = (p.baseToken?.address || '').toLowerCase();
+              const logo = p.info?.imageUrl || null;
+              if (addr && logo && !logoByAddr.has(addr)) logoByAddr.set(addr, logo);
+            }
+            data = data.map((item) => {
+              const addr = (item.contractAddress || item.contract_address || '').toLowerCase();
+              const fallback = addr ? logoByAddr.get(addr) : null;
+              return { ...item, logoUrlFallback: fallback };
+            });
+          } catch (_) { /* 忽略 DexScreener 失败，仍返回 Binance 数据 */ }
+        }
+      }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'no-store');
