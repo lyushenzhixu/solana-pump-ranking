@@ -629,7 +629,7 @@ return `<!DOCTYPE html>
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* === 聪明钱信号卡片 === */
+    /* === 聪明钱信号卡片 — Neon Cyberpunk 风格 === */
     .signal-cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -637,54 +637,121 @@ return `<!DOCTYPE html>
       padding: 1rem 1.25rem;
     }
     .signal-card {
-      background: var(--bg-card-solid);
-      border: 1px solid var(--border-subtle);
+      position: relative;
+      background: #08091a;
+      border: 1px solid rgba(0, 212, 255, 0.1);
       border-radius: 12px;
-      padding: 1rem;
-      transition: background 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+      overflow: hidden;
       cursor: pointer;
+      transition: box-shadow 0.5s ease, border-color 0.3s ease;
     }
-    .signal-card:hover {
-      background: var(--bg-card-hover);
-      border-color: oklch(50% 0.08 290 / 0.25);
+    .signal-card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #00d4ff, transparent 50%, rgba(0, 212, 255, 0.5));
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 0.5s ease;
     }
+    .signal-card::after {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 0;
+      transition: opacity 0.5s ease;
+    }
+    .signal-card:hover::before { opacity: 0.6; }
+    .signal-card:hover::after { opacity: 1; }
+    .signal-card:hover { border-color: rgba(0, 212, 255, 0.35); }
     .signal-card:focus-visible {
-      outline: 2px solid var(--accent);
+      outline: 2px solid #00d4ff;
       outline-offset: 2px;
     }
+    .signal-card-inner {
+      position: relative;
+      z-index: 1;
+    }
+    .signal-card-scanline {
+      position: absolute;
+      inset: 0;
+      opacity: 0.02;
+      pointer-events: none;
+      background-image: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px);
+    }
+    .signal-card-live-bar {
+      height: 2rem;
+      display: flex;
+      align-items: center;
+      padding: 0 1rem;
+      gap: 0.5rem;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      background: rgba(0, 212, 255, 0.06);
+      border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+    }
+    .signal-card-live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #00d4ff;
+      box-shadow: 0 0 6px rgba(0, 212, 255, 0.8);
+      animation: signal-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes signal-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .signal-card-live-text {
+      color: #00d4ff;
+      text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+    }
+    .signal-card-live-sm {
+      margin-left: auto;
+      color: #555870;
+      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+    }
+    .signal-card-body { padding: 1rem; padding-top: 0.75rem; }
     .signal-card-head {
       display: flex;
       align-items: center;
-      gap: 0.625rem;
+      gap: 0.75rem;
       margin-bottom: 0.75rem;
     }
     .signal-card-head img {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 1px solid var(--border-subtle);
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 212, 255, 0.25);
       background: rgba(15,12,30,0.5);
       object-fit: cover;
       flex-shrink: 0;
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.15), inset 0 0 12px rgba(0, 212, 255, 0.05);
     }
     .signal-card-logo-placeholder {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 1px solid var(--border-subtle);
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 212, 255, 0.25);
       background: oklch(35% 0.06 290 / 0.6);
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 0.875rem;
+      font-size: 1rem;
       font-weight: 600;
       color: var(--text-muted);
+      box-shadow: 0 0 12px rgba(0, 212, 255, 0.15), inset 0 0 12px rgba(0, 212, 255, 0.05);
     }
     .signal-card-head .token-name {
       font-weight: 600;
       color: var(--text-primary);
-      font-size: 0.875rem;
+      font-size: 1rem;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
@@ -692,12 +759,13 @@ return `<!DOCTYPE html>
       min-width: 0;
     }
     .signal-card-ca {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-bottom: 0.5rem;
+      font-size: 10px;
+      color: #555870;
+      margin-bottom: 0.75rem;
       display: flex;
       align-items: center;
       gap: 0.25rem;
+      font-family: 'JetBrains Mono', 'Exo 2', monospace;
     }
     .signal-card-chain {
       font-size: 0.6875rem;
@@ -716,63 +784,89 @@ return `<!DOCTYPE html>
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .signal-card-data {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.5rem 1rem;
-      font-size: 0.8125rem;
+    .signal-card-stats {
+      display: flex;
+      border: 1px solid rgba(255,255,255,0.03);
+      border-radius: 8px;
+      overflow: hidden;
       margin-bottom: 0.75rem;
     }
-    .signal-card-data .label {
-      color: var(--text-muted);
+    .signal-card-stats-item {
+      flex: 1;
+      padding: 0.5rem 0.75rem;
+      text-align: center;
+      background: rgba(255,255,255,0.015);
+      font-family: 'JetBrains Mono', 'Exo 2', monospace;
     }
-    .signal-card-data .value {
-      color: var(--text-primary);
+    .signal-card-stats-item:not(:last-child) {
+      border-right: 1px solid rgba(255,255,255,0.03);
+    }
+    .signal-card-stats-item .label {
+      font-size: 9px;
+      color: #555870;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.25rem;
+    }
+    .signal-card-stats-item .value {
+      font-size: 0.75rem;
+      color: #fff;
       font-variant-numeric: tabular-nums;
-      font-weight: 600;
+      font-weight: 500;
     }
-    .signal-card-foot {
-      font-size: 0.8125rem;
-      border-top: 1px solid var(--border-subtle);
-      padding-top: 0.75rem;
+    .signal-card-stats-item .value.inflow-positive {
+      color: #00d4ff;
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
     }
-    .signal-card-time {
-      color: var(--text-secondary);
-      margin-bottom: 0.25rem;
+    .signal-card-stats-item .value.inflow-negative {
+      color: #ff5252;
     }
-    .signal-card-smart {
-      color: var(--positive);
-      margin-bottom: 0.25rem;
-    }
-    .signal-card-inflow {
-      font-weight: 600;
-      margin-bottom: 0.5rem;
-    }
-    .signal-card-inflow.positive { color: var(--positive); }
-    .signal-card-inflow.negative { color: var(--negative); }
-    .signal-card-bar-wrap {
+    .signal-card-row {
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      height: 6px;
-      background: oklch(25% 0.04 290 / 0.5);
-      border-radius: 3px;
+      font-size: 0.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .signal-card-time { color: #555870; }
+    .signal-card-active {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      color: #00d4ff;
+      font-size: 11px;
+      text-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+    }
+    .signal-card-bar-wrap {
+      display: flex;
+      gap: 2px;
+      height: 12px;
+      border-radius: 4px;
       overflow: hidden;
     }
     .signal-card-bar-buy {
       height: 100%;
-      background: var(--positive);
-      border-radius: 3px 0 0 3px;
+      background: repeating-linear-gradient(90deg, #00d4ff, #00d4ff 4px, #0099cc 4px, #0099cc 6px);
+      box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
     }
     .signal-card-bar-sell {
       height: 100%;
-      background: var(--negative);
-      border-radius: 0 3px 3px 0;
+      background: repeating-linear-gradient(90deg, #ff5252, #ff5252 4px, rgba(255,82,82,0.56) 4px, rgba(255,82,82,0.56) 6px);
+      box-shadow: 0 0 6px rgba(255,82,82,0.4);
     }
     .signal-card-bar-labels {
-      font-size: 0.6875rem;
-      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
       margin-top: 0.25rem;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+    }
+    .signal-card-bar-labels .buy {
+      color: #00d4ff;
+      text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
+    }
+    .signal-card-bar-labels .sell {
+      color: #ff5252;
     }
 
     /* === MOBILE === */
@@ -934,12 +1028,18 @@ return `<!DOCTYPE html>
         var sellPct = Math.round(exitRate);
         if (buyPct < 0) buyPct = 0;
         if (sellPct < 0) sellPct = 0;
-        var inflowCl = isBuy ? 'positive' : 'negative';
-        var inflowStr = totalVal != null ? (isBuy ? '资金净流入 $' + totalVal.toFixed(2) : '资金净流入 -$' + Math.abs(totalVal).toFixed(2)) : '—';
         var timeStr = formatSignalTime(item.signalTriggerTime);
         var smartCount = item.smartMoneyCount != null ? Number(item.smartMoneyCount) : 0;
         var chainLabel = (item.chain === 'bsc' || item.bsc) ? 'BSC' : 'Sol';
+        var buyW = buyPct;
+        var sellW = sellPct;
+        if (buyW + sellW === 0) { buyW = 50; sellW = 50; }
+        var inflowDisplay = totalVal != null ? (isBuy ? '$' + totalVal.toFixed(2) : '-$' + Math.abs(totalVal).toFixed(2)) : '—';
         html += '<div class="signal-card clickable-signal-card" data-token="' + esc(ca) + '" data-chain="' + esc(item.chain || 'solana') + '" tabindex="0">';
+        html += '<div class="signal-card-inner">';
+        html += '<div class="signal-card-scanline"></div>';
+        html += '<div class="signal-card-live-bar"><span class="signal-card-live-dot"></span><span class="signal-card-live-text">LIVE</span><span class="signal-card-live-sm">SM:' + smartCount + '</span></div>';
+        html += '<div class="signal-card-body">';
         html += '<div class="signal-card-head">';
         var logoFallback = item.logoUrlFallback || '';
         if (logoUrl) {
@@ -951,20 +1051,17 @@ return `<!DOCTYPE html>
         }
         html += '<span class="token-name">' + esc(name) + '</span>' + copyBtn + '</div>';
         html += '<div class="signal-card-ca"><span class="signal-card-chain" data-chain="' + esc(item.chain || 'solana') + '">' + esc(chainLabel) + '</span><span>' + esc(ca ? (ca.length > 16 ? ca.slice(0, 8) + '…' + ca.slice(-6) : ca) : '—') + '</span></div>';
-        html += '<div class="signal-card-data">';
-        html += '<span class="label">市值</span><span class="value">' + (marketCap != null ? formatCompact(marketCap) : '—') + '</span>';
-        html += '<span class="label">平均买入价</span><span class="value">' + (avgPrice != null ? '$' + (avgPrice < 0.01 ? avgPrice.toPrecision(2) : avgPrice.toFixed(4)) : '—') + '</span>';
+        html += '<div class="signal-card-stats">';
+        html += '<div class="signal-card-stats-item"><div class="label">MCAP</div><div class="value">' + (marketCap != null ? formatCompact(marketCap) : '—') + '</div></div>';
+        html += '<div class="signal-card-stats-item"><div class="label">AVG</div><div class="value">' + (avgPrice != null ? '$' + (avgPrice < 0.01 ? avgPrice.toPrecision(2) : avgPrice.toFixed(4)) : '—') + '</div></div>';
+        html += '<div class="signal-card-stats-item"><div class="label">INFLOW</div><div class="value ' + (isBuy ? 'inflow-positive' : 'inflow-negative') + '">' + esc(inflowDisplay) + '</div></div>';
         html += '</div>';
-        html += '<div class="signal-card-foot">';
-        if (timeStr) html += '<div class="signal-card-time">' + esc(timeStr) + '</div>';
-        html += '<div class="signal-card-smart">' + smartCount + '个聪明钱正在交易</div>';
-        html += '<div class="signal-card-inflow ' + inflowCl + '">' + inflowStr + '</div>';
-        var buyW = buyPct;
-        var sellW = sellPct;
-        if (buyW + sellW === 0) { buyW = 50; sellW = 50; }
+        html += '<div class="signal-card-row">';
+        if (timeStr) html += '<span class="signal-card-time">' + esc(timeStr) + '</span>';
+        html += '<span class="signal-card-active">⚡ Active</span></div>';
         html += '<div class="signal-card-bar-wrap"><div class="signal-card-bar-buy" style="width:' + buyW + '%"></div><div class="signal-card-bar-sell" style="width:' + sellW + '%"></div></div>';
-        html += '<div class="signal-card-bar-labels">买入(' + buyPct + '%) 卖出(' + sellPct + '%)</div>';
-        html += '</div></div>';
+        html += '<div class="signal-card-bar-labels"><span class="buy">BUY ' + buyPct + '%</span><span class="sell">SELL ' + sellPct + '%</span></div>';
+        html += '</div></div></div>';
       });
       html += '</div>';
       root.innerHTML = html;
