@@ -869,6 +869,113 @@ return `<!DOCTYPE html>
       color: #ff5252;
     }
 
+    /* === 聪明钱卡片 — OKX 黑色风格 === */
+    .signal-cards-okx .signal-card {
+      background: #050505;
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+    .signal-cards-okx .signal-card::before {
+      background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 50%, rgba(255,255,255,0.04));
+    }
+    .signal-cards-okx .signal-card::after {
+      box-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
+    }
+    .signal-cards-okx .signal-card:hover { border-color: rgba(255, 255, 255, 0.2); }
+    .signal-cards-okx .signal-card:focus-visible { outline-color: #e0e0e0; }
+    .signal-cards-okx .signal-card-live-bar {
+      background: rgba(255, 255, 255, 0.04);
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+    .signal-cards-okx .signal-card-live-dot {
+      background: #e0e0e0;
+      box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+    }
+    .signal-cards-okx .signal-card-live-text {
+      color: #e0e0e0;
+      text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+    }
+    .signal-cards-okx .signal-card-head img,
+    .signal-cards-okx .signal-card-logo-placeholder {
+      border-color: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 12px rgba(255, 255, 255, 0.06), inset 0 0 12px rgba(255, 255, 255, 0.02);
+    }
+    .signal-cards-okx .signal-card-logo-placeholder {
+      background: oklch(28% 0.02 0 / 0.6);
+    }
+    .signal-cards-okx .signal-card-stats-item .value.inflow-positive {
+      color: #7dd3a8;
+    }
+    .signal-cards-okx .signal-card-active {
+      color: #e0e0e0;
+      text-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+    }
+    .signal-cards-okx .signal-card-bar-buy {
+      background: repeating-linear-gradient(90deg, #7dd3a8, #7dd3a8 4px, #5a9e7a 4px, #5a9e7a 6px);
+      box-shadow: 0 0 8px rgba(125, 211, 168, 0.35);
+    }
+    .signal-cards-okx .signal-card-bar-labels .buy {
+      color: #7dd3a8;
+      text-shadow: 0 0 4px rgba(125, 211, 168, 0.5);
+    }
+    .signal-cards-okx .signal-card-chain[data-chain="bsc"] {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e0e0e0;
+    }
+
+    /* === 聪明钱卡片 — Gate 蓝色风格 === */
+    .signal-cards-gate .signal-card {
+      background: #050814;
+      border-color: rgba(0, 180, 255, 0.2);
+    }
+    .signal-cards-gate .signal-card::before {
+      background: linear-gradient(135deg, #00b4ff, transparent 50%, rgba(0, 180, 255, 0.15));
+    }
+    .signal-cards-gate .signal-card::after {
+      box-shadow: 0 0 20px rgba(0, 180, 255, 0.35);
+    }
+    .signal-cards-gate .signal-card:hover { border-color: rgba(0, 180, 255, 0.45); }
+    .signal-cards-gate .signal-card:focus-visible { outline-color: #00b4ff; }
+    .signal-cards-gate .signal-card-live-bar {
+      background: rgba(0, 180, 255, 0.08);
+      border-bottom-color: rgba(0, 180, 255, 0.25);
+    }
+    .signal-cards-gate .signal-card-live-dot {
+      background: #00b4ff;
+      box-shadow: 0 0 6px rgba(0, 180, 255, 0.8);
+    }
+    .signal-cards-gate .signal-card-live-text {
+      color: #00b4ff;
+      text-shadow: 0 0 8px rgba(0, 180, 255, 0.5);
+    }
+    .signal-cards-gate .signal-card-head img,
+    .signal-cards-gate .signal-card-logo-placeholder {
+      border-color: rgba(0, 180, 255, 0.35);
+      box-shadow: 0 0 12px rgba(0, 180, 255, 0.15), inset 0 0 12px rgba(0, 180, 255, 0.04);
+    }
+    .signal-cards-gate .signal-card-logo-placeholder {
+      background: oklch(35% 0.12 220 / 0.5);
+    }
+    .signal-cards-gate .signal-card-stats-item .value.inflow-positive {
+      color: #00b4ff;
+      text-shadow: 0 0 6px rgba(0, 180, 255, 0.5);
+    }
+    .signal-cards-gate .signal-card-active {
+      color: #00b4ff;
+      text-shadow: 0 0 6px rgba(0, 180, 255, 0.5);
+    }
+    .signal-cards-gate .signal-card-bar-buy {
+      background: repeating-linear-gradient(90deg, #00b4ff, #00b4ff 4px, #0088c4 4px, #0088c4 6px);
+      box-shadow: 0 0 8px rgba(0, 180, 255, 0.4);
+    }
+    .signal-cards-gate .signal-card-bar-labels .buy {
+      color: #00b4ff;
+      text-shadow: 0 0 4px rgba(0, 180, 255, 0.5);
+    }
+    .signal-cards-gate .signal-card-chain[data-chain="bsc"] {
+      background: oklch(55% 0.15 220 / 0.3);
+      color: #00b4ff;
+    }
+
     /* === MOBILE === */
     @media (max-width: 768px) {
       .page-wrapper { padding: 1rem 0.75rem 2rem; }
@@ -920,6 +1027,8 @@ return `<!DOCTYPE html>
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
         <button type="button" class="tab-btn" data-tab="zhilabs">zhizhilabs 精选</button>
         <button type="button" class="tab-btn" data-tab="signal">binance聪明钱信号</button>
+        <button type="button" class="tab-btn" data-tab="okx-signal">okx聪明钱信号</button>
+        <button type="button" class="tab-btn" data-tab="gate-signal">gate聪明钱信号</button>
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
@@ -935,6 +1044,8 @@ return `<!DOCTYPE html>
       <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
       <div id="panel-zhilabs" class="panel"><div id="root-zhilabs"><div class="loading-text">加载中</div></div></div>
       <div id="panel-signal" class="panel"><div id="root-signal"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-okx-signal" class="panel"><div id="root-okx-signal"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-gate-signal" class="panel"><div id="root-gate-signal"><div class="loading-text">加载中</div></div></div>
     </div>
   </div>
 
@@ -1003,14 +1114,18 @@ return `<!DOCTYPE html>
       var d = Math.floor(h / 24);
       return d + 'd以前买入';
     }
-    function renderSignalCards(list, rootId) {
+    function renderSignalCards(list, rootId, variant) {
+      variant = variant || 'binance';
       var root = document.getElementById(rootId);
       if (!root) return;
       if (!list.length) {
         root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>';
         return;
       }
-      var html = '<div class="signal-cards-grid">';
+      var gridClass = 'signal-cards-grid';
+      if (variant === 'okx') gridClass += ' signal-cards-okx';
+      else if (variant === 'gate') gridClass += ' signal-cards-gate';
+      var html = '<div class="' + gridClass + '">';
       list.forEach(function(item) {
         var ca = item.contractAddress || item.contract_address || '';
         var name = item.ticker || item.symbol || ca.slice(0, 8) + '…' || '—';
@@ -1080,10 +1195,11 @@ return `<!DOCTYPE html>
       });
     }
     function refreshTab(tab) {
-      if (tab === 'signal') {
-        var rootId = 'root-signal';
+      if (tab === 'signal' || tab === 'okx-signal' || tab === 'gate-signal') {
+        var rootId = tab === 'signal' ? 'root-signal' : (tab === 'okx-signal' ? 'root-okx-signal' : 'root-gate-signal');
+        var variant = tab === 'signal' ? 'binance' : (tab === 'okx-signal' ? 'okx' : 'gate');
         return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
-          if (Array.isArray(list)) renderSignalCards(list, rootId);
+          if (Array.isArray(list)) renderSignalCards(list, rootId, variant);
           else document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
@@ -1168,6 +1284,8 @@ return `<!DOCTYPE html>
       if (tab === 'pump') descEl.textContent = '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序';
       else if (tab === 'zhilabs') descEl.textContent = 'zhizhilabs 精选 Meme 代币，按 24h 交易量排序';
       else if (tab === 'signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
+      else if (tab === 'okx-signal') descEl.textContent = 'OKX 风格聪明钱信号，数据来自 Binance Web3';
+      else if (tab === 'gate-signal') descEl.textContent = 'Gate 风格聪明钱信号，数据来自 Binance Web3';
       var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : '刷新信号');
       document.getElementById('updateBtn').querySelector('span').textContent = btnText;
       var narrativeBtn = document.getElementById('refreshNarrativeBtn');
@@ -1180,10 +1298,10 @@ return `<!DOCTYPE html>
     document.getElementById('updateBtn').addEventListener('click', function() {
       var btn = document.getElementById('updateBtn');
       var tab = currentTab || 'pump';
-      if (tab === 'signal') {
+      if (tab === 'signal' || tab === 'okx-signal' || tab === 'gate-signal') {
         btn.disabled = true;
         setUpdateStatus('刷新中…');
-        refreshTab('signal').then(function() {
+        refreshTab(tab).then(function() {
           setUpdateStatus('刷新完成');
           setLastSync(new Date());
         }).catch(function(e) {
