@@ -918,7 +918,7 @@ return `<!DOCTYPE html>
     <div class="controls-row">
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
-        <button type="button" class="tab-btn" data-tab="zhilabs">zhilabs 精选</button>
+        <button type="button" class="tab-btn" data-tab="zhilabs">zhizhilabs 精选</button>
         <button type="button" class="tab-btn" data-tab="signal">binance聪明钱信号</button>
       </div>
       <div class="actions">
@@ -1166,9 +1166,9 @@ return `<!DOCTYPE html>
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
       var descEl = document.getElementById('desc');
       if (tab === 'pump') descEl.textContent = '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序';
-      else if (tab === 'zhilabs') descEl.textContent = 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
+      else if (tab === 'zhilabs') descEl.textContent = 'zhizhilabs 精选 Meme 代币，按 24h 交易量排序';
       else if (tab === 'signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
-      var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhilabs 精选' : '刷新信号');
+      var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : '刷新信号');
       document.getElementById('updateBtn').querySelector('span').textContent = btnText;
       var narrativeBtn = document.getElementById('refreshNarrativeBtn');
       if (narrativeBtn) narrativeBtn.style.display = tab === 'zhilabs' ? '' : 'none';
@@ -1212,7 +1212,7 @@ return `<!DOCTYPE html>
     document.getElementById('refreshNarrativeBtn').addEventListener('click', function() {
       var btn = document.getElementById('refreshNarrativeBtn');
       btn.disabled = true;
-      setUpdateStatus('正在刷新 zhilabs 叙事…');
+      setUpdateStatus('正在刷新 zhizhilabs 叙事…');
       fetchJsonOrThrow('/api/ranking/zhilabs/refresh-narratives', { method: 'POST' })
         .then(function(out) {
           var u = out && out.updated != null ? out.updated : 0;
@@ -1237,7 +1237,7 @@ return `<!DOCTYPE html>
         if (s.lastResult) {
           var parts = [];
           if (s.lastResult.pump) parts.push('Pump ' + (s.lastResult.pump.ok ? s.lastResult.pump.count + '条' : '失败'));
-          if (s.lastResult.zhilabs) parts.push('zhilabs ' + (s.lastResult.zhilabs.ok ? s.lastResult.zhilabs.count + '条' : '失败'));
+          if (s.lastResult.zhilabs) parts.push('zhizhilabs ' + (s.lastResult.zhilabs.ok ? s.lastResult.zhilabs.count + '条' : '失败'));
           if (s.lastResult.durationMs) parts.push(s.lastResult.durationMs + 'ms');
           lastEl.textContent = parts.join(' · ') || '—';
         }
@@ -1268,7 +1268,7 @@ return `<!DOCTYPE html>
         if (r0.status === 'fulfilled' && Array.isArray(r0.value)) renderTable(r0.value, 'root-pump');
         else document.getElementById('root-pump').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">Pump 榜单: ' + (r0.status === 'rejected' && r0.reason ? (r0.reason.message || r0.reason) : '暂无数据') + '</div>';
         if (r1.status === 'fulfilled' && Array.isArray(r1.value)) renderTable(r1.value, 'root-zhilabs');
-        else document.getElementById('root-zhilabs').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">zhilabs 精选: ' + (r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</div>';
+        else document.getElementById('root-zhilabs').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">zhizhilabs 精选: ' + (r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</div>';
         setLastSync(new Date());
       });
   </script>
