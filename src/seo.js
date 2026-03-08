@@ -5,7 +5,7 @@
 
 const SITE_URL = (process.env.SITE_URL || 'https://zhizhilabs.com').replace(/\/+$/, '');
 const SITE_NAME = 'Zhizhi Labs';
-const DEFAULT_DESCRIPTION = 'Zhizhi Labs (zhizhilabs.com) — 探索 Solana Meme 代币排行榜、实时行情与链上数据分析。发现下一个潜力币。';
+const DEFAULT_DESCRIPTION = 'Zhizhi Labs (zhizhilabs.com) — 用 AI 技术探索 Crypto 机遇。';
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
 
 /**
@@ -20,7 +20,7 @@ const DEFAULT_OG_IMAGE = `${SITE_URL}/og-image.png`;
  * @returns {string} HTML meta 标签字符串
  */
 export function buildSeoMeta(opts = {}) {
-  const title = opts.title || `${SITE_NAME} | 探索 Solana Meme 代币`;
+  const title = opts.title || `${SITE_NAME} | 用 AI 技术探索 Crypto 机遇`;
   const description = opts.description || DEFAULT_DESCRIPTION;
   const canonical = opts.canonicalPath ? `${SITE_URL}${opts.canonicalPath}` : SITE_URL;
   const ogType = opts.ogType || 'website';
