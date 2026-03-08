@@ -629,7 +629,7 @@ return `<!DOCTYPE html>
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* === 聪明钱信号卡片 — Neon Cyberpunk 风格 === */
+    /* === 聪明钱信号卡片 — 币安风格（金黄） === */
     .signal-cards-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -638,8 +638,8 @@ return `<!DOCTYPE html>
     }
     .signal-card {
       position: relative;
-      background: #08091a;
-      border: 1px solid rgba(0, 212, 255, 0.1);
+      background: #0d0c08;
+      border: 1px solid rgba(240, 185, 11, 0.15);
       border-radius: 12px;
       overflow: hidden;
       cursor: pointer;
@@ -650,8 +650,8 @@ return `<!DOCTYPE html>
       position: absolute;
       inset: -1px;
       border-radius: 12px;
-      background: linear-gradient(135deg, #00d4ff, transparent 50%, rgba(0, 212, 255, 0.5));
-      opacity: 0.3;
+      background: linear-gradient(135deg, var(--bn-yellow), transparent 50%, rgba(240, 185, 11, 0.4));
+      opacity: 0.25;
       pointer-events: none;
       z-index: 0;
       transition: opacity 0.5s ease;
@@ -661,17 +661,17 @@ return `<!DOCTYPE html>
       position: absolute;
       inset: -1px;
       border-radius: 12px;
-      box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+      box-shadow: 0 0 20px rgba(240, 185, 11, 0.35);
       opacity: 0;
       pointer-events: none;
       z-index: 0;
       transition: opacity 0.5s ease;
     }
-    .signal-card:hover::before { opacity: 0.6; }
+    .signal-card:hover::before { opacity: 0.5; }
     .signal-card:hover::after { opacity: 1; }
-    .signal-card:hover { border-color: rgba(0, 212, 255, 0.35); }
+    .signal-card:hover { border-color: rgba(240, 185, 11, 0.4); }
     .signal-card:focus-visible {
-      outline: 2px solid #00d4ff;
+      outline: 2px solid var(--bn-yellow);
       outline-offset: 2px;
     }
     .signal-card-inner {
@@ -694,22 +694,22 @@ return `<!DOCTYPE html>
       font-size: 10px;
       text-transform: uppercase;
       letter-spacing: 0.15em;
-      background: rgba(0, 212, 255, 0.06);
-      border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+      background: rgba(240, 185, 11, 0.08);
+      border-bottom: 1px solid rgba(240, 185, 11, 0.2);
       font-family: 'JetBrains Mono', 'Exo 2', monospace;
     }
     .signal-card-live-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: #00d4ff;
-      box-shadow: 0 0 6px rgba(0, 212, 255, 0.8);
+      background: var(--bn-yellow);
+      box-shadow: 0 0 6px rgba(240, 185, 11, 0.8);
       animation: signal-pulse 1.5s ease-in-out infinite;
     }
     @keyframes signal-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .signal-card-live-text {
-      color: #00d4ff;
-      text-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+      color: var(--bn-yellow);
+      text-shadow: 0 0 8px rgba(240, 185, 11, 0.5);
     }
     .signal-card-live-sm {
       margin-left: auto;
@@ -727,18 +727,18 @@ return `<!DOCTYPE html>
       width: 40px;
       height: 40px;
       border-radius: 8px;
-      border: 1px solid rgba(0, 212, 255, 0.25);
-      background: rgba(15,12,30,0.5);
+      border: 1px solid rgba(240, 185, 11, 0.3);
+      background: rgba(13,12,8,0.5);
       object-fit: cover;
       flex-shrink: 0;
-      box-shadow: 0 0 12px rgba(0, 212, 255, 0.15), inset 0 0 12px rgba(0, 212, 255, 0.05);
+      box-shadow: 0 0 12px rgba(240, 185, 11, 0.12), inset 0 0 12px rgba(240, 185, 11, 0.04);
     }
     .signal-card-logo-placeholder {
       width: 40px;
       height: 40px;
       border-radius: 8px;
-      border: 1px solid rgba(0, 212, 255, 0.25);
-      background: oklch(35% 0.06 290 / 0.6);
+      border: 1px solid rgba(240, 185, 11, 0.3);
+      background: oklch(35% 0.08 85 / 0.5);
       flex-shrink: 0;
       display: flex;
       align-items: center;
@@ -746,7 +746,7 @@ return `<!DOCTYPE html>
       font-size: 1rem;
       font-weight: 600;
       color: var(--text-muted);
-      box-shadow: 0 0 12px rgba(0, 212, 255, 0.15), inset 0 0 12px rgba(0, 212, 255, 0.05);
+      box-shadow: 0 0 12px rgba(240, 185, 11, 0.12), inset 0 0 12px rgba(240, 185, 11, 0.04);
     }
     .signal-card-head .token-name {
       font-weight: 600;
@@ -814,8 +814,8 @@ return `<!DOCTYPE html>
       font-weight: 500;
     }
     .signal-card-stats-item .value.inflow-positive {
-      color: #00d4ff;
-      text-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+      color: var(--bn-yellow);
+      text-shadow: 0 0 6px rgba(240, 185, 11, 0.5);
     }
     .signal-card-stats-item .value.inflow-negative {
       color: #ff5252;
@@ -833,9 +833,9 @@ return `<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 0.25rem;
-      color: #00d4ff;
+      color: var(--bn-yellow);
       font-size: 11px;
-      text-shadow: 0 0 6px rgba(0, 212, 255, 0.4);
+      text-shadow: 0 0 6px rgba(240, 185, 11, 0.5);
     }
     .signal-card-bar-wrap {
       display: flex;
@@ -846,8 +846,8 @@ return `<!DOCTYPE html>
     }
     .signal-card-bar-buy {
       height: 100%;
-      background: repeating-linear-gradient(90deg, #00d4ff, #00d4ff 4px, #0099cc 4px, #0099cc 6px);
-      box-shadow: 0 0 8px rgba(0, 212, 255, 0.4);
+      background: repeating-linear-gradient(90deg, var(--bn-yellow), var(--bn-yellow) 4px, #B88A08 4px, #B88A08 6px);
+      box-shadow: 0 0 8px rgba(240, 185, 11, 0.4);
     }
     .signal-card-bar-sell {
       height: 100%;
@@ -862,8 +862,8 @@ return `<!DOCTYPE html>
       font-family: 'JetBrains Mono', 'Exo 2', monospace;
     }
     .signal-card-bar-labels .buy {
-      color: #00d4ff;
-      text-shadow: 0 0 4px rgba(0, 212, 255, 0.4);
+      color: var(--bn-yellow);
+      text-shadow: 0 0 4px rgba(240, 185, 11, 0.5);
     }
     .signal-card-bar-labels .sell {
       color: #ff5252;
