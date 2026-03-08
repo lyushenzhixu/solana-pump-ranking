@@ -79,6 +79,7 @@ async function getCachedNarrative(tokenAddr) {
       articles: data.articles || [],
       sentiment: data.sentiment || 'neutral',
       sourceCount: data.source_count || 0,
+      twitterNarrative: data.twitter_narrative || null,
       updatedAt: data.fetched_at,
       cached: true,
     };
@@ -96,6 +97,7 @@ async function saveNarrativeCache(tokenAddr, symbol, name, narrative) {
       articles: narrative.articles || [],
       sentiment: narrative.sentiment || 'neutral',
       source_count: narrative.sourceCount || 0,
+      twitter_narrative: narrative.twitterNarrative || null,
       fetched_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'token' });
@@ -1515,6 +1517,104 @@ return `<!DOCTYPE html>
       vertical-align: middle;
     }
 
+    /* === Twitter Narrative Grade === */
+    .narrative-grade-section {
+      margin-bottom: 1rem;
+      padding-bottom: 0.875rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .narrative-grade-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .narrative-grade-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .grade-S { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.15)); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); box-shadow: 0 0 12px rgba(255,215,0,0.15); }
+    .grade-A { background: linear-gradient(135deg, rgba(20,241,149,0.15), rgba(0,209,255,0.1)); color: #14f195; border: 1px solid rgba(20,241,149,0.25); box-shadow: 0 0 10px rgba(20,241,149,0.12); }
+    .grade-B { background: linear-gradient(135deg, rgba(153,69,255,0.15), rgba(0,209,255,0.1)); color: #b08cff; border: 1px solid rgba(153,69,255,0.2); }
+    .grade-C { background: rgba(255,77,106,0.1); color: #ff4d6a; border: 1px solid rgba(255,77,106,0.2); }
+    .narrative-grade-info {
+      flex: 1;
+    }
+    .narrative-grade-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .narrative-grade-rec {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .narrative-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 0.5rem;
+    }
+    .narrative-metric {
+      background: rgba(153,69,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.5rem 0.625rem;
+      text-align: center;
+    }
+    .narrative-metric-value {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .narrative-metric-label {
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .narrative-kol-list {
+      margin-top: 0.625rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+    }
+    .narrative-kol-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(0,209,255,0.06);
+      border: 1px solid rgba(0,209,255,0.12);
+      border-radius: 6px;
+      padding: 0.2em 0.5em;
+      font-size: 0.6875rem;
+      color: var(--text-secondary);
+    }
+    .narrative-kol-tag .verified-check {
+      color: var(--sol-blue);
+      font-size: 0.625rem;
+    }
+    .driver-tag {
+      display: inline-block;
+      font-size: 0.625rem;
+      font-weight: 600;
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+    }
+    .driver-organic { background: rgba(20,241,149,0.12); color: #14f195; }
+    .driver-mixed { background: rgba(153,69,255,0.12); color: #b08cff; }
+    .driver-paid { background: rgba(255,77,106,0.1); color: #ff4d6a; }
+
     /* === Hot Tweets Sidebar === */
     .tweets-card {
       background: var(--bg-card);
@@ -1871,7 +1971,7 @@ return `<!DOCTYPE html>
 
       // Narrative summary
       html += '<div class="narrative-card" id="narrative-section">';
-      html += '<div class="narrative-title"><span class="icon">📰</span>叙事总结<span class="ai-tag">AI</span></div>';
+      html += '<div class="narrative-title"><span class="icon">📊</span>叙事分析<span class="ai-tag">AI</span></div>';
       html += '<div id="narrative-content"><div class="narrative-loading">分析中</div></div>';
       html += '</div>';
       html += '</div>'; // end detail-main
@@ -2015,17 +2115,62 @@ return `<!DOCTYPE html>
       });
     }
 
+    function renderTwitterNarrative(tn) {
+      if (!tn || !tn.narrativeGrade) return '';
+      var grade = tn.narrativeGrade;
+      var gradeLabels = { S: '现象级叙事', A: '强叙事', B: '普通叙事', C: '弱叙事/风险' };
+      var driverClass = { organic: 'driver-organic', mixed: 'driver-mixed', paid: 'driver-paid', unknown: 'driver-mixed' };
+      var html = '<div class="narrative-grade-section">';
+      html += '<div class="narrative-grade-header">';
+      html += '<div class="narrative-grade-badge grade-' + grade + '">' + grade + '</div>';
+      html += '<div class="narrative-grade-info">';
+      html += '<div class="narrative-grade-label">' + esc(gradeLabels[grade] || grade);
+      if (tn.driverLabel) {
+        html += '<span class="driver-tag ' + (driverClass[tn.driverType] || 'driver-mixed') + '">' + esc(tn.driverLabel) + '</span>';
+      }
+      html += '</div>';
+      html += '<div class="narrative-grade-rec">' + esc(tn.recommendation || '') + '</div>';
+      html += '</div></div>';
+      html += '<div class="narrative-metrics">';
+      html += '<div class="narrative-metric"><div class="narrative-metric-value">' + (tn.kolCount ? tn.kolCount.total : 0) + '</div><div class="narrative-metric-label">KOL 数量</div></div>';
+      html += '<div class="narrative-metric"><div class="narrative-metric-value">' + (tn.kolCount ? tn.kolCount.tier1 : 0) + '</div><div class="narrative-metric-label">顶级 KOL</div></div>';
+      var shillColor = (tn.shillRatio || 0) > 50 ? 'var(--negative)' : ((tn.shillRatio || 0) > 30 ? '#f0a030' : 'var(--positive)');
+      html += '<div class="narrative-metric"><div class="narrative-metric-value" style="color:' + shillColor + '">' + (tn.shillRatio || 0) + '%</div><div class="narrative-metric-label">传销号占比</div></div>';
+      html += '<div class="narrative-metric"><div class="narrative-metric-value">' + (tn.organicScore || 0) + '</div><div class="narrative-metric-label">有机度</div></div>';
+      html += '</div>';
+      if (tn.topKols && tn.topKols.length > 0) {
+        html += '<div class="narrative-kol-list">';
+        tn.topKols.forEach(function(k) {
+          html += '<span class="narrative-kol-tag">';
+          html += '@' + esc(k.user);
+          if (k.verified) html += ' <span class="verified-check">✓</span>';
+          var f = k.followers || 0;
+          var fStr = f >= 1000000 ? (f / 1000000).toFixed(1) + 'M' : (f >= 1000 ? (f / 1000).toFixed(1) + 'K' : f);
+          html += ' <span style="color:var(--text-muted);font-size:0.6rem">' + fStr + '</span>';
+          html += '</span>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+      return html;
+    }
+
     function loadNarrative(token) {
       fetch('/api/token/' + encodeURIComponent(token.token) + '/narrative')
         .then(function(r) { return r.json(); })
         .then(function(data) {
           var el = document.getElementById('narrative-content');
           if (!el) return;
-          if (!data.summary && (!data.articles || data.articles.length === 0)) {
-            el.innerHTML = '<div class="narrative-empty">暂无该代币的相关新闻叙事</div>';
+          var hasTwitter = data.twitterNarrative && data.twitterNarrative.narrativeGrade;
+          var hasNews = data.summary || (data.articles && data.articles.length > 0);
+          if (!hasTwitter && !hasNews) {
+            el.innerHTML = '<div class="narrative-empty">暂无该代币的相关叙事分析</div>';
             return;
           }
           var html = '';
+          if (hasTwitter) {
+            html += renderTwitterNarrative(data.twitterNarrative);
+          }
           if (data.summary) {
             html += '<div class="narrative-text">' + esc(data.summary) + '</div>';
           }
@@ -2056,7 +2201,7 @@ return `<!DOCTYPE html>
         })
         .catch(function() {
           var el = document.getElementById('narrative-content');
-          if (el) el.innerHTML = '<div class="narrative-empty">暂无该代币的相关新闻叙事</div>';
+          if (el) el.innerHTML = '<div class="narrative-empty">暂无该代币的相关叙事分析</div>';
         });
     }
 

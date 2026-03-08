@@ -1,10 +1,20 @@
 /**
- * 6551 OpenNews + OpenTwitter 数据源（增强版）
+ * 6551 OpenNews + OpenTwitter 数据源（增强版 v2）
  *
- * 叙事总结：多策略搜索（coin symbol、名称、meme 引擎、cashtag），
- *          结果去重、AI 评分排序、情绪分析
+ * 叙事总结：
+ *   - OpenNews 多策略搜索（coin symbol、名称、meme 引擎、cashtag）
+ *   - OpenTwitter CA 优先搜索 → KOL 审计 → 叙事评级 S/A/B/C
+ *   结果去重、AI 评分排序、情绪分析、推特叙事分析
+ *
  * 热门推特：cashtag ($SYMBOL) + 合约地址前缀多维搜索，
  *          相关性过滤、KOL 加权、增强营销号检测
+ *
+ * 推特叙事分析（来自 meme 叙事专家方法论）：
+ *   - 以 CA 为核心搜索推特，避免同名代币干扰
+ *   - KOL 分层（顶级 / 中高 / 中低 / 小博主）
+ *   - 传销号识别与占比统计
+ *   - 叙事等级判定（S / A / B / C）
+ *   - 结构化叙事评估输出
  *
  * 成本优化：
  *   - 内存缓存（叙事 30min，推文 60min）
@@ -54,7 +64,7 @@ async function fetchJson(url, body, token) {
   return resp.json();
 }
 
-// ─── 营销号/喊单号 过滤（增强版）──────────────────────
+// ─── 营销号/传销号 过滤（增强版 v2 —— 融合推特叙事专家方法）──────
 
 const SHILL_KEYWORDS_BIO = [
   'call group', 'signal group', 'gem call', '100x', '1000x',
@@ -74,7 +84,38 @@ const SHILL_KEYWORDS_TEXT = [
   'like & rt for', 'claim your', 'drop your wallet',
 ];
 
+const PAID_PROMO_MARKERS = ['#ad', 'sponsored', '#sponsored', 'paid partnership', 'collab'];
+
 const SHILL_NAME_PATTERNS = /bot|shill|call|signal|gem|pump|alert|airdrop|promo|giveaway/i;
+
+/**
+ * 检测推文是否只有 CA + emoji，没有实质分析内容
+ * （传销号典型行为：发 CA + 火箭 emoji，无分析）
+ */
+function isSubstanceless(text) {
+  const stripped = text
+    .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .replace(/[A-HJ-NP-Za-km-z1-9]{32,44}/g, '')  // remove Solana-like addresses
+    .replace(/0x[a-fA-F0-9]{40}/g, '')              // remove EVM addresses
+    .replace(/\$[A-Za-z]+/g, '')                     // remove cashtags
+    .replace(/#\w+/g, '')                            // remove hashtags
+    .replace(/https?:\/\/\S+/g, '')                  // remove URLs
+    .replace(/\s+/g, ' ')
+    .trim();
+  return stripped.length < 20;
+}
+
+/**
+ * 估算账号年龄（月数），基于 createdAt 字段
+ * 若无法判断则返回 Infinity（视为老号）
+ */
+function estimateAccountAgeMonths(tweet) {
+  const created = tweet.userCreatedAt || tweet.user_created_at;
+  if (!created) return Infinity;
+  const d = new Date(created);
+  if (isNaN(d.getTime())) return Infinity;
+  return (Date.now() - d.getTime()) / (30 * 86400_000);
+}
 
 function isLikelyShill(tweet) {
   const text = (tweet.text || '').toLowerCase();
@@ -88,6 +129,11 @@ function isLikelyShill(tweet) {
     if (bio.includes(kw.toLowerCase())) return true;
   }
 
+  // 明显付费推广
+  for (const marker of PAID_PROMO_MARKERS) {
+    if (text.includes(marker)) return true;
+  }
+
   const followers = tweet.userFollowersCount || 0;
   const friends = tweet.userFriendsCount || 1;
   if (followers < 100) return true;
@@ -95,13 +141,250 @@ function isLikelyShill(tweet) {
 
   if (SHILL_NAME_PATTERNS.test(screenName)) return true;
 
+  // 新号（<6 个月）+ 无实质内容 → 大概率传销号
+  const ageMonths = estimateAccountAgeMonths(tweet);
+  if (ageMonths < 6 && isSubstanceless(tweet.text || '')) return true;
+
   const textLen = text.length;
   if (textLen > 0) {
     const emojiCount = (text.match(/[\u{1F300}-\u{1FAFF}]/gu) || []).length;
     if (emojiCount > textLen * 0.15) return true;
   }
 
+  // 纯 CA + emoji，无实质分析
+  if (isSubstanceless(tweet.text || '') && followers < 5000) return true;
+
   return false;
+}
+
+// ─── KOL 分层系统 ─────────────────────────────────────
+
+/**
+ * KOL 层级划分（参考推特叙事专家标准）
+ * tier1: 顶级 KOL（Cobie, Ansem, Hsaka 等级别，粉丝 ≥500K 或已认证 + ≥200K）
+ * tier2: 中高权重博主（粉丝 ≥50K）
+ * tier3: 中低博主（粉丝 ≥10K）
+ * tier4: 小博主 / 普通用户（粉丝 <10K）
+ */
+function classifyKolTier(tweet) {
+  const followers = tweet.userFollowersCount || 0;
+  const verified = tweet.userVerified || false;
+
+  if (followers >= 500_000) return 'tier1';
+  if (verified && followers >= 200_000) return 'tier1';
+  if (followers >= 50_000) return 'tier2';
+  if (followers >= 10_000) return 'tier3';
+  return 'tier4';
+}
+
+// ─── 推特叙事分析（核心新增）────────────────────────────
+
+/**
+ * 基于推特数据进行叙事评级
+ *
+ * @param {Array} tweets 已过滤的推文列表
+ * @param {Array} rawTweets 未过滤的原始推文列表（用于计算传销号占比）
+ * @returns {{ grade: string, kolSummary: object, shillRatio: number, organicScore: number, assessment: object }}
+ */
+function analyzeTwitterNarrative(tweets, rawTweets) {
+  const kolDistribution = { tier1: [], tier2: [], tier3: [], tier4: [] };
+  const seenUsers = new Set();
+
+  for (const t of tweets) {
+    const user = t.userScreenName || t.userName || '';
+    if (seenUsers.has(user)) continue;
+    seenUsers.add(user);
+    const tier = classifyKolTier(t);
+    kolDistribution[tier].push({
+      user,
+      followers: t.userFollowersCount || 0,
+      verified: t.userVerified || false,
+      likes: t.favoriteCount || 0,
+      retweets: t.retweetCount || 0,
+    });
+  }
+
+  const shillCount = rawTweets.filter(t => isLikelyShill(t)).length;
+  const shillRatio = rawTweets.length > 0 ? shillCount / rawTweets.length : 0;
+
+  // 有机度评分：自发 KOL 互动 vs 付费/传销驱动
+  let organicScore = 0;
+  const tier1Count = kolDistribution.tier1.length;
+  const tier2Count = kolDistribution.tier2.length;
+  const tier3Count = kolDistribution.tier3.length;
+  const totalKolCount = tier1Count + tier2Count + tier3Count;
+  const totalEngagement = tweets.reduce((sum, t) =>
+    sum + (t.favoriteCount || 0) + (t.retweetCount || 0) * 2, 0);
+
+  if (tier1Count >= 1) organicScore += 40;
+  if (tier2Count >= 2) organicScore += 25;
+  else if (tier2Count >= 1) organicScore += 15;
+  if (tier3Count >= 3) organicScore += 15;
+  if (totalEngagement > 1000) organicScore += 10;
+  if (shillRatio < 0.2) organicScore += 10;
+  else if (shillRatio > 0.5) organicScore -= 20;
+  organicScore = Math.max(0, Math.min(100, organicScore));
+
+  // 叙事等级判定
+  let grade = 'C';
+  if (tier1Count >= 2 || (tier1Count >= 1 && tier2Count >= 2 && shillRatio < 0.3)) {
+    grade = 'S';
+  } else if (tier2Count >= 2 && shillRatio < 0.4 && totalKolCount >= 3) {
+    grade = 'A';
+  } else if ((tier2Count >= 1 || tier3Count >= 2) && shillRatio < 0.5) {
+    grade = 'B';
+  }
+
+  // 叙事驱动类型判定
+  let driverType = 'unknown';
+  if (organicScore >= 60) driverType = 'organic';      // 社区自发驱动
+  else if (organicScore >= 30) driverType = 'mixed';    // 混合驱动
+  else driverType = 'paid';                              // 付费/项目方营销驱动
+
+  // 推荐
+  let recommendation = '观察';
+  if (grade === 'S') recommendation = '重点关注';
+  else if (grade === 'A') recommendation = '值得关注';
+  else if (grade === 'B') recommendation = '谨慎观察';
+  else recommendation = '注意风险';
+
+  const assessment = {
+    narrativeGrade: grade,
+    driverType,
+    driverLabel: { organic: '社区自发驱动', mixed: '混合驱动', paid: '项目方/付费驱动', unknown: '未知' }[driverType],
+    recommendation,
+    shillRatio: Math.round(shillRatio * 100),
+    organicScore,
+    kolCount: { tier1: tier1Count, tier2: tier2Count, tier3: tier3Count, total: totalKolCount },
+    topKols: [...kolDistribution.tier1, ...kolDistribution.tier2]
+      .sort((a, b) => b.followers - a.followers)
+      .slice(0, 5)
+      .map(k => ({ user: k.user, followers: k.followers, verified: k.verified })),
+    totalTweets: tweets.length,
+    totalEngagement,
+  };
+
+  return assessment;
+}
+
+/**
+ * 获取代币推特叙事分析（CA 优先搜索）
+ *
+ * 搜索策略（按优先级）：
+ * 1. 合约地址搜索（最精准，避免同名干扰）
+ * 2. cashtag 搜索（$SYMBOL）
+ * 3. 代币名称补充搜索
+ *
+ * @param {string} symbol
+ * @param {string} name
+ * @param {object} options
+ * @param {string} options.contractAddress
+ * @returns {Promise<object>} 叙事评估结果
+ */
+async function getTokenTwitterNarrative(symbol, name, options = {}) {
+  const { contractAddress = '' } = options;
+  const twitterToken = getTwitterToken();
+  if (!twitterToken) return null;
+
+  const cacheKey = `tw-narrative:${symbol}:${contractAddress.slice(0, 8)}`;
+  const cached = cacheGet(cacheKey, NEWS_CACHE_TTL);
+  if (cached) return cached;
+
+  try {
+    const today = new Date();
+    const sinceDate = new Date(today);
+    sinceDate.setDate(sinceDate.getDate() - 3);
+    const sinceDateStr = sinceDate.toISOString().slice(0, 10);
+
+    const sym = (symbol || '').toUpperCase();
+    const searchPromises = [];
+
+    // 策略 1（核心）：合约地址搜索（CA 唯一性，避免同名代币干扰）
+    if (contractAddress && contractAddress.length >= 10) {
+      searchPromises.push(
+        fetchJson(`${NEWS_BASE}/open/twitter_search`, {
+          keywords: contractAddress,
+          product: 'Top',
+          maxResults: 50,
+          excludeRetweets: true,
+          sinceDate: sinceDateStr,
+        }, twitterToken).catch(() => ({ data: [] }))
+      );
+      // 也搜 Latest 以获取更全面的数据
+      searchPromises.push(
+        fetchJson(`${NEWS_BASE}/open/twitter_search`, {
+          keywords: contractAddress.slice(0, 12),
+          product: 'Latest',
+          maxResults: 30,
+          excludeRetweets: true,
+          sinceDate: sinceDateStr,
+        }, twitterToken).catch(() => ({ data: [] }))
+      );
+    }
+
+    // 策略 2：cashtag 搜索
+    if (sym && sym.length >= 2) {
+      searchPromises.push(
+        fetchJson(`${NEWS_BASE}/open/twitter_search`, {
+          keywords: `$${sym}`,
+          product: 'Top',
+          maxResults: 40,
+          excludeRetweets: true,
+          sinceDate: sinceDateStr,
+        }, twitterToken).catch(() => ({ data: [] }))
+      );
+    }
+
+    // 策略 3：名称搜索（仅名称较独特时使用）
+    if (name && name.length >= 4 && name.toLowerCase() !== (sym || '').toLowerCase()) {
+      searchPromises.push(
+        fetchJson(`${NEWS_BASE}/open/twitter_search`, {
+          keywords: name,
+          product: 'Top',
+          maxResults: 20,
+          excludeRetweets: true,
+          minLikes: 5,
+          sinceDate: sinceDateStr,
+        }, twitterToken).catch(() => ({ data: [] }))
+      );
+    }
+
+    if (searchPromises.length === 0) return null;
+
+    const responses = await Promise.allSettled(searchPromises);
+    const seenIds = new Set();
+    const allTweets = [];
+
+    for (const r of responses) {
+      if (r.status === 'fulfilled') {
+        for (const t of (r.value?.data || [])) {
+          if (t.id && !seenIds.has(t.id)) {
+            seenIds.add(t.id);
+            allTweets.push(t);
+          }
+        }
+      }
+    }
+
+    if (allTweets.length === 0) return null;
+
+    // 保留原始列表（用于计算传销号占比），然后过滤
+    const rawTweets = [...allTweets];
+    const filteredTweets = allTweets.filter(t => {
+      if (isLikelyShill(t)) return false;
+      if (contractAddress || (sym && sym.length <= 5)) {
+        return isRelevantToToken(t, { symbol: sym, name, contractAddress });
+      }
+      return true;
+    });
+
+    const result = analyzeTwitterNarrative(filteredTweets, rawTweets);
+    cacheSet(cacheKey, result);
+    return result;
+  } catch (e) {
+    console.error('[6551] 推特叙事分析失败:', e?.message);
+    return null;
+  }
 }
 
 /**
@@ -293,19 +576,28 @@ export async function getTokenNarrative(symbol, name, options = {}) {
       ts: a.ts,
     }));
 
+    // 并行获取推特叙事分析
+    let twitterNarrative = null;
+    try {
+      twitterNarrative = await getTokenTwitterNarrative(symbol, name, { contractAddress });
+    } catch (e) {
+      console.error('[6551] 推特叙事分析附加失败:', e?.message);
+    }
+
     const result = {
       summary,
       articles: articleList,
       sentiment,
       sourceCount: allArticles.length,
       updatedAt: new Date().toISOString(),
+      twitterNarrative,
     };
 
     cacheSet(cacheKey, result);
     return result;
   } catch (e) {
     console.error('[6551] 获取新闻叙事失败:', e?.message);
-    return { summary: '', articles: [], sentiment: 'neutral', updatedAt: null, error: e?.message };
+    return { summary: '', articles: [], sentiment: 'neutral', updatedAt: null, twitterNarrative: null, error: e?.message };
   }
 }
 

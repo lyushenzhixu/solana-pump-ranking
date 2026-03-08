@@ -5,16 +5,28 @@
 
 -- 叙事总结缓存
 create table if not exists token_narratives (
-  token         text primary key,
-  symbol        text,
-  name          text,
-  summary       text default '',
-  articles      jsonb default '[]'::jsonb,
-  sentiment     text default 'neutral',
-  source_count  int default 0,
-  fetched_at    timestamptz not null default now(),
-  updated_at    timestamptz not null default now()
+  token              text primary key,
+  symbol             text,
+  name               text,
+  summary            text default '',
+  articles           jsonb default '[]'::jsonb,
+  sentiment          text default 'neutral',
+  source_count       int default 0,
+  twitter_narrative  jsonb default null,
+  fetched_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
 );
+
+-- 如果表已存在但缺少 twitter_narrative 列，则添加
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_name = 'token_narratives' and column_name = 'twitter_narrative'
+  ) then
+    alter table token_narratives add column twitter_narrative jsonb default null;
+  end if;
+end $$;
 
 -- 热门推文缓存
 create table if not exists token_tweets (
