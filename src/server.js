@@ -74,11 +74,14 @@ async function getCachedNarrative(tokenAddr) {
     if (!data) return null;
     const age = Date.now() - new Date(data.fetched_at).getTime();
     if (age > NARRATIVE_CACHE_TTL_MS) return null;
+    // 旧缓存不含链上叙事 → 视为过期，强制重新获取
+    if (!data.twitter_narrative) return null;
     return {
       summary: data.summary || '',
       articles: data.articles || [],
       sentiment: data.sentiment || 'neutral',
       sourceCount: data.source_count || 0,
+      twitterNarrative: data.twitter_narrative || null,
       updatedAt: data.fetched_at,
       cached: true,
     };
@@ -96,6 +99,7 @@ async function saveNarrativeCache(tokenAddr, symbol, name, narrative) {
       articles: narrative.articles || [],
       sentiment: narrative.sentiment || 'neutral',
       source_count: narrative.sourceCount || 0,
+      twitter_narrative: narrative.twitterNarrative || null,
       fetched_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }, { onConflict: 'token' });
@@ -1515,6 +1519,164 @@ return `<!DOCTYPE html>
       vertical-align: middle;
     }
 
+    /* === Twitter Narrative Grade === */
+    .narrative-grade-section {
+      margin-bottom: 1rem;
+      padding-bottom: 0.875rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .narrative-grade-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .narrative-grade-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .grade-S { background: linear-gradient(135deg, rgba(255,215,0,0.2), rgba(255,165,0,0.15)); color: #ffd700; border: 1px solid rgba(255,215,0,0.3); box-shadow: 0 0 12px rgba(255,215,0,0.15); }
+    .grade-A { background: linear-gradient(135deg, rgba(20,241,149,0.15), rgba(0,209,255,0.1)); color: #14f195; border: 1px solid rgba(20,241,149,0.25); box-shadow: 0 0 10px rgba(20,241,149,0.12); }
+    .grade-B { background: linear-gradient(135deg, rgba(153,69,255,0.15), rgba(0,209,255,0.1)); color: #b08cff; border: 1px solid rgba(153,69,255,0.2); }
+    .grade-C { background: rgba(255,77,106,0.1); color: #ff4d6a; border: 1px solid rgba(255,77,106,0.2); }
+    .narrative-grade-info {
+      flex: 1;
+    }
+    .narrative-grade-label {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    .narrative-grade-rec {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .narrative-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 0.5rem;
+    }
+    .narrative-metric {
+      background: rgba(153,69,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.5rem 0.625rem;
+      text-align: center;
+    }
+    .narrative-metric-value {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+    .narrative-metric-label {
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .narrative-kol-list {
+      margin-top: 0.625rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.375rem;
+    }
+    .narrative-kol-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      background: rgba(0,209,255,0.06);
+      border: 1px solid rgba(0,209,255,0.12);
+      border-radius: 6px;
+      padding: 0.2em 0.5em;
+      font-size: 0.6875rem;
+      color: var(--text-secondary);
+    }
+    .narrative-kol-tag .verified-check {
+      color: var(--sol-blue);
+      font-size: 0.625rem;
+    }
+    .driver-tag {
+      display: inline-block;
+      font-size: 0.625rem;
+      font-weight: 600;
+      padding: 0.15em 0.45em;
+      border-radius: 4px;
+      margin-left: 0.5rem;
+    }
+    .driver-organic { background: rgba(20,241,149,0.12); color: #14f195; }
+    .driver-mixed { background: rgba(153,69,255,0.12); color: #b08cff; }
+    .driver-paid { background: rgba(255,77,106,0.1); color: #ff4d6a; }
+    .narrative-dimensions {
+      margin-top: 0.75rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 0.5rem;
+    }
+    .narrative-dim-card {
+      background: rgba(153,69,255,0.03);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 0.5rem 0.625rem;
+    }
+    .narrative-dim-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.375rem;
+    }
+    .narrative-dim-name {
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .narrative-dim-score {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+    }
+    .narrative-dim-bar {
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(153,69,255,0.1);
+      overflow: hidden;
+      margin-bottom: 0.375rem;
+    }
+    .narrative-dim-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.5s ease;
+    }
+    .narrative-dim-details {
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .narrative-dim-details span { color: var(--text-secondary); font-weight: 600; }
+    .dim-bar-green { background: linear-gradient(90deg, #14f195, rgba(20,241,149,0.5)); }
+    .dim-bar-yellow { background: linear-gradient(90deg, #f0a030, rgba(240,160,48,0.5)); }
+    .dim-bar-red { background: linear-gradient(90deg, #ff4d6a, rgba(255,77,106,0.5)); }
+    .narrative-source-tag {
+      display: inline-block;
+      font-size: 0.5625rem;
+      padding: 0.1em 0.4em;
+      border-radius: 3px;
+      margin-left: 0.5rem;
+      background: rgba(0,209,255,0.08);
+      color: var(--sol-blue);
+    }
+
     /* === Hot Tweets Sidebar === */
     .tweets-card {
       background: var(--bg-card);
@@ -1871,7 +2033,7 @@ return `<!DOCTYPE html>
 
       // Narrative summary
       html += '<div class="narrative-card" id="narrative-section">';
-      html += '<div class="narrative-title"><span class="icon">📰</span>叙事总结<span class="ai-tag">AI</span></div>';
+      html += '<div class="narrative-title"><span class="icon">📊</span>叙事分析<span class="ai-tag">AI</span></div>';
       html += '<div id="narrative-content"><div class="narrative-loading">分析中</div></div>';
       html += '</div>';
       html += '</div>'; // end detail-main
@@ -2015,17 +2177,139 @@ return `<!DOCTYPE html>
       });
     }
 
+    function renderDimBar(score, max) {
+      var pct = max > 0 ? Math.round(score / max * 100) : 0;
+      var barClass = pct >= 60 ? 'dim-bar-green' : (pct >= 35 ? 'dim-bar-yellow' : 'dim-bar-red');
+      return '<div class="narrative-dim-bar"><div class="narrative-dim-bar-fill ' + barClass + '" style="width:' + pct + '%"></div></div>';
+    }
+
+    function fmtCompact(n) {
+      if (n == null) return '—';
+      if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return String(n);
+    }
+
+    function renderTwitterNarrative(tn) {
+      if (!tn || !tn.narrativeGrade) return '';
+      var grade = tn.narrativeGrade;
+      var gradeLabels = { S: '现象级叙事', A: '强叙事', B: '普通叙事', C: '弱叙事/风险' };
+      var driverClass = { organic: 'driver-organic', mixed: 'driver-mixed', paid: 'driver-paid', unknown: 'driver-mixed' };
+      var sourceLabels = { onchain: '链上分析', twitter: '推特分析', combined: '综合分析' };
+      var html = '<div class="narrative-grade-section">';
+      html += '<div class="narrative-grade-header">';
+      html += '<div class="narrative-grade-badge grade-' + grade + '">' + grade + '</div>';
+      html += '<div class="narrative-grade-info">';
+      html += '<div class="narrative-grade-label">' + esc(gradeLabels[grade] || grade);
+      if (tn.driverLabel) {
+        html += '<span class="driver-tag ' + (driverClass[tn.driverType] || 'driver-mixed') + '">' + esc(tn.driverLabel) + '</span>';
+      }
+      if (tn.source) {
+        html += '<span class="narrative-source-tag">' + esc(sourceLabels[tn.source] || tn.source) + '</span>';
+      }
+      html += '</div>';
+      html += '<div class="narrative-grade-rec">' + esc(tn.recommendation || '') + '</div>';
+      html += '</div></div>';
+
+      // KOL 指标（推特数据可用时显示）
+      if (tn.kolCount && tn.kolCount.total > 0) {
+        html += '<div class="narrative-metrics">';
+        html += '<div class="narrative-metric"><div class="narrative-metric-value">' + tn.kolCount.total + '</div><div class="narrative-metric-label">KOL 数量</div></div>';
+        html += '<div class="narrative-metric"><div class="narrative-metric-value">' + tn.kolCount.tier1 + '</div><div class="narrative-metric-label">顶级 KOL</div></div>';
+        var shillColor = (tn.shillRatio || 0) > 50 ? 'var(--negative)' : ((tn.shillRatio || 0) > 30 ? '#f0a030' : 'var(--positive)');
+        html += '<div class="narrative-metric"><div class="narrative-metric-value" style="color:' + shillColor + '">' + (tn.shillRatio || 0) + '%</div><div class="narrative-metric-label">传销号占比</div></div>';
+        html += '<div class="narrative-metric"><div class="narrative-metric-value">' + (tn.organicScore || 0) + '</div><div class="narrative-metric-label">有机度</div></div>';
+        html += '</div>';
+      }
+
+      if (tn.topKols && tn.topKols.length > 0) {
+        html += '<div class="narrative-kol-list">';
+        tn.topKols.forEach(function(k) {
+          html += '<span class="narrative-kol-tag">';
+          html += '@' + esc(k.user);
+          if (k.verified) html += ' <span class="verified-check">✓</span>';
+          var f = k.followers || 0;
+          var fStr = f >= 1000000 ? (f / 1000000).toFixed(1) + 'M' : (f >= 1000 ? (f / 1000).toFixed(1) + 'K' : f);
+          html += ' <span style="color:var(--text-muted);font-size:0.6rem">' + fStr + '</span>';
+          html += '</span>';
+        });
+        html += '</div>';
+      }
+
+      // 链上维度分析（onchain 或 combined 时显示）
+      var dims = tn.dimensions;
+      if (dims) {
+        html += '<div class="narrative-dimensions">';
+
+        // 市场健康度
+        var m = dims.market || {};
+        html += '<div class="narrative-dim-card">';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">📊 市场</span><span class="narrative-dim-score">' + (m.score || 0) + '/' + (m.max || 30) + '</span></div>';
+        html += renderDimBar(m.score || 0, m.max || 30);
+        html += '<div class="narrative-dim-details">交易量比 <span>' + (m.velocity || 0) + '</span> · 流动性 <span>' + (m.liqDepth || 0) + '</span><br>24h交易 <span>' + fmtCompact(m.txns24h) + '</span> · 买入 <span>' + (m.buyRatio || 50) + '%</span></div>';
+        html += '</div>';
+
+        // 社区
+        var c = dims.community || {};
+        html += '<div class="narrative-dim-card">';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">👥 社区</span><span class="narrative-dim-score">' + (c.score || 0) + '/' + (c.max || 25) + '</span></div>';
+        html += renderDimBar(c.score || 0, c.max || 25);
+        html += '<div class="narrative-dim-details">持币人 <span>' + fmtCompact(c.holders) + '</span> · Top10 <span>' + (c.topHolderPct || 0) + '%</span><br>交易对 <span>' + (c.pairCount || 0) + '</span></div>';
+        html += '</div>';
+
+        // 安全
+        var s = dims.security || {};
+        html += '<div class="narrative-dim-card">';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">🔒 安全</span><span class="narrative-dim-score">' + (s.score || 0) + '/' + (s.max || 25) + '</span></div>';
+        html += renderDimBar(s.score || 0, s.max || 25);
+        var secDetails = [];
+        secDetails.push('LP ' + (s.lpLocked ? '<span style="color:var(--positive)">已锁</span>' : '<span style="color:var(--negative)">未锁</span>'));
+        if (s.isMintable) secDetails.push('<span style="color:var(--negative)">可铸币</span>');
+        if (s.isFreezable) secDetails.push('<span style="color:var(--negative)">可冻结</span>');
+        if (s.riskLevel && s.riskLevel !== 'UNKNOWN') secDetails.push('风险 <span>' + s.riskLevel + '</span>');
+        html += '<div class="narrative-dim-details">' + secDetails.join(' · ') + '</div>';
+        html += '</div>';
+
+        // 成熟度
+        var mt = dims.maturity || {};
+        html += '<div class="narrative-dim-card">';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">🏗 成熟度</span><span class="narrative-dim-score">' + (mt.score || 0) + '/' + (mt.max || 20) + '</span></div>';
+        html += renderDimBar(mt.score || 0, mt.max || 20);
+        var matDetails = [];
+        if (mt.ageDays !== null) matDetails.push('上线 <span>' + mt.ageDays + '</span> 天');
+        var socials = [];
+        if (mt.hasTwitter) socials.push('𝕏');
+        if (mt.hasTelegram) socials.push('TG');
+        if (mt.hasWebsite) socials.push('Web');
+        if (socials.length > 0) matDetails.push('社交 <span>' + socials.join('+') + '</span>');
+        if (mt.hasProfile) matDetails.push('<span>有头像</span>');
+        html += '<div class="narrative-dim-details">' + matDetails.join(' · ') + '</div>';
+        html += '</div>';
+
+        html += '</div>'; // end dimensions
+      }
+
+      html += '</div>';
+      return html;
+    }
+
     function loadNarrative(token) {
       fetch('/api/token/' + encodeURIComponent(token.token) + '/narrative')
         .then(function(r) { return r.json(); })
         .then(function(data) {
           var el = document.getElementById('narrative-content');
           if (!el) return;
-          if (!data.summary && (!data.articles || data.articles.length === 0)) {
-            el.innerHTML = '<div class="narrative-empty">暂无该代币的相关新闻叙事</div>';
+          var hasTwitter = data.twitterNarrative && data.twitterNarrative.narrativeGrade;
+          var hasNews = data.summary || (data.articles && data.articles.length > 0);
+          if (!hasTwitter && !hasNews) {
+            el.innerHTML = '<div class="narrative-empty">暂无该代币的相关叙事分析</div>';
             return;
           }
           var html = '';
+          if (hasTwitter) {
+            html += renderTwitterNarrative(data.twitterNarrative);
+          }
           if (data.summary) {
             html += '<div class="narrative-text">' + esc(data.summary) + '</div>';
           }
@@ -2056,7 +2340,7 @@ return `<!DOCTYPE html>
         })
         .catch(function() {
           var el = document.getElementById('narrative-content');
-          if (el) el.innerHTML = '<div class="narrative-empty">暂无该代币的相关新闻叙事</div>';
+          if (el) el.innerHTML = '<div class="narrative-empty">暂无该代币的相关叙事分析</div>';
         });
     }
 
