@@ -22,6 +22,9 @@
  *   - 批量预取支持
  */
 
+import * as dexscreener from './dexscreener.js';
+import * as goplus from './goplus.js';
+
 const NEWS_BASE = 'https://ai.6551.io';
 
 function getNewsToken() {
@@ -265,6 +268,187 @@ function analyzeTwitterNarrative(tweets, rawTweets) {
   };
 
   return assessment;
+}
+
+// ─── 链上叙事分析（无需任何 API Key）─────────────────────
+
+/**
+ * 基于链上数据（DexScreener + GoPlus）进行叙事评估
+ * 完全免费，不依赖推特/新闻 API
+ *
+ * 数据维度：
+ *   1. 市场健康度：交易量/市值比、流动性深度、买卖比、价格波动
+ *   2. 社区健康度：持币人数、Top10 集中度、交易人数
+ *   3. 安全评估：LP 锁定、铸币权、冻结权、蜜罐风险
+ *   4. 项目成熟度：代币年龄、DexScreener Profile、社交链接
+ *
+ * @param {string} contractAddress 合约地址
+ * @param {string} [chain='solana'] 链
+ * @returns {Promise<object|null>} 链上叙事评估
+ */
+async function getOnChainNarrative(contractAddress, chain = 'solana') {
+  if (!contractAddress) return null;
+
+  const cacheKey = `onchain-narrative:${contractAddress}`;
+  const cached = cacheGet(cacheKey, NEWS_CACHE_TTL);
+  if (cached) return cached;
+
+  try {
+    const [pairs, security] = await Promise.all([
+      dexscreener.getTokenPairs(contractAddress).catch(() => []),
+      goplus.getTokenSecuritySingle(chain, contractAddress).catch(() => null),
+    ]);
+
+    if (!pairs.length && !security) return null;
+
+    // 选择流动性最高的交易对
+    const sorted = [...pairs].sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0));
+    const mainPair = sorted[0] || {};
+    const pairInfo = mainPair.info || {};
+
+    // ── 市场指标 ──
+    const mcap = mainPair.marketCap || mainPair.fdv || 0;
+    const volume24h = mainPair.volume?.h24 || 0;
+    const liquidity = mainPair.liquidity?.usd || 0;
+    const priceChange24h = mainPair.priceChange?.h24 || 0;
+    const txns24h = mainPair.txns?.h24 || {};
+    const buys24h = txns24h.buys || 0;
+    const sells24h = txns24h.sells || 0;
+    const totalTxns = buys24h + sells24h;
+    const buyRatio = totalTxns > 0 ? buys24h / totalTxns : 0.5;
+
+    // 交易量/市值比（velocity）
+    const velocity = mcap > 0 ? volume24h / mcap : 0;
+    // 流动性/市值比
+    const liqDepth = mcap > 0 ? liquidity / mcap : 0;
+
+    // 代币年龄（天）
+    const pairAge = mainPair.pairCreatedAt
+      ? (Date.now() - mainPair.pairCreatedAt) / 86400_000
+      : null;
+
+    // ── DexScreener Profile（社交/品牌）──
+    const hasProfile = !!(pairInfo.imageUrl);
+    const socials = pairInfo.socials || [];
+    const websites = pairInfo.websites || [];
+    const hasTwitter = socials.some(s => s.type === 'twitter' || s.platform === 'twitter');
+    const hasTelegram = socials.some(s => s.type === 'telegram' || s.platform === 'telegram');
+    const hasWebsite = websites.length > 0;
+    const socialCount = socials.length + websites.length;
+
+    // ── GoPlus 安全 ──
+    const holderCount = security?.holder_count || 0;
+    const lpLocked = security?.is_lp_locked || false;
+    const isMintable = security?.is_mintable || false;
+    const isFreezable = security?.is_freezable || false;
+    const topHolderPct = security?.top_holder_percent || 0;
+    const riskLevel = security?.risk_level || 'UNKNOWN';
+    const isHoneypot = security?.is_honeypot || false;
+
+    // ═══ 评分计算 ═══
+
+    // 1) 市场健康度 (0-30)
+    let marketScore = 0;
+    if (velocity >= 0.5) marketScore += 10;
+    else if (velocity >= 0.2) marketScore += 7;
+    else if (velocity >= 0.05) marketScore += 4;
+
+    if (liqDepth >= 0.1) marketScore += 8;
+    else if (liqDepth >= 0.03) marketScore += 5;
+    else if (liqDepth >= 0.01) marketScore += 2;
+
+    if (totalTxns >= 500) marketScore += 6;
+    else if (totalTxns >= 100) marketScore += 4;
+    else if (totalTxns >= 20) marketScore += 2;
+
+    if (buyRatio >= 0.45 && buyRatio <= 0.65) marketScore += 6;
+    else if (buyRatio >= 0.35) marketScore += 3;
+
+    // 2) 社区健康度 (0-25)
+    let communityScore = 0;
+    if (holderCount >= 10_000) communityScore += 10;
+    else if (holderCount >= 3_000) communityScore += 7;
+    else if (holderCount >= 1_000) communityScore += 5;
+    else if (holderCount >= 300) communityScore += 2;
+
+    if (topHolderPct > 0 && topHolderPct < 0.3) communityScore += 8;
+    else if (topHolderPct < 0.5) communityScore += 4;
+
+    const pairCount = pairs.length;
+    if (pairCount >= 5) communityScore += 4;
+    else if (pairCount >= 3) communityScore += 3;
+    else if (pairCount >= 2) communityScore += 1;
+
+    if (mcap >= 1_000_000) communityScore += 3;
+    else if (mcap >= 100_000) communityScore += 1;
+
+    // 3) 安全评估 (0-25)
+    let securityScore = 10; // 基础分
+    if (isHoneypot) securityScore = 0;
+    else {
+      if (lpLocked) securityScore += 6;
+      if (!isMintable) securityScore += 4;
+      if (!isFreezable) securityScore += 3;
+      if (riskLevel === 'LOW') securityScore += 2;
+      else if (riskLevel === 'HIGH' || riskLevel === 'CRITICAL') securityScore -= 8;
+      else if (riskLevel === 'MEDIUM') securityScore -= 3;
+    }
+    securityScore = Math.max(0, Math.min(25, securityScore));
+
+    // 4) 项目成熟度 (0-20)
+    let maturityScore = 0;
+    if (hasProfile) maturityScore += 4;
+    if (hasTwitter) maturityScore += 3;
+    if (hasTelegram) maturityScore += 2;
+    if (hasWebsite) maturityScore += 3;
+
+    if (pairAge !== null) {
+      if (pairAge >= 30) maturityScore += 5;
+      else if (pairAge >= 7) maturityScore += 3;
+      else if (pairAge >= 1) maturityScore += 1;
+    }
+
+    if (socialCount >= 3) maturityScore += 3;
+    else if (socialCount >= 1) maturityScore += 1;
+
+    // ═══ 总分 & 等级 ═══
+    const totalScore = marketScore + communityScore + securityScore + maturityScore;
+
+    let grade = 'C';
+    if (totalScore >= 70) grade = 'S';
+    else if (totalScore >= 55) grade = 'A';
+    else if (totalScore >= 35) grade = 'B';
+
+    if (isHoneypot || riskLevel === 'CRITICAL') grade = 'C';
+
+    let recommendation = '注意风险';
+    if (grade === 'S') recommendation = '重点关注';
+    else if (grade === 'A') recommendation = '值得关注';
+    else if (grade === 'B') recommendation = '谨慎观察';
+
+    const result = {
+      narrativeGrade: grade,
+      totalScore,
+      recommendation,
+      source: 'onchain',
+      dimensions: {
+        market: { score: marketScore, max: 30, velocity: Math.round(velocity * 100) / 100, liqDepth: Math.round(liqDepth * 100) / 100, txns24h: totalTxns, buyRatio: Math.round(buyRatio * 100) },
+        community: { score: communityScore, max: 25, holders: holderCount, topHolderPct: Math.round(topHolderPct * 100), pairCount },
+        security: { score: securityScore, max: 25, lpLocked, isMintable, isFreezable, isHoneypot, riskLevel },
+        maturity: { score: maturityScore, max: 20, hasProfile, hasTwitter, hasTelegram, hasWebsite, ageDays: pairAge !== null ? Math.round(pairAge) : null },
+      },
+      mcap,
+      volume24h,
+      liquidity,
+      priceChange24h,
+    };
+
+    cacheSet(cacheKey, result);
+    return result;
+  } catch (e) {
+    console.error('[链上叙事] 分析失败:', e?.message);
+    return null;
+  }
 }
 
 /**
@@ -576,13 +760,20 @@ export async function getTokenNarrative(symbol, name, options = {}) {
       ts: a.ts,
     }));
 
-    // 并行获取推特叙事分析
+    // 并行获取链上叙事 + 推特叙事
     let twitterNarrative = null;
-    try {
-      twitterNarrative = await getTokenTwitterNarrative(symbol, name, { contractAddress });
-    } catch (e) {
-      console.error('[6551] 推特叙事分析附加失败:', e?.message);
-    }
+    let onChainNarrative = null;
+
+    const [twResult, ocResult] = await Promise.allSettled([
+      getTokenTwitterNarrative(symbol, name, { contractAddress }),
+      getOnChainNarrative(contractAddress),
+    ]);
+    if (twResult.status === 'fulfilled') twitterNarrative = twResult.value;
+    if (ocResult.status === 'fulfilled') onChainNarrative = ocResult.value;
+
+    // 如果推特分析可用，用推特结果作为主叙事；否则用链上分析
+    // 两者都可用时合并，推特 KOL 数据 + 链上安全/市场数据
+    const mergedNarrative = mergeNarratives(twitterNarrative, onChainNarrative);
 
     const result = {
       summary,
@@ -590,15 +781,94 @@ export async function getTokenNarrative(symbol, name, options = {}) {
       sentiment,
       sourceCount: allArticles.length,
       updatedAt: new Date().toISOString(),
-      twitterNarrative,
+      twitterNarrative: mergedNarrative,
     };
 
     cacheSet(cacheKey, result);
     return result;
   } catch (e) {
     console.error('[6551] 获取新闻叙事失败:', e?.message);
-    return { summary: '', articles: [], sentiment: 'neutral', updatedAt: null, twitterNarrative: null, error: e?.message };
+    // 即使新闻失败，尝试获取链上叙事
+    let fallbackNarrative = null;
+    try {
+      fallbackNarrative = await getOnChainNarrative(contractAddress);
+    } catch { /* ignore */ }
+    return { summary: '', articles: [], sentiment: 'neutral', updatedAt: null, twitterNarrative: fallbackNarrative, error: e?.message };
   }
+}
+
+/**
+ * 合并推特叙事 + 链上叙事，产出综合评估
+ * - 推特可用时：以推特 KOL/传销号分析为主，链上数据为辅
+ * - 推特不可用时：以链上数据为主（完全不依赖推特）
+ * - 两者都可用时：综合评分取加权平均
+ */
+function mergeNarratives(twitter, onChain) {
+  if (!twitter && !onChain) return null;
+
+  // 仅有链上数据（无推特 API 场景）
+  if (!twitter && onChain) {
+    return {
+      ...onChain,
+      source: 'onchain',
+      driverType: deriveDriverType(onChain),
+      driverLabel: deriveDriverLabel(onChain),
+    };
+  }
+
+  // 仅有推特数据
+  if (twitter && !onChain) return { ...twitter, source: 'twitter' };
+
+  // 两者都有 → 综合评估
+  // 推特权重 40%，链上权重 60%（链上数据更客观可靠）
+  const twitterGradeScore = { S: 100, A: 75, B: 50, C: 25 }[twitter.narrativeGrade] || 25;
+  const onChainGradeScore = onChain.totalScore;
+  const combinedScore = Math.round(twitterGradeScore * 0.4 + onChainGradeScore * 0.6);
+
+  let grade = 'C';
+  if (combinedScore >= 70) grade = 'S';
+  else if (combinedScore >= 55) grade = 'A';
+  else if (combinedScore >= 35) grade = 'B';
+
+  // 安全性一票否决
+  if (onChain.dimensions?.security?.isHoneypot ||
+      onChain.dimensions?.security?.riskLevel === 'CRITICAL') {
+    grade = 'C';
+  }
+
+  let recommendation = '注意风险';
+  if (grade === 'S') recommendation = '重点关注';
+  else if (grade === 'A') recommendation = '值得关注';
+  else if (grade === 'B') recommendation = '谨慎观察';
+
+  return {
+    narrativeGrade: grade,
+    totalScore: combinedScore,
+    recommendation,
+    source: 'combined',
+    driverType: twitter.driverType || deriveDriverType(onChain),
+    driverLabel: twitter.driverLabel || deriveDriverLabel(onChain),
+    shillRatio: twitter.shillRatio,
+    organicScore: twitter.organicScore,
+    kolCount: twitter.kolCount,
+    topKols: twitter.topKols,
+    totalTweets: twitter.totalTweets,
+    totalEngagement: twitter.totalEngagement,
+    dimensions: onChain.dimensions,
+  };
+}
+
+function deriveDriverType(onChain) {
+  if (!onChain?.dimensions) return 'unknown';
+  const { community, market } = onChain.dimensions;
+  if (community.holders >= 3000 && market.txns24h >= 100) return 'organic';
+  if (community.holders >= 500 || market.txns24h >= 50) return 'mixed';
+  return 'paid';
+}
+
+function deriveDriverLabel(onChain) {
+  const type = deriveDriverType(onChain);
+  return { organic: '社区自发驱动', mixed: '混合驱动', paid: '早期/项目方驱动', unknown: '未知' }[type];
 }
 
 // ─── 热门推特（增强版）────────────────────────────────
