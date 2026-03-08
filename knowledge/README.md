@@ -21,6 +21,7 @@
 - **auto-update-scheduler.md** — 定时自动更新调度器：配置、执行流程、API、前端状态栏、运维要点。
 - **google-analytics.md** — Google Analytics 集成：前端 gtag.js 动态注入、MCP 查询配置、环境变量、部署注意事项。
 - **meme-narrative-strategy.md** — Meme 代币叙事总结与热门推文方案：五层优化策略、成本控制、配置说明。
+- **token-detail-page.md** — 代币详情页设计记录：页面结构、色彩体系、动画、交互、数据流、响应式断点。
 
 ## 示例结构
 
