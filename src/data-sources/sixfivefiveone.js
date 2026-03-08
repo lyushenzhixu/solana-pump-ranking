@@ -27,6 +27,11 @@ import * as goplus from './goplus.js';
 
 const NEWS_BASE = 'https://ai.6551.io';
 
+// 与公链/主流币同名的 symbol，按 symbol 搜新闻会混入链/生态内容，应跳过 coins 搜索
+const AMBIGUOUS_SYMBOLS = new Set([
+  'SOL', 'PEPE', 'DOGE', 'SHIB', 'BTC', 'ETH', 'BNB', 'XRP', 'ADA', 'AVAX', 'LINK', 'DOT', 'MATIC', 'UNI', 'ATOM', 'LTC', 'BCH', 'ETC', 'XLM', 'ALGO', 'VET', 'FIL', 'TRX', 'APT', 'ARB', 'OP', 'SUI', 'SEI', 'INJ', 'TIA', 'STX', 'RUNE', 'FTM', 'NEAR', 'AAVE', 'MKR', 'SNX', 'CRV', 'COMP', 'SUSHI', '1INCH', 'USDC', 'USDT', 'DAI',
+]);
+
 function getNewsToken() {
   return (process.env.OPENNEWS_TOKEN || process.env.TWITTER_TOKEN || process.env.TOKEN_6551 || '').trim();
 }
@@ -636,7 +641,22 @@ export async function getTokenNarrative(symbol, name, options = {}) {
   const { contractAddress = '' } = options;
   const newsToken = getNewsToken();
   if (!newsToken) {
-    return { summary: '', articles: [], sentiment: 'neutral', updatedAt: null, error: 'OPENNEWS_TOKEN 未配置' };
+    // 无 6551 Token 时仍尝试返回链上叙事（不依赖任何 API Key）
+    let fallbackNarrative = null;
+    if (contractAddress) {
+      try {
+        fallbackNarrative = await getOnChainNarrative(contractAddress, 'solana');
+      } catch (_) { /* ignore */ }
+    }
+    return {
+      summary: '',
+      articles: [],
+      sentiment: 'neutral',
+      updatedAt: new Date().toISOString(),
+      sourceCount: 0,
+      twitterNarrative: fallbackNarrative,
+      error: 'OPENNEWS_TOKEN 未配置，仅返回链上叙事',
+    };
   }
 
   const cacheKey = `narrative:${symbol}:${name || ''}:${contractAddress.slice(0, 8)}`;
@@ -645,12 +665,14 @@ export async function getTokenNarrative(symbol, name, options = {}) {
 
   try {
     const searches = [];
+    const symbolUpper = (symbol || '').toUpperCase();
+    const isAmbiguousSymbol = symbolUpper && AMBIGUOUS_SYMBOLS.has(symbolUpper);
 
-    // 策略 1：按 coin symbol 搜索（OpenNews 标准方式，匹配率最高）
-    if (symbol) {
+    // 策略 1：按 coin symbol 搜索（歧义 symbol 如 SOL/PEPE/DOGE 会混入链/生态新闻，跳过）
+    if (symbol && !isAmbiguousSymbol) {
       searches.push(
         fetchJson(`${NEWS_BASE}/open/news_search`, {
-          coins: [symbol.toUpperCase()],
+          coins: [symbolUpper],
           limit: 20,
           page: 1,
         }, newsToken)
@@ -775,11 +797,19 @@ export async function getTokenNarrative(symbol, name, options = {}) {
     // 两者都可用时合并，推特 KOL 数据 + 链上安全/市场数据
     const mergedNarrative = mergeNarratives(twitterNarrative, onChainNarrative);
 
+    let finalSummary = summary;
+    let finalArticles = articleList;
+    // 歧义 symbol（如 SOL）时，新闻多为链/生态内容，与当前 Meme 代币无关，改用链上/推特叙事生成主摘要并隐藏无关新闻
+    if (isAmbiguousSymbol && mergedNarrative) {
+      finalSummary = buildNarrativeSummaryFromGrade(mergedNarrative);
+      finalArticles = [];
+    }
+
     const result = {
-      summary,
-      articles: articleList,
+      summary: finalSummary,
+      articles: finalArticles,
       sentiment,
-      sourceCount: allArticles.length,
+      sourceCount: isAmbiguousSymbol ? 0 : allArticles.length,
       updatedAt: new Date().toISOString(),
       twitterNarrative: mergedNarrative,
     };
@@ -803,6 +833,29 @@ export async function getTokenNarrative(symbol, name, options = {}) {
  * - 推特不可用时：以链上数据为主（完全不依赖推特）
  * - 两者都可用时：综合评分取加权平均
  */
+/** 从链上/推特叙事结构生成简短文字摘要（歧义 symbol 时代替无关新闻） */
+function buildNarrativeSummaryFromGrade(tn) {
+  if (!tn) return '';
+  const gradeLabels = { S: '现象级叙事', A: '强叙事', B: '普通叙事', C: '弱叙事/风险' };
+  const grade = gradeLabels[tn.narrativeGrade] || tn.narrativeGrade;
+  const rec = tn.recommendation || '';
+  const parts = [`本代币叙事评级：${grade}。${rec}`];
+  const d = tn.dimensions;
+  if (d?.market) {
+    parts.push(`市场：24h 交易 ${d.market.txns24h ?? '—'} 笔，买入占比 ${d.market.buyRatio ?? '—'}%。`);
+  }
+  if (d?.community && d.community.holders != null) {
+    parts.push(`持币人约 ${typeof d.community.holders === 'number' ? d.community.holders.toLocaleString() : d.community.holders}，前 10 占比 ${d.community.topHolderPct ?? '—'}%。`);
+  }
+  if (d?.security) {
+    const sec = d.security;
+    if (sec.riskLevel) parts.push(`安全：${sec.riskLevel}`);
+    if (sec.isHoneypot) parts.push('检测到蜜罐风险');
+  }
+  const src = tn.source === 'onchain' ? '（数据来自链上分析）' : tn.source === 'twitter' ? '（含推特社区分析）' : '';
+  return parts.join(' ') + src;
+}
+
 function mergeNarratives(twitter, onChain) {
   if (!twitter && !onChain) return null;
 

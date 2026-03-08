@@ -12,6 +12,7 @@
     "example:demo": "node examples/04-完整演示.js",
     "pump-ranking": "node scripts/fetch-pump-ranking.js",
     "zhilabs-ranking": "node scripts/fetch-zhilabs-ranking.js",
+    "zhilabs-refresh-narratives": "node scripts/refresh-zhilabs-narratives.js",
     "zhilabs-to-local": "node scripts/fetch-zhilabs-to-local.js",
     "token-audit": "node scripts/token-audit.js",
     "check-token": "node scripts/check-token-eligibility.js",

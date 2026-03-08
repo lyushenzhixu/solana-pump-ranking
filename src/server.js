@@ -12,6 +12,7 @@ import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
 import { getTokenDetail, getKline, getTokenSecurityDetail } from './data-sources/index.js';
 import { getTokenNarrative, getTokenHotTweets, batchPrefetch } from './data-sources/sixfivefiveone.js';
+import { refreshZhilabsNarratives } from '../scripts/refresh-zhilabs-narratives.js';
 import { buildSeoMeta, buildHomepageJsonLd, buildOrganizationJsonLd, buildSitemap, SITE_URL, SITE_NAME } from './seo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -409,6 +410,9 @@ return `<!DOCTYPE html>
       box-shadow: none !important;
     }
     .actions button span { position: relative; z-index: 1; }
+    .actions button.secondary-btn::before { background: transparent; }
+    .actions button.secondary-btn { background: rgba(153,69,255,0.12); border-color: var(--sol-purple); }
+    .actions button.secondary-btn:hover::before { opacity: 0.15; }
     .actions .status {
       font-size: 0.8125rem; color: var(--text-secondary);
       font-variant-numeric: tabular-nums;
@@ -661,6 +665,7 @@ return `<!DOCTYPE html>
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
+        <button type="button" id="refreshNarrativeBtn" class="secondary-btn" style="display:none" title="强制刷新当前精选榜单内所有代币的叙事分析缓存"><span>刷新叙事</span></button>
         <span class="status" id="updateStatus"></span>
         <span class="sync-label" id="lastSync"></span>
       </div>
@@ -811,6 +816,8 @@ return `<!DOCTYPE html>
         ? '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序'
         : 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
       document.getElementById('updateBtn').querySelector('span').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
+      var narrativeBtn = document.getElementById('refreshNarrativeBtn');
+      if (narrativeBtn) narrativeBtn.style.display = tab === 'zhilabs' ? '' : 'none';
       refreshTab(tab).then(function(){ setLastSync(new Date()); }).catch(function(){});
     }
     document.querySelectorAll('.tab-btn').forEach(function(btn) {
@@ -836,6 +843,22 @@ return `<!DOCTYPE html>
         .finally(function() {
           btn.disabled = false;
         });
+    });
+    document.getElementById('refreshNarrativeBtn').addEventListener('click', function() {
+      var btn = document.getElementById('refreshNarrativeBtn');
+      btn.disabled = true;
+      setUpdateStatus('正在刷新 zhilabs 叙事…');
+      fetchJsonOrThrow('/api/ranking/zhilabs/refresh-narratives', { method: 'POST' })
+        .then(function(out) {
+          var u = out && out.updated != null ? out.updated : 0;
+          var e = out && out.errors != null ? out.errors : 0;
+          var t = out && out.tokens != null ? out.tokens : 0;
+          setUpdateStatus('叙事刷新完成：成功 ' + u + ' 条，失败 ' + e + ' 条（共 ' + t + ' 个代币）');
+        })
+        .catch(function(err) {
+          setUpdateStatus('叙事刷新失败：' + (err && err.message ? err.message : String(err)), true);
+        })
+        .finally(function() { btn.disabled = false; });
     });
     var _schedState = { intervalMs: 300000, lastRun: null, running: false };
     function fetchSchedulerStatus() {
@@ -2696,6 +2719,26 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+  // 强制刷新 zhilabs 精选榜单内所有代币的叙事缓存
+  if (urlPath === '/api/ranking/zhilabs/refresh-narratives' && req.method === 'POST') {
+    try {
+      const result = await refreshZhilabsNarratives();
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.end(JSON.stringify({
+        ok: true,
+        updated: result.updated,
+        errors: result.errors,
+        tokens: result.tokens,
+        at: new Date().toISOString(),
+      }));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
     }
     return;
   }
