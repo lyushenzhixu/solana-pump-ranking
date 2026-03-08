@@ -10,7 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
-import { getTokenDetail, getKline, getTokenSecurityDetail } from './data-sources/index.js';
+import { getTokenDetail, getKline, getTokenSecurityDetail, fetchSmartMoneySignals } from './data-sources/index.js';
 import { getTokenNarrative, getTokenHotTweets, batchPrefetch } from './data-sources/sixfivefiveone.js';
 import { refreshZhilabsNarratives } from '../scripts/refresh-zhilabs-narratives.js';
 import { buildSeoMeta, buildHomepageJsonLd, buildOrganizationJsonLd, buildSitemap, SITE_URL, SITE_NAME } from './seo.js';
@@ -628,6 +628,126 @@ return `<!DOCTYPE html>
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* === 聪明钱信号卡片 === */
+    .signal-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+    }
+    .signal-card {
+      background: var(--bg-card-solid);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 1rem;
+      transition: background 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
+      cursor: pointer;
+    }
+    .signal-card:hover {
+      background: var(--bg-card-hover);
+      border-color: oklch(50% 0.08 290 / 0.25);
+    }
+    .signal-card:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .signal-card-head {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      margin-bottom: 0.75rem;
+    }
+    .signal-card-head img {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border-subtle);
+      background: rgba(15,12,30,0.5);
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .signal-card-head .token-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+      min-width: 0;
+    }
+    .signal-card-ca {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .signal-card-ca span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .signal-card-data {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem 1rem;
+      font-size: 0.8125rem;
+      margin-bottom: 0.75rem;
+    }
+    .signal-card-data .label {
+      color: var(--text-muted);
+    }
+    .signal-card-data .value {
+      color: var(--text-primary);
+      font-variant-numeric: tabular-nums;
+      font-weight: 600;
+    }
+    .signal-card-foot {
+      font-size: 0.8125rem;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 0.75rem;
+    }
+    .signal-card-time {
+      color: var(--text-secondary);
+      margin-bottom: 0.25rem;
+    }
+    .signal-card-smart {
+      color: var(--positive);
+      margin-bottom: 0.25rem;
+    }
+    .signal-card-inflow {
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .signal-card-inflow.positive { color: var(--positive); }
+    .signal-card-inflow.negative { color: var(--negative); }
+    .signal-card-bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      height: 6px;
+      background: oklch(25% 0.04 290 / 0.5);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .signal-card-bar-buy {
+      height: 100%;
+      background: var(--positive);
+      border-radius: 3px 0 0 3px;
+    }
+    .signal-card-bar-sell {
+      height: 100%;
+      background: var(--negative);
+      border-radius: 0 3px 3px 0;
+    }
+    .signal-card-bar-labels {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
     /* === MOBILE === */
     @media (max-width: 768px) {
       .page-wrapper { padding: 1rem 0.75rem 2rem; }
@@ -637,6 +757,7 @@ return `<!DOCTYPE html>
       th, td { padding: 0.5rem 0.625rem; font-size: 0.8125rem; }
       .table-card { border-radius: 12px; overflow-x: auto; }
       table { min-width: 640px; }
+      .signal-cards-grid { grid-template-columns: 1fr; padding: 0.75rem 1rem; }
     }
 
     /* === SCROLLBAR === */
@@ -677,6 +798,7 @@ return `<!DOCTYPE html>
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
         <button type="button" class="tab-btn" data-tab="zhilabs">zhilabs 精选</button>
+        <button type="button" class="tab-btn" data-tab="signal">binance聪明钱信号</button>
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
@@ -691,6 +813,7 @@ return `<!DOCTYPE html>
     <div class="table-card">
       <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
       <div id="panel-zhilabs" class="panel"><div id="root-zhilabs"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-signal" class="panel"><div id="root-signal"><div class="loading-text">加载中</div></div></div>
     </div>
   </div>
 
@@ -749,6 +872,68 @@ return `<!DOCTYPE html>
       table += '</tbody></table>';
       root.innerHTML = table;
     }
+    function formatSignalTime(ms) {
+      if (ms == null || !Number(ms)) return '';
+      var diff = Math.max(0, Math.floor((Date.now() - Number(ms)) / 60000));
+      if (diff < 1) return '刚刚买入';
+      if (diff < 60) return diff + 'm以前买入';
+      var h = Math.floor(diff / 60);
+      if (h < 24) return h + 'h以前买入';
+      var d = Math.floor(h / 24);
+      return d + 'd以前买入';
+    }
+    function renderSignalCards(list, rootId) {
+      var root = document.getElementById(rootId);
+      if (!root) return;
+      if (!list.length) {
+        root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>';
+        return;
+      }
+      var html = '<div class="signal-cards-grid">';
+      list.forEach(function(item) {
+        var ca = item.contractAddress || item.contract_address || '';
+        var name = item.ticker || item.symbol || ca.slice(0, 8) + '…' || '—';
+        if (typeof name !== 'string') name = String(name);
+        if (name.length > 24) name = name.slice(0, 24) + '…';
+        var logoUrl = item.logoUrl || '';
+        var copyBtn = ca ? '<button class="copy-ca-btn" data-ca="' + esc(ca) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+        var marketCap = item.currentMarketCap != null ? parseFloat(item.currentMarketCap) : (item.alertMarketCap != null ? parseFloat(item.alertMarketCap) : null);
+        var avgPrice = item.alertPrice != null ? parseFloat(item.alertPrice) : null;
+        var totalVal = item.totalTokenValue != null ? parseFloat(item.totalTokenValue) : null;
+        var direction = (item.direction || '').toLowerCase();
+        var isBuy = direction === 'buy';
+        var exitRate = item.exitRate != null ? Number(item.exitRate) : 0;
+        var buyPct = Math.round(100 - exitRate);
+        var sellPct = Math.round(exitRate);
+        if (buyPct < 0) buyPct = 0;
+        if (sellPct < 0) sellPct = 0;
+        var inflowCl = isBuy ? 'positive' : 'negative';
+        var inflowStr = totalVal != null ? (isBuy ? '资金净流入 $' + totalVal.toFixed(2) : '资金净流入 -$' + Math.abs(totalVal).toFixed(2)) : '—';
+        var timeStr = formatSignalTime(item.signalTriggerTime);
+        var smartCount = item.smartMoneyCount != null ? Number(item.smartMoneyCount) : 0;
+        html += '<div class="signal-card clickable-signal-card" data-token="' + esc(ca) + '" tabindex="0">';
+        html += '<div class="signal-card-head">';
+        if (logoUrl) html += '<img src="' + esc(logoUrl) + '" alt="" loading="lazy">';
+        html += '<span class="token-name">' + esc(name) + '</span>' + copyBtn + '</div>';
+        html += '<div class="signal-card-ca"><span>' + esc(ca ? (ca.length > 16 ? ca.slice(0, 8) + '…' + ca.slice(-6) : ca) : '—') + '</span></div>';
+        html += '<div class="signal-card-data">';
+        html += '<span class="label">市值</span><span class="value">' + (marketCap != null ? formatCompact(marketCap) : '—') + '</span>';
+        html += '<span class="label">平均买入价</span><span class="value">' + (avgPrice != null ? '$' + (avgPrice < 0.01 ? avgPrice.toPrecision(2) : avgPrice.toFixed(4)) : '—') + '</span>';
+        html += '</div>';
+        html += '<div class="signal-card-foot">';
+        if (timeStr) html += '<div class="signal-card-time">' + esc(timeStr) + '</div>';
+        html += '<div class="signal-card-smart">' + smartCount + '个聪明钱正在交易</div>';
+        html += '<div class="signal-card-inflow ' + inflowCl + '">' + inflowStr + '</div>';
+        var buyW = buyPct;
+        var sellW = sellPct;
+        if (buyW + sellW === 0) { buyW = 50; sellW = 50; }
+        html += '<div class="signal-card-bar-wrap"><div class="signal-card-bar-buy" style="width:' + buyW + '%"></div><div class="signal-card-bar-sell" style="width:' + sellW + '%"></div></div>';
+        html += '<div class="signal-card-bar-labels">买入(' + buyPct + '%) 卖出(' + sellPct + '%)</div>';
+        html += '</div></div>';
+      });
+      html += '</div>';
+      root.innerHTML = html;
+    }
     function fetchJsonOrThrow(url, options) {
       return fetch(url, options).then(function(r) {
         return r.text().then(function(t) {
@@ -763,6 +948,15 @@ return `<!DOCTYPE html>
       });
     }
     function refreshTab(tab) {
+      if (tab === 'signal') {
+        var rootId = 'root-signal';
+        return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
+          if (Array.isArray(list)) renderSignalCards(list, rootId);
+          else document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        }).catch(function(e) {
+          document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        });
+      }
       var url = tab === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
       var rootId = tab === 'pump' ? 'root-pump' : 'root-zhilabs';
       return fetchJsonOrThrow(url).then(function(list) {
@@ -819,6 +1013,12 @@ return `<!DOCTYPE html>
       if (row) {
         var token = row.getAttribute('data-token');
         if (token) window.location.href = '/token/' + encodeURIComponent(token);
+        return;
+      }
+      var card = e.target.closest('.clickable-signal-card');
+      if (card) {
+        var token = card.getAttribute('data-token');
+        if (token) window.location.href = '/token/' + encodeURIComponent(token);
       }
     });
     var currentTab = 'pump';
@@ -827,10 +1027,12 @@ return `<!DOCTYPE html>
       currentTab = tab;
       document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
-      document.getElementById('desc').textContent = tab === 'pump'
-        ? '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序'
-        : 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
-      document.getElementById('updateBtn').querySelector('span').textContent = tab === 'pump' ? '更新 Pump 榜单' : '更新 zhilabs 精选';
+      var descEl = document.getElementById('desc');
+      if (tab === 'pump') descEl.textContent = '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序';
+      else if (tab === 'zhilabs') descEl.textContent = 'zhilabs 精选 Meme 代币，按 24h 交易量排序';
+      else if (tab === 'signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
+      var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhilabs 精选' : '刷新信号');
+      document.getElementById('updateBtn').querySelector('span').textContent = btnText;
       var narrativeBtn = document.getElementById('refreshNarrativeBtn');
       if (narrativeBtn) narrativeBtn.style.display = tab === 'zhilabs' ? '' : 'none';
       refreshTab(tab).then(function(){ setLastSync(new Date()); }).catch(function(){});
@@ -841,6 +1043,17 @@ return `<!DOCTYPE html>
     document.getElementById('updateBtn').addEventListener('click', function() {
       var btn = document.getElementById('updateBtn');
       var tab = currentTab || 'pump';
+      if (tab === 'signal') {
+        btn.disabled = true;
+        setUpdateStatus('刷新中…');
+        refreshTab('signal').then(function() {
+          setUpdateStatus('刷新完成');
+          setLastSync(new Date());
+        }).catch(function(e) {
+          setUpdateStatus('刷新失败：' + (e && e.message ? e.message : String(e)), true);
+        }).finally(function() { btn.disabled = false; });
+        return;
+      }
       btn.disabled = true;
       setUpdateStatus('更新中…');
       var started = Date.now();
@@ -2746,6 +2959,24 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+  if (urlPath === '/api/smart-money-signals') {
+    try {
+      const u = new URL(req.url || '/', 'http://localhost');
+      const page = parseInt(u.searchParams.get('page') || '1', 10) || 1;
+      const pageSize = Math.min(parseInt(u.searchParams.get('pageSize') || '100', 10) || 100, 100);
+      const chainId = u.searchParams.get('chainId') || 'CT_501';
+      const data = await fetchSmartMoneySignals({ page, pageSize, chainId });
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(JSON.stringify(data));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
     }
     return;
   }
