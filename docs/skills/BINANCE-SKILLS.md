@@ -64,7 +64,7 @@
 |-----|------|-----------------------------------|
 | Social Hype Leaderboard | GET | `/bapi/defi/v1/public/wallet-direct/buw/wallet/market/token/pulse/social/hype/rank/leaderboard` |
 | Unified Token Rank | POST | `/bapi/defi/v1/public/wallet-direct/buw/wallet/market/token/pulse/unified/rank/list` |
-| Smart Money Inflow Rank | POST | `/bapi/defi/v1/public/wallet-direct/tracker/wallet/token/inflow/rank/query` |
+| Smayonyon POST | `/bapi/defi/v1/public/wallet-direct/tracker/wallet/token/inflow/rank/query` |
 | Meme Rank | GET | `/bapi/defi/v1/public/wallet-direct/buw/wallet/market/token/pulse/exclusive/rank/list` |
 | Address Pnl Rank | GET | `/bapi/defi/v1/public/wallet-direct/market/leaderboard/query` |
 
