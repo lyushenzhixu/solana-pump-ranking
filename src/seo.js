@@ -46,7 +46,7 @@ export function buildSeoMeta(opts = {}) {
   html += `  <meta name="twitter:image" content="${escAttr(ogImage)}">\n`;
 
   html += `  <!-- Favicon -->\n`;
-  html += `  <link rel="icon" href="/favicon.ico">\n`;
+  html += `  <link rel="icon" href="/favicon.svg" type="image/svg+xml">\n`;
 
   if (opts.jsonLd) {
     html += `  <!-- Structured Data -->\n`;
