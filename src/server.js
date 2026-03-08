@@ -699,6 +699,18 @@ return `<!DOCTYPE html>
       align-items: center;
       gap: 0.25rem;
     }
+    .signal-card-chain {
+      font-size: 0.6875rem;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      background: oklch(45% 0.06 290 / 0.4);
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+    .signal-card-chain[data-chain="bsc"] {
+      background: oklch(55% 0.15 85 / 0.25);
+      color: var(--bn-yellow);
+    }
     .signal-card-ca span {
       overflow: hidden;
       text-overflow: ellipsis;
@@ -926,7 +938,8 @@ return `<!DOCTYPE html>
         var inflowStr = totalVal != null ? (isBuy ? '资金净流入 $' + totalVal.toFixed(2) : '资金净流入 -$' + Math.abs(totalVal).toFixed(2)) : '—';
         var timeStr = formatSignalTime(item.signalTriggerTime);
         var smartCount = item.smartMoneyCount != null ? Number(item.smartMoneyCount) : 0;
-        html += '<div class="signal-card clickable-signal-card" data-token="' + esc(ca) + '" tabindex="0">';
+        var chainLabel = (item.chain === 'bsc' || item.bsc) ? 'BSC' : 'Sol';
+        html += '<div class="signal-card clickable-signal-card" data-token="' + esc(ca) + '" data-chain="' + esc(item.chain || 'solana') + '" tabindex="0">';
         html += '<div class="signal-card-head">';
         var logoFallback = item.logoUrlFallback || '';
         if (logoUrl) {
@@ -937,7 +950,7 @@ return `<!DOCTYPE html>
           html += '<div class="signal-card-logo-placeholder">' + esc((name || '?').charAt(0)) + '</div>';
         }
         html += '<span class="token-name">' + esc(name) + '</span>' + copyBtn + '</div>';
-        html += '<div class="signal-card-ca"><span>' + esc(ca ? (ca.length > 16 ? ca.slice(0, 8) + '…' + ca.slice(-6) : ca) : '—') + '</span></div>';
+        html += '<div class="signal-card-ca"><span class="signal-card-chain" data-chain="' + esc(item.chain || 'solana') + '">' + esc(chainLabel) + '</span><span>' + esc(ca ? (ca.length > 16 ? ca.slice(0, 8) + '…' + ca.slice(-6) : ca) : '—') + '</span></div>';
         html += '<div class="signal-card-data">';
         html += '<span class="label">市值</span><span class="value">' + (marketCap != null ? formatCompact(marketCap) : '—') + '</span>';
         html += '<span class="label">平均买入价</span><span class="value">' + (avgPrice != null ? '$' + (avgPrice < 0.01 ? avgPrice.toPrecision(2) : avgPrice.toFixed(4)) : '—') + '</span>';
@@ -1040,7 +1053,12 @@ return `<!DOCTYPE html>
       var card = e.target.closest('.clickable-signal-card');
       if (card) {
         var token = card.getAttribute('data-token');
-        if (token) window.location.href = '/token/' + encodeURIComponent(token);
+        var chain = card.getAttribute('data-chain');
+        if (token) {
+          var url = '/token/' + encodeURIComponent(token);
+          if (chain && chain !== 'solana') url += '?chain=' + encodeURIComponent(chain);
+          window.location.href = url;
+        }
       }
     });
     var currentTab = 'pump';
@@ -2259,10 +2277,11 @@ return `<!DOCTYPE html>
       html += '<div class="token-hero-top">';
       html += '<div class="token-logo-wrap">' + logoHtml + '</div>';
       html += '<div class="token-info">';
+      var chainName = (token.chain === 'bsc') ? 'BSC' : 'Solana';
       html += '<div class="token-name-row">';
       html += '<h1>' + esc(nameStr) + '</h1>';
       if (symbolStr) html += '<span class="symbol-badge">' + esc(symbolStr) + '</span>';
-      html += '<span class="chain-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>Solana</span>';
+      html += '<span class="chain-badge">' + esc(chainName) + '</span>';
       html += '</div>';
       html += '<div class="token-price-row">';
       html += '<span class="token-price">' + formatPrice(token.current_price_usd) + '</span>';
@@ -2279,10 +2298,14 @@ return `<!DOCTYPE html>
       html += '<span class="contract-addr" id="ca-text">' + esc(token.token) + '</span>';
       html += '<button class="copy-btn" id="copy-ca-btn"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>复制</button>';
       html += '</div>';
+      var dsChain = (token.chain === 'bsc') ? 'bsc' : 'solana';
+      var gtChain = (token.chain === 'bsc') ? 'bsc' : 'solana';
+      var explorerBase = (token.chain === 'bsc') ? 'https://bscscan.com/token/' : 'https://solscan.io/token/';
+      var explorerLabel = (token.chain === 'bsc') ? 'BscScan' : 'Solscan';
       html += '<div class="action-bar-links">';
-      html += '<a class="ext-link" href="https://dexscreener.com/solana/' + esc(token.token) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 17l4-8 4 4 6-8"/></svg>DexScreener<span class="ext-arrow">↗</span></a>';
-      html += '<a class="ext-link" href="https://www.geckoterminal.com/solana/tokens/' + esc(token.token) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Gecko<span class="ext-arrow">↗</span></a>';
-      html += '<a class="ext-link" href="https://solscan.io/token/' + esc(token.token) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Solscan<span class="ext-arrow">↗</span></a>';
+      html += '<a class="ext-link" href="https://dexscreener.com/' + dsChain + '/' + esc(token.token) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 17l4-8 4 4 6-8"/></svg>DexScreener<span class="ext-arrow">↗</span></a>';
+      html += '<a class="ext-link" href="https://www.geckoterminal.com/' + gtChain + '/tokens/' + esc(token.token) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Gecko<span class="ext-arrow">↗</span></a>';
+      html += '<a class="ext-link" href="' + explorerBase + esc(token.token) + '" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' + esc(explorerLabel) + '<span class="ext-arrow">↗</span></a>';
       html += '</div>';
       html += '</div>';
 
@@ -2700,7 +2723,8 @@ return `<!DOCTYPE html>
 
     // Fetch token detail
     if (tokenAddress) {
-      fetch('/api/token/' + encodeURIComponent(tokenAddress) + '?chain=solana')
+      var chain = (new URLSearchParams(location.search)).get('chain') || 'solana';
+      fetch('/api/token/' + encodeURIComponent(tokenAddress) + '?chain=' + encodeURIComponent(chain))
         .then(function(r) {
           if (!r.ok) throw new Error('HTTP ' + r.status);
           return r.json();
@@ -2989,26 +3013,36 @@ const server = http.createServer(async (req, res) => {
       const u = new URL(req.url || '/', 'http://localhost');
       const page = parseInt(u.searchParams.get('page') || '1', 10) || 1;
       const pageSize = Math.min(parseInt(u.searchParams.get('pageSize') || '100', 10) || 100, 100);
-      const chainId = u.searchParams.get('chainId') || 'CT_501';
-      let data = await fetchSmartMoneySignals({ page, pageSize, chainId });
-      // 用 DexScreener 补充 logo 备用源（Binance CDN 可能因 Referer 等策略加载失败）
-      if (Array.isArray(data) && data.length > 0 && chainId === 'CT_501') {
-        const addrs = data.map((d) => d.contractAddress || d.contract_address).filter(Boolean);
-        if (addrs.length > 0) {
+      // 同时拉取 Solana + BSC 聪明钱信号，合并展示
+      const [solData, bscData] = await Promise.all([
+        fetchSmartMoneySignals({ page, pageSize, chainId: 'CT_501' }),
+        fetchSmartMoneySignals({ page, pageSize, chainId: '56' }),
+      ]);
+      const solWithChain = (Array.isArray(solData) ? solData : []).map((d) => ({ ...d, chain: 'solana', sol: true, bsc: false }));
+      const bscWithChain = (Array.isArray(bscData) ? bscData : []).map((d) => ({ ...d, chain: 'bsc', sol: false, bsc: true }));
+      let data = [...solWithChain, ...bscWithChain];
+      // 用 DexScreener 补充 logo 备用源
+      if (data.length > 0) {
+        const allAddrs = data.map((d) => d.contractAddress || d.contract_address).filter(Boolean);
+        if (allAddrs.length > 0) {
           try {
-            const pairs = await dexscreener.getTokenPairs(addrs);
-            const logoByAddr = new Map();
+            const pairs = await dexscreener.getTokenPairs(allAddrs);
+            const logoByKey = new Map();
+            const chainMap = { solana: 'solana', bsc: 'bsc' };
             for (const p of pairs || []) {
               const addr = (p.baseToken?.address || '').toLowerCase();
               const logo = p.info?.imageUrl || null;
-              if (addr && logo && !logoByAddr.has(addr)) logoByAddr.set(addr, logo);
+              const dsChain = (p.chainId || '').toLowerCase();
+              const chain = chainMap[dsChain] || dsChain || 'solana';
+              const key = chain + ':' + addr;
+              if (addr && logo && !logoByKey.has(key)) logoByKey.set(key, logo);
             }
             data = data.map((item) => {
               const addr = (item.contractAddress || item.contract_address || '').toLowerCase();
-              const fallback = addr ? logoByAddr.get(addr) : null;
-              return { ...item, logoUrlFallback: fallback };
+              const key = (item.chain || 'solana') + ':' + addr;
+              return { ...item, logoUrlFallback: logoByKey.get(key) || null };
             });
-          } catch (_) { /* 忽略 DexScreener 失败，仍返回 Binance 数据 */ }
+          } catch (_) { /* 忽略 DexScreener 失败 */ }
         }
       }
       res.setHeader('Content-Type', 'application/json');
