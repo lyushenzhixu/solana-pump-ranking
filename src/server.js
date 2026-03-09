@@ -10,7 +10,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
-import { getTokenDetail, getKline, getTokenSecurityDetail, fetchSmartMoneySignals, fetchSmartMoneyInflowRank } from './data-sources/index.js';
+import { getTokenDetail, getKline, getTokenSecurityDetail, fetchSmartMoneySignals, fetchSmartMoneyInflowRank, okxOnchain } from './data-sources/index.js';
 import * as dexscreener from './data-sources/dexscreener.js';
 import { getTokenNarrative, getTokenHotTweets, batchPrefetch } from './data-sources/sixfivefiveone.js';
 import { refreshZhilabsNarratives } from '../scripts/refresh-zhilabs-narratives.js';
@@ -42,6 +42,11 @@ if (!supabaseUrl || !supabaseKey || isPlaceholder) {
 }
 
 console.log('[数据源] 使用自研数据源（DexScreener + GeckoTerminal + Jupiter + GoPlus），无需 AVE_API_KEY');
+if (okxOnchain.isConfigured()) {
+  console.log('[数据源] OKX OnchainOS API 已配置，将用于补充代币数据');
+} else {
+  console.log('[数据源] OKX OnchainOS API 未配置（可选），设置 OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE 启用');
+}
 
 const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -216,6 +221,11 @@ return `<!DOCTYPE html>
       --sol-green: #14F195;
       --sol-blue: #00D1FF;
       --bn-yellow: #F0B90B;
+      --okx-black: #050505;
+      --okx-white: #e0e0e0;
+      --okx-accent: #a0a0a0;
+      --okx-green: #7dd3a8;
+      --okx-border: rgba(255,255,255,0.08);
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -1050,12 +1060,157 @@ return `<!DOCTYPE html>
     .inflow-rank-change.positive { color: var(--positive); }
     .inflow-rank-change.negative { color: var(--negative); }
 
+    /* === SUB TABS === */
+    .sub-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 0;
+      padding: 0 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .sub-tabs button {
+      position: relative;
+      padding: 0.5rem 1rem;
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.25s ease;
+      z-index: 1;
+    }
+    .sub-tabs button:hover { color: var(--text-secondary); }
+    .sub-tabs button.active { color: var(--bn-yellow); border-bottom-color: var(--bn-yellow); font-weight: 600; }
+    .sub-tabs.okx-sub-tabs button.active { color: var(--okx-white); border-bottom-color: var(--okx-white); }
+
+    /* === OKX VARIANT STYLES === */
+    .signal-cards-okx .signal-card {
+      background: var(--okx-black);
+      border-color: var(--okx-border);
+    }
+    .signal-cards-okx .signal-card::before {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%);
+    }
+    .signal-cards-okx .signal-card:hover {
+      border-color: rgba(255,255,255,0.25);
+      box-shadow: 0 0 24px rgba(255,255,255,0.06), 0 4px 16px rgba(0,0,0,0.5);
+    }
+    .signal-cards-okx .signal-card-live-bar {
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .signal-cards-okx .signal-card-live-dot {
+      background: var(--okx-white);
+      box-shadow: 0 0 6px rgba(224,224,224,0.6);
+    }
+    .signal-cards-okx .signal-card-live-text {
+      color: var(--okx-white);
+      text-shadow: none;
+    }
+    .signal-cards-okx .signal-card-live-sm { color: rgba(255,255,255,0.3); }
+    .signal-cards-okx .signal-card-head img {
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(20,20,20,0.5);
+      box-shadow: 0 0 8px rgba(255,255,255,0.04);
+    }
+    .signal-cards-okx .signal-card-logo-placeholder {
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.06);
+      color: var(--okx-white);
+      box-shadow: none;
+    }
+    .signal-cards-okx .signal-card-chain {
+      background: rgba(255,255,255,0.08);
+      color: var(--okx-accent);
+    }
+    .signal-cards-okx .signal-card-chain[data-chain="bsc"] {
+      background: rgba(255,255,255,0.1);
+      color: var(--okx-white);
+    }
+    .signal-cards-okx .signal-card-active {
+      color: var(--okx-green);
+      text-shadow: 0 0 6px rgba(125,211,168,0.3);
+    }
+    .signal-cards-okx .signal-card-stats-item {
+      background: rgba(255,255,255,0.02);
+    }
+    .signal-cards-okx .signal-card-stats-item:not(:last-child) {
+      border-right-color: rgba(255,255,255,0.04);
+    }
+    .signal-cards-okx .signal-card-stats-item .label { color: rgba(255,255,255,0.3); }
+    .signal-cards-okx .signal-card-stats-item .value.inflow-positive {
+      color: var(--okx-green);
+      text-shadow: 0 0 6px rgba(125,211,168,0.3);
+    }
+    .signal-cards-okx .signal-card-bar-buy {
+      background: repeating-linear-gradient(90deg, var(--okx-white), var(--okx-white) 4px, #888 4px, #888 6px);
+      box-shadow: 0 0 6px rgba(224,224,224,0.2);
+    }
+    .signal-cards-okx .signal-card-bar-sell {
+      background: repeating-linear-gradient(90deg, #ff5252, #ff5252 4px, rgba(255,82,82,0.4) 4px, rgba(255,82,82,0.4) 6px);
+    }
+    .signal-cards-okx .signal-card-bar-labels .buy {
+      color: var(--okx-white);
+      text-shadow: none;
+    }
+    .signal-cards-okx .signal-card-ca { color: rgba(255,255,255,0.25); }
+    .signal-cards-okx .signal-card-time { color: rgba(255,255,255,0.25); }
+    .signal-cards-okx .signal-card-scanline { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.015), transparent); }
+    .signal-cards-okx .signal-card-stats { border-color: rgba(255,255,255,0.04); }
+
+    .inflow-cards-okx .inflow-rank-card {
+      background: var(--okx-black);
+      border-color: var(--okx-border);
+    }
+    .inflow-cards-okx .inflow-rank-card:hover { border-color: rgba(255,255,255,0.2); }
+    .inflow-cards-okx .inflow-rank-pos {
+      background: rgba(255,255,255,0.08);
+      color: var(--okx-white);
+    }
+    .inflow-cards-okx .inflow-rank-pos.top3 {
+      background: var(--okx-white);
+      color: var(--okx-black);
+    }
+    .inflow-cards-okx .inflow-rank-logo {
+      border-color: rgba(255,255,255,0.15);
+    }
+    .inflow-cards-okx .inflow-rank-logo-placeholder {
+      background: rgba(255,255,255,0.08);
+      color: var(--okx-white);
+      border-color: rgba(255,255,255,0.15);
+    }
+    .inflow-cards-okx .inflow-rank-chain {
+      background: rgba(255,255,255,0.08);
+      color: var(--okx-white);
+    }
+    .inflow-cards-okx .inflow-rank-traders {
+      color: var(--okx-white);
+    }
+    .inflow-cards-okx .inflow-rank-bar-buy {
+      background: var(--okx-white);
+    }
+    .inflow-cards-okx .inflow-rank-bar-labels .buy { color: var(--okx-white); }
+    .inflow-cards-okx .inflow-rank-tag {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.1);
+    }
+    .inflow-cards-okx .inflow-rank-live-dot {
+      background: var(--okx-white);
+      box-shadow: 0 0 6px rgba(224,224,224,0.4);
+    }
+
     /* === MOBILE === */
     @media (max-width: 768px) {
       .page-wrapper { padding: 1rem 0.75rem 2rem; }
       .page-header { flex-direction: column; align-items: flex-start; }
       .controls-row { flex-direction: column; align-items: flex-start; }
+      .tabs { flex-wrap: wrap; }
       .tabs button { padding: 0.5rem 0.75rem; font-size: 0.8125rem; }
+      .sub-tabs { flex-wrap: wrap; }
+      .sub-tabs button { padding: 0.4rem 0.625rem; font-size: 0.75rem; }
       th, td { padding: 0.5rem 0.625rem; font-size: 0.8125rem; }
       .table-card { border-radius: 12px; overflow-x: auto; }
       table { min-width: 640px; }
@@ -1102,8 +1257,8 @@ return `<!DOCTYPE html>
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
         <button type="button" class="tab-btn" data-tab="zhilabs">zhizhilabs 精选</button>
-        <button type="button" class="tab-btn" data-tab="signal">binance聪明钱信号</button>
-        <button type="button" class="tab-btn" data-tab="inflow">聪明钱流入排行</button>
+        <button type="button" class="tab-btn" data-tab="binance">Binance Skill</button>
+        <button type="button" class="tab-btn" data-tab="okx">OKX Skill</button>
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
@@ -1113,13 +1268,28 @@ return `<!DOCTYPE html>
       </div>
     </div>
 
+    <div class="sub-tabs" id="subTabsBinance" style="display:none">
+      <button type="button" class="sub-tab-btn active" data-subtab="bn-signal">Binance 聪明钱信号</button>
+      <button type="button" class="sub-tab-btn" data-subtab="bn-inflow">Binance 聪明钱流入</button>
+      <button type="button" class="sub-tab-btn" data-subtab="bn-kol">Binance KOL 追踪</button>
+    </div>
+    <div class="sub-tabs okx-sub-tabs" id="subTabsOkx" style="display:none">
+      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">OKX 聪明钱信号</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">OKX 聪明钱流入</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">OKX KOL 追踪</button>
+    </div>
+
     <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
 
     <div class="table-card">
       <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
       <div id="panel-zhilabs" class="panel"><div id="root-zhilabs"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-signal" class="panel"><div id="root-signal"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-inflow" class="panel"><div id="root-inflow"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-bn-signal" class="panel"><div id="root-bn-signal"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-bn-inflow" class="panel"><div id="root-bn-inflow"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-bn-kol" class="panel"><div id="root-bn-kol"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-okx-signal" class="panel"><div id="root-okx-signal"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-okx-inflow" class="panel"><div id="root-okx-inflow"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-okx-kol" class="panel"><div id="root-okx-kol"><div class="loading-text">加载中</div></div></div>
     </div>
   </div>
 
@@ -1197,6 +1367,7 @@ return `<!DOCTYPE html>
         return;
       }
       var gridClass = 'signal-cards-grid';
+      if (variant === 'okx') gridClass += ' signal-cards-okx';
       var html = '<div class="' + gridClass + '">';
       list.forEach(function(item) {
         var ca = item.contractAddress || item.contract_address || '';
@@ -1253,7 +1424,8 @@ return `<!DOCTYPE html>
       html += '</div>';
       root.innerHTML = html;
     }
-    function renderInflowRank(list, rootId) {
+    function renderInflowRank(list, rootId, variant) {
+      variant = variant || 'binance';
       var root = document.getElementById(rootId);
       if (!root) return;
       if (!list.length) {
@@ -1261,7 +1433,9 @@ return `<!DOCTYPE html>
         return;
       }
       list.sort(function(a, b) { return (b.inflow || 0) - (a.inflow || 0); });
-      var html = '<div class="inflow-rank-grid">';
+      var gridClass = 'inflow-rank-grid';
+      if (variant === 'okx') gridClass += ' inflow-cards-okx';
+      var html = '<div class="' + gridClass + '">';
       list.forEach(function(item, idx) {
         var ca = item.ca || '';
         var name = item.tokenName || ca.slice(0, 8) + '…' || '—';
@@ -1343,31 +1517,71 @@ return `<!DOCTYPE html>
         });
       });
     }
-    function refreshTab(tab) {
-      if (tab === 'signal') {
+    function refreshPanel(panelKey) {
+      var rootId = 'root-' + panelKey;
+      var rootEl = document.getElementById(rootId);
+      if (!rootEl) return Promise.resolve();
+
+      if (panelKey === 'bn-signal') {
         return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
-          if (Array.isArray(list)) renderSignalCards(list, 'root-signal', 'binance');
-          else document.getElementById('root-signal').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+          if (Array.isArray(list)) renderSignalCards(list, rootId, 'binance');
+          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
-          document.getElementById('root-signal').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
-      if (tab === 'inflow') {
-        return fetchJsonOrThrow('/api/smart-money-inflow').then(function(list) {
-          if (Array.isArray(list)) renderInflowRank(list, 'root-inflow');
-          else document.getElementById('root-inflow').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+      if (panelKey === 'bn-inflow') {
+        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=1').then(function(list) {
+          if (Array.isArray(list)) renderInflowRank(list, rootId, 'binance');
+          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
-          document.getElementById('root-inflow').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
-      var url = tab === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
-      var rootId = tab === 'pump' ? 'root-pump' : 'root-zhilabs';
+      if (panelKey === 'bn-kol') {
+        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=2').then(function(list) {
+          if (Array.isArray(list)) renderInflowRank(list, rootId, 'binance');
+          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        }).catch(function(e) {
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        });
+      }
+      if (panelKey === 'okx-signal') {
+        return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
+          if (Array.isArray(list)) renderSignalCards(list, rootId, 'okx');
+          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        }).catch(function(e) {
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        });
+      }
+      if (panelKey === 'okx-inflow') {
+        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=1').then(function(list) {
+          if (Array.isArray(list)) renderInflowRank(list, rootId, 'okx');
+          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        }).catch(function(e) {
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        });
+      }
+      if (panelKey === 'okx-kol') {
+        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=2').then(function(list) {
+          if (Array.isArray(list)) renderInflowRank(list, rootId, 'okx');
+          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        }).catch(function(e) {
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        });
+      }
+      var url = panelKey === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
       return fetchJsonOrThrow(url).then(function(list) {
         if (Array.isArray(list)) renderTable(list, rootId);
-        else document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
       }).catch(function(e) {
-        document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
       });
+    }
+    function refreshTab(tab) {
+      if (tab === 'binance') return refreshPanel(currentSubTab || 'bn-signal');
+      if (tab === 'okx') return refreshPanel(currentSubTab || 'okx-signal');
+      return refreshPanel(tab);
     }
     function setUpdateStatus(text, isError) {
       var el = document.getElementById('updateStatus');
@@ -1430,29 +1644,82 @@ return `<!DOCTYPE html>
       }
     });
     var currentTab = 'pump';
+    var currentSubTab = '';
+    var bnSubTabs = { 'bn-signal': true, 'bn-inflow': true, 'bn-kol': true };
+    var okxSubTabs = { 'okx-signal': true, 'okx-inflow': true, 'okx-kol': true };
+    var defaultBnSub = 'bn-signal';
+    var defaultOkxSub = 'okx-signal';
     document.getElementById('updateBtn').querySelector('span').textContent = '更新 Pump 榜单';
-    function switchTab(tab) {
-      currentTab = tab;
-      document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
-      document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
+
+    function showSubTabs(tab) {
+      document.getElementById('subTabsBinance').style.display = tab === 'binance' ? 'flex' : 'none';
+      document.getElementById('subTabsOkx').style.display = tab === 'okx' ? 'flex' : 'none';
+    }
+
+    function activatePanel(panelKey) {
+      document.querySelectorAll('.panel').forEach(function(p){ p.classList.remove('active'); });
+      var target = document.getElementById('panel-' + panelKey);
+      if (target) target.classList.add('active');
+    }
+
+    function updateDesc(tab, subTab) {
       var descEl = document.getElementById('desc');
       if (tab === 'pump') descEl.textContent = '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序';
       else if (tab === 'zhilabs') descEl.textContent = 'zhizhilabs 精选 Meme 代币，按 24h 交易量排序';
-      else if (tab === 'signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
-      else if (tab === 'inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
+      else if (tab === 'binance') {
+        if (subTab === 'bn-signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
+        else if (subTab === 'bn-inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
+        else if (subTab === 'bn-kol') descEl.textContent = 'Binance KOL 大 V 资金流入排行，追踪 KOL 投资动向';
+      } else if (tab === 'okx') {
+        if (subTab === 'okx-signal') descEl.textContent = 'OKX 链上聪明钱买入/卖出信号，追踪链上聪明钱最新动态';
+        else if (subTab === 'okx-inflow') descEl.textContent = 'OKX 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
+        else if (subTab === 'okx-kol') descEl.textContent = 'OKX KOL 大 V 资金流入排行，追踪 KOL 投资动向';
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
+      showSubTabs(tab);
+      if (tab === 'binance') {
+        currentSubTab = defaultBnSub;
+        activatePanel(currentSubTab);
+        document.querySelectorAll('#subTabsBinance .sub-tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.subtab === currentSubTab); });
+      } else if (tab === 'okx') {
+        currentSubTab = defaultOkxSub;
+        activatePanel(currentSubTab);
+        document.querySelectorAll('#subTabsOkx .sub-tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.subtab === currentSubTab); });
+      } else {
+        currentSubTab = '';
+        activatePanel(tab);
+      }
+      updateDesc(tab, currentSubTab);
       var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : '刷新数据');
       document.getElementById('updateBtn').querySelector('span').textContent = btnText;
       var narrativeBtn = document.getElementById('refreshNarrativeBtn');
       if (narrativeBtn) narrativeBtn.style.display = tab === 'zhilabs' ? '' : 'none';
       refreshTab(tab).then(function(){ setLastSync(new Date()); }).catch(function(){});
     }
+
+    function switchSubTab(subTab) {
+      currentSubTab = subTab;
+      var parentId = bnSubTabs[subTab] ? 'subTabsBinance' : 'subTabsOkx';
+      document.querySelectorAll('#' + parentId + ' .sub-tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.subtab === subTab); });
+      activatePanel(subTab);
+      updateDesc(currentTab, subTab);
+      refreshPanel(subTab).then(function(){ setLastSync(new Date()); }).catch(function(){});
+    }
+
     document.querySelectorAll('.tab-btn').forEach(function(btn) {
       btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
+    });
+    document.querySelectorAll('.sub-tab-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() { switchSubTab(btn.dataset.subtab); });
     });
     document.getElementById('updateBtn').addEventListener('click', function() {
       var btn = document.getElementById('updateBtn');
       var tab = currentTab || 'pump';
-      if (tab === 'signal' || tab === 'inflow') {
+      if (tab === 'binance' || tab === 'okx') {
         btn.disabled = true;
         setUpdateStatus('刷新中…');
         refreshTab(tab).then(function() {
@@ -1536,8 +1803,8 @@ return `<!DOCTYPE html>
     function startInflowAutoRefresh() {
       stopInflowAutoRefresh();
       inflowAutoRefreshTimer = setInterval(function() {
-        if (currentTab === 'inflow') {
-          refreshTab('inflow').then(function() { setLastSync(new Date()); }).catch(function(){});
+        if (currentSubTab && (currentSubTab.indexOf('inflow') >= 0 || currentSubTab.indexOf('kol') >= 0)) {
+          refreshPanel(currentSubTab).then(function() { setLastSync(new Date()); }).catch(function(){});
         }
       }, 30000);
     }
@@ -1547,8 +1814,13 @@ return `<!DOCTYPE html>
     var origSwitchTab = switchTab;
     switchTab = function(tab) {
       origSwitchTab(tab);
-      if (tab === 'inflow') startInflowAutoRefresh();
+      if (tab === 'binance' || tab === 'okx') startInflowAutoRefresh();
       else stopInflowAutoRefresh();
+    };
+    var origSwitchSubTab = switchSubTab;
+    switchSubTab = function(subTab) {
+      origSwitchSubTab(subTab);
+      if (subTab.indexOf('inflow') >= 0 || subTab.indexOf('kol') >= 0) startInflowAutoRefresh();
     };
 
     Promise.allSettled([
@@ -3756,9 +4028,10 @@ const server = http.createServer(async (req, res) => {
   }
   if (urlPath === '/api/smart-money-inflow') {
     try {
+      const tagType = parseInt(u.searchParams.get('tagType') || '1', 10) || 1;
       const [solData, bscData] = await Promise.all([
-        fetchSmartMoneyInflowRank({ chainId: 'CT_501', tagType: 1 }),
-        fetchSmartMoneyInflowRank({ chainId: '56', tagType: 1 }),
+        fetchSmartMoneyInflowRank({ chainId: 'CT_501', tagType }),
+        fetchSmartMoneyInflowRank({ chainId: '56', tagType }),
       ]);
       const solWithChain = (Array.isArray(solData) ? solData : []).map((d) => ({ ...d, chain: 'solana' }));
       const bscWithChain = (Array.isArray(bscData) ? bscData : []).map((d) => ({ ...d, chain: 'bsc' }));
@@ -3914,9 +4187,10 @@ const server = http.createServer(async (req, res) => {
     const address = decodeURIComponent(tokenMatch[1]);
     const chain = u.searchParams.get('chain') || 'solana';
     try {
-      const [detail, dbRow, secDetail] = await Promise.all([
+      const [detail, pumpRow, zhilabsRow, secDetail] = await Promise.all([
         getTokenDetail(address, chain),
-        supabase.from('zhilabs_ranking').select('holders').eq('token', address).maybeSingle().then(r => r.data),
+        supabase.from('solana_pump_ranking').select('holders, holders_top10_percent').eq('token', address).maybeSingle().then(r => r.data).catch(() => null),
+        supabase.from('zhilabs_ranking').select('holders').eq('token', address).maybeSingle().then(r => r.data).catch(() => null),
         getTokenSecurityDetail(address, chain).catch(() => null),
       ]);
       if (!detail) {
@@ -3925,12 +4199,24 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: '未找到该代币' }));
         return;
       }
+      const dbRow = pumpRow || zhilabsRow;
       if (detail.holders == null && dbRow?.holders != null) {
         detail.holders = dbRow.holders;
       }
       if (detail.holders == null && secDetail?.holderCount != null) {
         detail.holders = secDetail.holderCount;
       }
+      // 优先使用数据库（Binance来源）的 top10 数据，保持与榜单一致
+      let dbTop10 = pumpRow?.holders_top10_percent ?? null;
+      let goplusTop10 = secDetail?.topHolderPercent ?? null;
+      // GoPlus 的 topHolderPercent 是 0-1 比例，转换为百分比
+      if (goplusTop10 != null && goplusTop10 < 1) goplusTop10 = goplusTop10 * 100;
+      let okxTop10 = null;
+      if (dbTop10 == null && okxOnchain.isConfigured()) {
+        okxTop10 = await okxOnchain.getTop10HolderPercent(address, chain).catch(() => null);
+      }
+      const finalTop10 = dbTop10 ?? okxTop10 ?? goplusTop10;
+
       if (secDetail) {
         detail._security = {
           lpNotLocked: secDetail.lpNotLocked,
@@ -3940,8 +4226,10 @@ const server = http.createServer(async (req, res) => {
           isMintable: secDetail.isMintable,
           isFreezable: secDetail.isFreezable,
           riskLevel: secDetail.riskLevel,
-          topHolderPercent: secDetail.topHolderPercent,
+          topHolderPercent: finalTop10,
         };
+      } else if (finalTop10 != null) {
+        detail._security = { topHolderPercent: finalTop10 };
       }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
