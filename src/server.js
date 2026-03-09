@@ -1429,7 +1429,7 @@ return `<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"><\/script>
+  <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"><\/script>
   <style>
     /* Design tokens (shared with welcome + ranking) */
     :root {
@@ -1833,7 +1833,7 @@ return `<!DOCTYPE html>
     .stat-value.positive { color: var(--positive); }
     .stat-value.negative { color: var(--negative); }
 
-    /* === Chart Card === */
+    /* === Chart Card (TradingView style) === */
     .chart-card {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
@@ -1852,13 +1852,13 @@ return `<!DOCTYPE html>
     }
     .chart-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 1.125rem 1.25rem 0;
-      gap: 0.75rem;
+      padding: 0.875rem 1rem 0;
+      gap: 0.5rem;
       flex-wrap: wrap;
     }
     .chart-title {
       font-family: 'Orbitron', sans-serif;
-      font-size: 0.75rem; font-weight: 700;
+      font-size: 0.6875rem; font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.08em;
       color: var(--text-muted);
@@ -1871,38 +1871,94 @@ return `<!DOCTYPE html>
       animation: dotPulse 2s ease-in-out infinite;
     }
     .chart-intervals {
-      display: flex; gap: 0.25rem;
+      display: flex; gap: 2px; align-items: center;
+      background: rgba(153,69,255,0.04);
+      border-radius: 8px;
+      padding: 2px;
     }
     .chart-intervals button {
       font-family: 'Exo 2', sans-serif;
       font-size: 0.6875rem; font-weight: 600;
-      padding: 0.3rem 0.6rem;
+      padding: 0.3rem 0.55rem;
       border-radius: 6px;
-      border: 1px solid transparent;
+      border: none;
       background: transparent;
       color: var(--text-muted);
       cursor: pointer;
       transition: all 0.2s;
+      white-space: nowrap;
     }
     .chart-intervals button.active {
-      color: var(--sol-purple);
-      background: rgba(153,69,255,0.1);
-      border-color: rgba(153,69,255,0.2);
+      color: #fff;
+      background: var(--sol-purple);
+      box-shadow: 0 0 8px rgba(153,69,255,0.3);
     }
     .chart-intervals button:hover:not(.active) {
       color: var(--text-secondary);
-      background: rgba(153,69,255,0.04);
+      background: rgba(153,69,255,0.08);
     }
-    .chart-body { padding: 0.75rem 1.25rem 1.25rem; }
+    .chart-ohlcv-bar {
+      display: flex; align-items: center; gap: 0.75rem;
+      padding: 0.5rem 1rem 0.25rem;
+      font-family: 'Exo 2', monospace;
+      font-size: 0.6875rem;
+      flex-wrap: wrap;
+      min-height: 1.75rem;
+    }
+    .chart-ohlcv-bar .ohlcv-pair {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 0.75rem;
+      display: flex; align-items: center; gap: 0.375rem;
+    }
+    .chart-ohlcv-bar .ohlcv-pair .chain-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--sol-purple);
+    }
+    .chart-ohlcv-bar .ohlcv-label {
+      color: var(--text-muted);
+    }
+    .chart-ohlcv-bar .ohlcv-val {
+      font-variant-numeric: tabular-nums;
+    }
+    .chart-ohlcv-bar .ohlcv-val.up { color: #14F195; }
+    .chart-ohlcv-bar .ohlcv-val.down { color: #ff4d6a; }
+    .chart-ohlcv-bar .ohlcv-val.neutral { color: var(--text-secondary); }
+    .chart-ohlcv-bar .ohlcv-change {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+    }
+    .chart-ohlcv-bar .ohlcv-change.up { color: #14F195; background: rgba(20,241,149,0.1); }
+    .chart-ohlcv-bar .ohlcv-change.down { color: #ff4d6a; background: rgba(255,77,106,0.1); }
+    .chart-vol-label {
+      position: absolute; bottom: 72px; left: 16px;
+      font-family: 'Exo 2', monospace;
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      pointer-events: none;
+      z-index: 2;
+      display: flex; align-items: center; gap: 0.375rem;
+      opacity: 0.7;
+    }
+    .chart-vol-label .vol-value {
+      color: var(--text-secondary);
+      font-variant-numeric: tabular-nums;
+    }
+    .chart-body {
+      padding: 0 0.25rem 0.25rem;
+      position: relative;
+    }
     #kline-chart {
       width: 100%;
-      height: 420px;
-      border-radius: 10px;
+      height: 460px;
+      border-radius: 0 0 10px 10px;
       overflow: hidden;
     }
     .chart-loading {
       display: flex; align-items: center; justify-content: center;
-      height: 420px;
+      height: 460px;
       color: var(--text-muted);
       font-size: 0.875rem;
     }
@@ -1918,7 +1974,7 @@ return `<!DOCTYPE html>
     }
     .chart-error {
       display: flex; align-items: center; justify-content: center;
-      height: 420px;
+      height: 460px;
       color: var(--text-muted);
       font-size: 0.875rem;
     }
@@ -2397,8 +2453,11 @@ return `<!DOCTYPE html>
       .action-bar-links { overflow-x: auto; -webkit-overflow-scrolling: touch; }
       .ext-link { border-left: none !important; border-top: none; padding: 0.625rem 0.875rem; font-size: 0.75rem; }
       .ext-link + .ext-link { border-left: 1px solid var(--border-subtle) !important; }
-      #kline-chart { height: 300px; }
-      .chart-loading, .chart-error { height: 300px; }
+      #kline-chart { height: 340px; }
+      .chart-loading, .chart-error { height: 340px; }
+      .chart-ohlcv-bar { font-size: 0.625rem; gap: 0.5rem; }
+      .chart-ohlcv-bar .ohlcv-pair { font-size: 0.6875rem; }
+      .chart-intervals button { padding: 0.25rem 0.4rem; font-size: 0.625rem; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.625rem; }
       .stat-card { padding: 0.875rem; border-radius: 12px; }
       .stat-value { font-size: 1rem; }
@@ -2546,12 +2605,25 @@ return `<!DOCTYPE html>
       // Left column: chart + narrative
       html += '<div class="detail-main">';
 
-      // K-line chart
+      // K-line chart (TradingView style)
       html += '<div class="chart-card">';
-      html += '<div class="chart-header"><div class="chart-title"><span class="live-dot"></span>K 线图</div>';
-      html += '<div class="chart-intervals"><button class="active" data-interval="15">15m</button><button data-interval="60">1H</button><button data-interval="240">4H</button><button data-interval="1440">1D</button></div>';
+      html += '<div class="chart-header">';
+      html += '<div class="chart-title"><span class="live-dot"></span>K线图表</div>';
+      html += '<div class="chart-intervals">';
+      html += '<button data-interval="1">1分</button>';
+      html += '<button data-interval="5">5分</button>';
+      html += '<button class="active" data-interval="15">15分</button>';
+      html += '<button data-interval="30">30分</button>';
+      html += '<button data-interval="60">1小时</button>';
+      html += '<button data-interval="240">4小时</button>';
+      html += '<button data-interval="1440">1天</button>';
       html += '</div>';
-      html += '<div class="chart-body"><div id="kline-chart"><div class="chart-loading">加载K线数据</div></div></div>';
+      html += '</div>';
+      html += '<div class="chart-ohlcv-bar" id="chart-ohlcv"></div>';
+      html += '<div class="chart-body">';
+      html += '<div id="chart-vol-label" class="chart-vol-label">Vol <span class="vol-value" id="vol-display">—</span></div>';
+      html += '<div id="kline-chart"><div class="chart-loading">加载K线数据</div></div>';
+      html += '</div>';
       html += '</div>';
 
       // Narrative summary
@@ -2607,17 +2679,53 @@ return `<!DOCTYPE html>
       loadTweets(token);
     }
 
+    var _chartInstance = null;
+    var _chartResizeHandler = null;
+
+    function fmtPrice(n) {
+      if (n == null || isNaN(n)) return '—';
+      if (n >= 1) return n.toFixed(4);
+      if (n >= 0.01) return n.toFixed(6);
+      return n.toFixed(8);
+    }
+
+    function fmtVol(n) {
+      if (n == null || isNaN(n)) return '—';
+      if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K';
+      return n.toFixed(2);
+    }
+
+    function updateOhlcvBar(d, symbol) {
+      var bar = document.getElementById('chart-ohlcv');
+      if (!bar || !d) { if (bar) bar.innerHTML = ''; return; }
+      var bullish = d.close >= d.open;
+      var changeAbs = d.close - d.open;
+      var changePct = d.open !== 0 ? ((changeAbs / d.open) * 100) : 0;
+      var cls = bullish ? 'up' : 'down';
+      var sign = bullish ? '+' : '';
+      bar.innerHTML =
+        '<span class="ohlcv-pair"><span class="chain-dot"></span>' + (symbol || '') + '</span>' +
+        '<span class="ohlcv-label">开</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.open) + '</span>' +
+        '<span class="ohlcv-label">高</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.high) + '</span>' +
+        '<span class="ohlcv-label">低</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.low) + '</span>' +
+        '<span class="ohlcv-label">收</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.close) + '</span>' +
+        '<span class="ohlcv-change ' + cls + '">' + sign + fmtPrice(changeAbs) + ' (' + sign + changePct.toFixed(2) + '%)</span>';
+    }
+
     function loadKlineChart(token, interval) {
       var pairAddress = token.main_pair;
       var chain = token.chain || 'solana';
       interval = interval || 15;
-      var sizeMap = { 15: 96, 60: 96, 240: 96, 1440: 60 };
+      var sizeMap = { 1: 120, 5: 120, 15: 96, 30: 96, 60: 96, 240: 96, 1440: 60 };
       var size = sizeMap[interval] || 96;
       if (!pairAddress) {
         document.getElementById('kline-chart').innerHTML = '<div class="chart-error">无交易对数据，无法加载K线</div>';
         return;
       }
       document.getElementById('kline-chart').innerHTML = '<div class="chart-loading">加载K线数据</div>';
+      document.getElementById('chart-ohlcv').innerHTML = '';
       fetch('/api/kline/' + encodeURIComponent(pairAddress) + '?chain=' + encodeURIComponent(chain) + '&interval=' + interval + '&size=' + size)
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -2625,44 +2733,89 @@ return `<!DOCTYPE html>
             document.getElementById('kline-chart').innerHTML = '<div class="chart-error">暂无K线数据</div>';
             return;
           }
-          renderChart(data);
+          renderChart(data, token.symbol || '');
         })
         .catch(function(e) {
           document.getElementById('kline-chart').innerHTML = '<div class="chart-error">K线加载失败：' + (e.message || e) + '</div>';
         });
     }
 
-    function renderChart(data) {
+    function calcPrecision(data) {
+      var minP = Infinity;
+      for (var i = 0; i < data.length; i++) {
+        var p = Math.min(data[i].open, data[i].close, data[i].low);
+        if (p > 0 && p < minP) minP = p;
+      }
+      if (minP >= 1) return 4;
+      if (minP >= 0.01) return 6;
+      if (minP >= 0.0001) return 8;
+      return 10;
+    }
+
+    function renderChart(data, symbol) {
+      if (_chartInstance) {
+        try { _chartInstance.remove(); } catch(e) {}
+        _chartInstance = null;
+      }
+      if (_chartResizeHandler) {
+        window.removeEventListener('resize', _chartResizeHandler);
+        _chartResizeHandler = null;
+      }
+
+      var precision = calcPrecision(data);
+      var minMove = Math.pow(10, -precision);
+
       var container = document.getElementById('kline-chart');
       container.innerHTML = '';
       var chart = LightweightCharts.createChart(container, {
         width: container.clientWidth,
-        height: container.clientHeight || 420,
+        height: container.clientHeight || 460,
         layout: {
           background: { type: 'solid', color: 'transparent' },
-          textColor: '#8a84a0',
+          textColor: 'rgba(138,132,160,0.8)',
           fontFamily: "'Exo 2', system-ui, sans-serif",
           fontSize: 11,
         },
         grid: {
-          vertLines: { color: 'rgba(153, 69, 255, 0.06)' },
-          horzLines: { color: 'rgba(153, 69, 255, 0.06)' },
+          vertLines: { color: 'rgba(153, 69, 255, 0.04)' },
+          horzLines: { color: 'rgba(153, 69, 255, 0.04)' },
         },
         crosshair: {
           mode: LightweightCharts.CrosshairMode.Normal,
-          vertLine: { color: 'rgba(153, 69, 255, 0.3)', labelBackgroundColor: '#9945FF' },
-          horzLine: { color: 'rgba(153, 69, 255, 0.3)', labelBackgroundColor: '#9945FF' },
+          vertLine: {
+            color: 'rgba(153, 69, 255, 0.4)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#9945FF',
+          },
+          horzLine: {
+            color: 'rgba(153, 69, 255, 0.4)',
+            width: 1,
+            style: LightweightCharts.LineStyle.Dashed,
+            labelBackgroundColor: '#9945FF',
+          },
         },
         rightPriceScale: {
-          borderColor: 'rgba(153, 69, 255, 0.1)',
-          scaleMargins: { top: 0.1, bottom: 0.1 },
+          borderColor: 'rgba(153, 69, 255, 0.08)',
+          scaleMargins: { top: 0.08, bottom: 0.22 },
         },
         timeScale: {
-          borderColor: 'rgba(153, 69, 255, 0.1)',
+          borderColor: 'rgba(153, 69, 255, 0.08)',
           timeVisible: true,
           secondsVisible: false,
+          rightOffset: 5,
+          minBarSpacing: 4,
         },
         handleScroll: { vertTouchDrag: false },
+      });
+      _chartInstance = chart;
+
+      var priceFmt = function(p) {
+        if (typeof p !== 'number' || isNaN(p)) return '—';
+        return p.toFixed(precision);
+      };
+      chart.applyOptions({
+        localization: { priceFormatter: priceFmt },
       });
 
       var candleSeries = chart.addCandlestickSeries({
@@ -2670,8 +2823,9 @@ return `<!DOCTYPE html>
         downColor: '#ff4d6a',
         borderUpColor: '#14F195',
         borderDownColor: '#ff4d6a',
-        wickUpColor: 'rgba(20, 241, 149, 0.6)',
-        wickDownColor: 'rgba(255, 77, 106, 0.6)',
+        wickUpColor: 'rgba(20, 241, 149, 0.7)',
+        wickDownColor: 'rgba(255, 77, 106, 0.7)',
+        priceFormat: { type: 'custom', minMove: minMove, formatter: priceFmt },
       });
 
       var volumeSeries = chart.addHistogramSeries({
@@ -2679,7 +2833,7 @@ return `<!DOCTYPE html>
         priceScaleId: 'volume',
       });
       chart.priceScale('volume').applyOptions({
-        scaleMargins: { top: 0.8, bottom: 0 },
+        scaleMargins: { top: 0.82, bottom: 0 },
       });
 
       var candleData = data.map(function(d) {
@@ -2687,17 +2841,57 @@ return `<!DOCTYPE html>
       }).sort(function(a, b) { return a.time - b.time; });
 
       var volumeData = data.map(function(d) {
-        var color = d.close >= d.open ? 'rgba(20, 241, 149, 0.3)' : 'rgba(255, 77, 106, 0.3)';
-        return { time: d.time, value: d.volume || 0, color: color };
+        var bullish = d.close >= d.open;
+        return {
+          time: d.time,
+          value: d.volume || 0,
+          color: bullish ? 'rgba(20, 241, 149, 0.25)' : 'rgba(255, 77, 106, 0.25)',
+        };
       }).sort(function(a, b) { return a.time - b.time; });
 
       candleSeries.setData(candleData);
       volumeSeries.setData(volumeData);
       chart.timeScale().fitContent();
 
-      window.addEventListener('resize', function() {
-        chart.applyOptions({ width: container.clientWidth });
+      // Current price line
+      var lastCandle = candleData[candleData.length - 1];
+      if (lastCandle) {
+        var bullish = lastCandle.close >= lastCandle.open;
+        candleSeries.createPriceLine({
+          price: lastCandle.close,
+          color: bullish ? 'rgba(20,241,149,0.6)' : 'rgba(255,77,106,0.6)',
+          lineWidth: 1,
+          lineStyle: LightweightCharts.LineStyle.Dashed,
+          axisLabelVisible: true,
+          title: '',
+        });
+
+        updateOhlcvBar(lastCandle, symbol);
+
+        var volEl = document.getElementById('vol-display');
+        if (volEl) {
+          var lastVol = data[data.length - 1];
+          volEl.textContent = lastVol ? fmtVol(lastVol.volume) : '—';
+        }
+      }
+
+      // Crosshair move → update OHLCV bar + volume label
+      chart.subscribeCrosshairMove(function(param) {
+        if (!param || !param.time) {
+          if (lastCandle) updateOhlcvBar(lastCandle, symbol);
+          return;
+        }
+        var cd = param.seriesData ? param.seriesData.get(candleSeries) : null;
+        var vd = param.seriesData ? param.seriesData.get(volumeSeries) : null;
+        if (cd) updateOhlcvBar(cd, symbol);
+        var volEl = document.getElementById('vol-display');
+        if (volEl && vd) volEl.textContent = fmtVol(vd.value);
       });
+
+      _chartResizeHandler = function() {
+        chart.applyOptions({ width: container.clientWidth });
+      };
+      window.addEventListener('resize', _chartResizeHandler);
     }
 
     function renderDimBar(score, max) {

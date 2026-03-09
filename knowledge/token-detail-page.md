@@ -78,7 +78,7 @@
 
 ## 依赖
 
-- **LightweightCharts 4.1.3**（CDN：unpkg）— K 线蜡烛图 + 成交量柱状图
+- **LightweightCharts 4.2.2**（CDN：unpkg）— K 线蜡烛图 + 成交量柱状图 + OHLCV 信息栏 + 当前价格线
 - **Google Fonts**：Orbitron（标题/数字）、Exo 2（正文）
 
 ## 变更记录
@@ -86,3 +86,4 @@
 | 日期 | 内容 |
 |---|---|
 | 2026-03-07 | 初始美化：Hero 卡片、统一 Action Bar、Stats 图标化、K 线周期切换、AI 叙事标签、fadeSlideUp 动画、sticky 侧边栏、品牌页脚、移动端优化 |
+| 2026-03-09 | K 线图表改造为 TradingView 风格：OHLCV 信息栏（十字光标联动）、7 种时间周期（1分/5分/15分/30分/1小时/4小时/1天）、当前价格虚线、成交量标签、自动精度价格轴、LightweightCharts 升级至 4.2.2 |
