@@ -1274,9 +1274,9 @@ return `<!DOCTYPE html>
       <button type="button" class="sub-tab-btn" data-subtab="bn-kol">Binance KOL 追踪</button>
     </div>
     <div class="sub-tabs okx-sub-tabs" id="subTabsOkx" style="display:none">
-      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">OKX 涨幅榜</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">OKX 交易量榜</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">OKX 市值榜</button>
+      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">OKX 聪明钱信号</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">OKX 聪明钱流入</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">OKX KOL 追踪</button>
     </div>
 
     <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
@@ -1547,24 +1547,24 @@ return `<!DOCTYPE html>
         });
       }
       if (panelKey === 'okx-signal') {
-        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=1').then(function(list) {
-          if (Array.isArray(list)) renderTable(list, rootId);
+        return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
+          if (Array.isArray(list)) renderSignalCards(list, rootId, 'okx');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'okx-inflow') {
-        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=2').then(function(list) {
-          if (Array.isArray(list)) renderTable(list, rootId);
+        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=1').then(function(list) {
+          if (Array.isArray(list)) renderInflowRank(list, rootId, 'okx');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'okx-kol') {
-        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=3').then(function(list) {
-          if (Array.isArray(list)) renderTable(list, rootId);
+        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=2').then(function(list) {
+          if (Array.isArray(list)) renderInflowRank(list, rootId, 'okx');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
@@ -1671,9 +1671,9 @@ return `<!DOCTYPE html>
         else if (subTab === 'bn-inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
         else if (subTab === 'bn-kol') descEl.textContent = 'Binance KOL 大 V 资金流入排行，追踪 KOL 投资动向';
       } else if (tab === 'okx') {
-        if (subTab === 'okx-signal') descEl.textContent = 'OKX OnchainOS 代币涨幅排行（Solana），按 24h 涨跌排序';
-        else if (subTab === 'okx-inflow') descEl.textContent = 'OKX OnchainOS 代币交易量排行（Solana），按 24h 成交量排序';
-        else if (subTab === 'okx-kol') descEl.textContent = 'OKX OnchainOS 代币市值排行（Solana），按市值排序';
+        if (subTab === 'okx-signal') descEl.textContent = 'Smart Money / KOL / Whale 链上交易信号，挖掘 Meme 机会';
+        else if (subTab === 'okx-inflow') descEl.textContent = '聪明钱资金流入排行，按净流入排序';
+        else if (subTab === 'okx-kol') descEl.textContent = 'KOL 追踪，按 KOL 标签代币资金流入排序';
       }
     }
 
