@@ -3914,9 +3914,12 @@ const server = http.createServer(async (req, res) => {
     const address = decodeURIComponent(tokenMatch[1]);
     const chain = u.searchParams.get('chain') || 'solana';
     try {
-      const [detail, dbRow, secDetail] = await Promise.all([
+      const [detail, dbRow, pumpRow, secDetail] = await Promise.all([
         getTokenDetail(address, chain),
         supabase.from('zhilabs_ranking').select('holders').eq('token', address).maybeSingle().then(r => r.data),
+        chain === 'solana'
+          ? supabase.from('solana_pump_ranking').select('holders, holders_top10_percent').eq('token', address).maybeSingle().then(r => r.data)
+          : null,
         getTokenSecurityDetail(address, chain).catch(() => null),
       ]);
       if (!detail) {
@@ -3928,9 +3931,16 @@ const server = http.createServer(async (req, res) => {
       if (detail.holders == null && dbRow?.holders != null) {
         detail.holders = dbRow.holders;
       }
+      if (detail.holders == null && pumpRow?.holders != null) {
+        detail.holders = pumpRow.holders;
+      }
       if (detail.holders == null && secDetail?.holderCount != null) {
         detail.holders = secDetail.holderCount;
       }
+      // Top10% 优先使用 pump 表（Binance 源），与榜单列保持一致；无则用 GoPlus
+      const topHolderPercent = pumpRow?.holders_top10_percent != null
+        ? pumpRow.holders_top10_percent
+        : secDetail?.topHolderPercent;
       if (secDetail) {
         detail._security = {
           lpNotLocked: secDetail.lpNotLocked,
@@ -3940,7 +3950,7 @@ const server = http.createServer(async (req, res) => {
           isMintable: secDetail.isMintable,
           isFreezable: secDetail.isFreezable,
           riskLevel: secDetail.riskLevel,
-          topHolderPercent: secDetail.topHolderPercent,
+          topHolderPercent,
         };
       }
       res.setHeader('Content-Type', 'application/json');
