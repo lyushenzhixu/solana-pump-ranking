@@ -176,4 +176,106 @@ export async function getTokenDetail(address, chain = 'solana') {
   }
 }
 
+/**
+ * 获取代币列表（用于构建榜单）
+ * 优先尝试 all-tokens，失败则用 search 拉取热门词结果
+ */
+async function getTokenListForRanking(chain = 'solana') {
+  const chainIdx = getChainIndex(chain);
+  const cacheKey = `okx:tokenlist:${chainIdx}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
+  let result = [];
+  try {
+    const path = `/api/v6/dex/aggregator/all-tokens?chainIndex=${chainIdx}`;
+    const data = await okxFetch('GET', path);
+    result = Array.isArray(data) ? data : (data?.tokenList || data?.list || []);
+  } catch (_) {
+    try {
+      const hotKeywords = ['SOL', 'USDC', 'BONK', 'WIF', 'POPCAT', 'PEPE'];
+      const seen = new Set();
+      for (const kw of hotKeywords) {
+        const list = await searchTokens(kw);
+        for (const t of list || []) {
+          const addr = t.tokenContractAddress || t.address || t.token;
+          if (addr && !seen.has(addr.toLowerCase())) {
+            seen.add(addr.toLowerCase());
+            result.push(t);
+          }
+        }
+      }
+    } catch (_) {}
+  }
+  cacheSet(cacheKey, result);
+  return result;
+}
+
+/**
+ * 获取代币榜单（通过 all-tokens + price-info 组合实现）
+ * OKX 暂无独立的 token/ranking 接口，使用代币列表 + 批量价格信息排序
+ * @param {object} [options]
+ * @param {string} [options.chain='solana']
+ * @param {number} [options.sortType=1] 1=涨跌 2=成交量 3=市值
+ * @param {number} [options.page=1]
+ * @param {number} [options.pageSize=50]
+ */
+export async function getTokenRanking(options = {}) {
+  const {
+    chain = 'solana',
+    sortType = 1,
+    page = 1,
+    pageSize = 50,
+  } = options;
+
+  const chainIdx = getChainIndex(chain);
+  const cacheKey = `okx:ranking:${chainIdx}:${sortType}:${page}:${pageSize}`;
+  const cached = cacheGet(cacheKey);
+  if (cached) return cached;
+
+  const tokens = await getTokenListForRanking(chain);
+  if (!tokens || tokens.length === 0) return [];
+
+  const batch = tokens.slice(0, 50).map((t) => ({
+    chainIndex: chainIdx,
+    tokenContractAddress: t.tokenContractAddress || t.address || t.token,
+  }));
+
+  const priceList = await getTokenPriceInfo(batch.map((t) => ({ ...t, chain })));
+  const priceMap = new Map();
+  for (const p of priceList || []) {
+    const addr = (p.tokenContractAddress || p.address || '').toLowerCase();
+    if (addr) priceMap.set(addr, p);
+  }
+
+  const combined = tokens
+    .filter((t) => {
+      const addr = t.tokenContractAddress || t.address || t.token;
+      return addr && priceMap.has(addr.toLowerCase());
+    })
+    .map((t) => {
+      const addr = (t.tokenContractAddress || t.address || t.token || '').toLowerCase();
+      const p = priceMap.get(addr) || {};
+      return {
+        ...t,
+        tokenContractAddress: t.tokenContractAddress || t.address || t.token,
+        tokenName: t.tokenName || t.name,
+        tokenSymbol: t.tokenSymbol || t.symbol,
+        tokenLogoUrl: t.tokenLogoUrl || t.logoUrl || t.icon,
+        marketCap: parseFloat(p.marketCap || p.market_cap || 0) || parseFloat(t.marketCap || 0),
+        volume: parseFloat(p.volume24H || p.volume || p.volume24h || 0) || parseFloat(t.volume || t.liquidity || 0),
+        change: parseFloat(p.priceChange24H || p.change || p.priceChange24h || 0) || parseFloat(t.change || 0),
+        holders: p.holders ?? t.holders,
+      };
+    });
+
+  const sortKey = sortType === 1 ? 'change' : sortType === 2 ? 'volume' : 'marketCap';
+  combined.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+
+  const start = (Math.max(1, page) - 1) * Math.min(100, Math.max(1, pageSize));
+  const result = combined.slice(start, start + Math.min(100, Math.max(1, pageSize)));
+  cacheSet(cacheKey, result);
+  return result;
+}
+
 export { isConfigured, getChainIndex, CHAIN_INDEX };
