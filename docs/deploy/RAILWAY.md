@@ -35,6 +35,16 @@ git push -u origin main
 | `SUPABASE_URL` | `https://rkzljtotquogikekxhcw.supabase.co` | 你的 Supabase 项目 URL |
 | `SUPABASE_ANON_KEY` | 你的 anon 公钥 | Supabase 项目设置 → API 里的 anon key |
 
+**可选（启用 OKX Skill / Meme 榜单）：**
+
+| 变量名 | 值 | 说明 |
+|--------|-----|------|
+| `OKX_API_KEY` | 你的 API Key | [OKX 开发者后台](https://web3.okx.com/build) 创建 |
+| `OKX_SECRET_KEY` | 你的 Secret Key | 同上 |
+| `OKX_PASSPHRASE` | 你的 Passphrase | 创建 API 时设置的密码 |
+
+> ⚠️ **重要**：`.env` 在 `.gitignore` 中，**不会随代码部署**。本地 `.env` 仅用于开发，线上必须在 Railway Variables 中配置这些变量。
+
 保存后 Railway 会自动重新部署。
 
 ## 四、生成公网域名
