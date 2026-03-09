@@ -3900,6 +3900,14 @@ async function scheduleNarrativePrefetch() {
   }
 }
 
+function okxMissingVars() {
+  const missing = [];
+  if (!process.env.OKX_API_KEY) missing.push('OKX_API_KEY');
+  if (!process.env.OKX_SECRET_KEY) missing.push('OKX_SECRET_KEY');
+  if (!process.env.OKX_PASSPHRASE) missing.push('OKX_PASSPHRASE');
+  return missing;
+}
+
 function startScheduler() {
   if (scheduler.timer) clearInterval(scheduler.timer);
   scheduler.timer = setInterval(runScheduledUpdate, scheduler.intervalMs);
@@ -3945,7 +3953,16 @@ const server = http.createServer(async (req, res) => {
   }
   if (urlPath === '/health' || urlPath === '/api/health') {
     res.setHeader('Content-Type', 'application/json');
-    res.end(JSON.stringify({ ok: true, port: PORT }));
+    res.end(JSON.stringify({
+      ok: true,
+      port: PORT,
+      okx: {
+        configured: okxOnchain.isConfigured(),
+        has_api_key: !!process.env.OKX_API_KEY,
+        has_secret_key: !!process.env.OKX_SECRET_KEY,
+        has_passphrase: !!process.env.OKX_PASSPHRASE,
+      },
+    }));
     return;
   }
   if (urlPath === '/api/scheduler/status') {
@@ -4036,10 +4053,11 @@ const server = http.createServer(async (req, res) => {
   if (urlPath === '/api/okx/token-ranking') {
     try {
       if (!okxOnchain.isConfigured()) {
+        const missing = okxMissingVars();
         res.statusCode = 503;
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.end(JSON.stringify({ error: 'OKX API 未配置，请设置 OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE' }));
+        res.end(JSON.stringify({ error: 'OKX API 未配置，请在 Railway Variables 中设置: ' + missing.join(' / '), missing }));
         return;
       }
       const u = new URL(req.url || '/', 'http://localhost');
@@ -4073,10 +4091,11 @@ const server = http.createServer(async (req, res) => {
   if (urlPath === '/api/okx/meme-ranking') {
     try {
       if (!okxOnchain.isConfigured()) {
+        const missing = okxMissingVars();
         res.statusCode = 503;
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Access-Control-Allow-Origin', '*');
-        res.end(JSON.stringify({ error: 'OKX API 未配置，请设置 OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE' }));
+        res.end(JSON.stringify({ error: 'OKX API 未配置，请在 Railway Variables 中设置: ' + missing.join(' / '), missing }));
         return;
       }
       const u = new URL(req.url || '/', 'http://localhost');
@@ -4474,5 +4493,19 @@ const server = http.createServer(async (req, res) => {
 const HOST = '0.0.0.0';
 server.listen(PORT, HOST, () => {
   console.log('Server running on', HOST + ':' + PORT);
+
+  const okxKey = !!process.env.OKX_API_KEY;
+  const okxSecret = !!process.env.OKX_SECRET_KEY;
+  const okxPass = !!process.env.OKX_PASSPHRASE;
+  if (okxKey && okxSecret && okxPass) {
+    console.log('[OKX] ✅ API 已配置（isConfigured=' + okxOnchain.isConfigured() + '）');
+  } else {
+    const missing = [];
+    if (!okxKey) missing.push('OKX_API_KEY');
+    if (!okxSecret) missing.push('OKX_SECRET_KEY');
+    if (!okxPass) missing.push('OKX_PASSPHRASE');
+    console.warn('[OKX] ⚠️  缺少环境变量: ' + missing.join(', ') + '（OKX Skill 相关功能不可用）');
+  }
+
   startScheduler();
 });
