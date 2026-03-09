@@ -34,6 +34,11 @@ git push -u origin main
 |--------|-----|------|
 | `SUPABASE_URL` | `https://rkzljtotquogikekxhcw.supabase.co` | 你的 Supabase 项目 URL |
 | `SUPABASE_ANON_KEY` | 你的 anon 公钥 | Supabase 项目设置 → API 里的 anon key |
+| `OKX_API_KEY` | 你的 OKX API Key | 可选，用于 OKX Skill（Meme 涨幅/交易量/市值榜） |
+| `OKX_SECRET_KEY` | 你的 OKX Secret Key | 需与 OKX_API_KEY 成对配置 |
+| `OKX_PASSPHRASE` | 你的 OKX Passphrase | 需与 OKX_API_KEY 成对配置 |
+
+**注意**：OKX 三个变量必须同时配置，缺一不可；变量名需**完全一致**（大小写、下划线）。
 
 保存后 Railway 会自动重新部署。
 

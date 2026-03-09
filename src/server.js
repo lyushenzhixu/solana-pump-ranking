@@ -4033,6 +4033,13 @@ const server = http.createServer(async (req, res) => {
     }
     return;
   }
+  if (urlPath === '/api/okx/status') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(JSON.stringify({ okxConfigured: okxOnchain.isConfigured() }));
+    return;
+  }
   if (urlPath === '/api/okx/token-ranking') {
     try {
       if (!okxOnchain.isConfigured()) {
