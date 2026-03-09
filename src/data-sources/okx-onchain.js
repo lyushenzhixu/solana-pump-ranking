@@ -10,9 +10,9 @@ import crypto from 'crypto';
 
 const BASE_URL = 'https://web3.okx.com';
 
-const OKX_API_KEY = (process.env.OKX_API_KEY || '').trim();
-const OKX_SECRET_KEY = (process.env.OKX_SECRET_KEY || '').trim();
-const OKX_PASSPHRASE = (process.env.OKX_PASSPHRASE || '').trim();
+function getKey() { return (process.env.OKX_API_KEY || '').trim(); }
+function getSecret() { return (process.env.OKX_SECRET_KEY || '').trim(); }
+function getPassphrase() { return (process.env.OKX_PASSPHRASE || '').trim(); }
 
 const CHAIN_INDEX = {
   solana: '501',
@@ -30,21 +30,21 @@ function getChainIndex(chain) {
 }
 
 function isConfigured() {
-  return !!(OKX_API_KEY && OKX_SECRET_KEY && OKX_PASSPHRASE);
+  return !!(getKey() && getSecret() && getPassphrase());
 }
 
 function buildSignature(timestamp, method, requestPath, body = '') {
   const preHash = timestamp + method.toUpperCase() + requestPath + (body || '');
-  return crypto.createHmac('sha256', OKX_SECRET_KEY).update(preHash).digest('base64');
+  return crypto.createHmac('sha256', getSecret()).update(preHash).digest('base64');
 }
 
 function buildHeaders(method, requestPath, body = '') {
   const timestamp = new Date().toISOString();
   const sign = buildSignature(timestamp, method, requestPath, body);
   return {
-    'OK-ACCESS-KEY': OKX_API_KEY,
+    'OK-ACCESS-KEY': getKey(),
     'OK-ACCESS-SIGN': sign,
-    'OK-ACCESS-PASSPHRASE': OKX_PASSPHRASE,
+    'OK-ACCESS-PASSPHRASE': getPassphrase(),
     'OK-ACCESS-TIMESTAMP': timestamp,
     'Content-Type': 'application/json',
   };

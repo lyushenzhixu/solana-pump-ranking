@@ -34,8 +34,12 @@ git push -u origin main
 |--------|-----|------|
 | `SUPABASE_URL` | `https://rkzljtotquogikekxhcw.supabase.co` | 你的 Supabase 项目 URL |
 | `SUPABASE_ANON_KEY` | 你的 anon 公钥 | Supabase 项目设置 → API 里的 anon key |
+| `OKX_API_KEY` | 你的 OKX API Key | OKX OnchainOS 凭证（OKX Skill 功能必需） |
+| `OKX_SECRET_KEY` | 你的 OKX Secret Key | OKX OnchainOS 凭证（OKX Skill 功能必需） |
+| `OKX_PASSPHRASE` | 你的 OKX Passphrase | OKX OnchainOS 凭证（OKX Skill 功能必需） |
 
-保存后 Railway 会自动重新部署。
+> **注意**：OKX 变量名必须完全匹配（区分大小写）。保存后 Railway 会自动重新部署。
+> 部署后可访问 `https://你的域名/api/health` 检查各环境变量是否生效。
 
 ## 四、生成公网域名
 
