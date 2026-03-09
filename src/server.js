@@ -1762,6 +1762,48 @@ return `<!DOCTYPE html>
       background: radial-gradient(circle, rgba(153,69,255,0.06) 0%, transparent 70%);
       pointer-events: none;
     }
+    .token-hero-layout {
+      display: flex; gap: 1.5rem; align-items: stretch;
+    }
+    .token-hero-left { flex: 1; min-width: 0; }
+    .token-hero-right {
+      flex: 0 0 320px;
+      min-width: 0;
+      display: flex; flex-direction: column;
+    }
+    .hero-narrative {
+      background: rgba(153,69,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 0.875rem 1rem;
+      flex: 1;
+      display: flex; flex-direction: column;
+    }
+    .hero-narrative .narrative-title {
+      margin-bottom: 0.5rem;
+      font-size: 0.625rem;
+    }
+    .hero-narrative .narrative-grade-section {
+      margin-bottom: 0.5rem;
+      padding-bottom: 0.5rem;
+    }
+    .hero-narrative .narrative-grade-header { margin-bottom: 0.5rem; gap: 0.5rem; }
+    .hero-narrative .narrative-grade-badge { width: 30px; height: 30px; font-size: 0.9rem; border-radius: 8px; }
+    .hero-narrative .narrative-grade-label { font-size: 0.75rem; }
+    .hero-narrative .narrative-grade-rec { font-size: 0.625rem; }
+    .hero-narrative .narrative-metrics { gap: 0.375rem; grid-template-columns: repeat(2, 1fr); }
+    .hero-narrative .narrative-metric { padding: 0.375rem 0.5rem; border-radius: 6px; }
+    .hero-narrative .narrative-metric-value { font-size: 0.8125rem; }
+    .hero-narrative .narrative-metric-label { font-size: 0.5625rem; }
+    .hero-narrative .narrative-kol-list { margin-top: 0.375rem; gap: 0.25rem; }
+    .hero-narrative .narrative-kol-tag { font-size: 0.625rem; padding: 0.15em 0.4em; }
+    .hero-narrative .narrative-text {
+      font-size: 0.75rem; line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+    }
+    .hero-narrative .narrative-articles { margin-top: 0.5rem; padding-top: 0.5rem; }
+    .hero-narrative .narrative-article { padding: 0.375rem 0.25rem; font-size: 0.6875rem; }
+    .hero-narrative .narrative-loading, .hero-narrative .narrative-empty { font-size: 0.6875rem; padding: 0.5rem 0; }
     .token-hero-top {
       display: flex; align-items: flex-start; gap: 1.25rem;
       flex-wrap: wrap;
@@ -2275,23 +2317,7 @@ return `<!DOCTYPE html>
     .detail-main { min-width: 0; }
     .detail-sidebar { min-width: 0; position: sticky; top: 1.5rem; }
 
-    /* === Narrative Summary === */
-    .narrative-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 1.25rem 1.5rem;
-      margin-bottom: 1.5rem;
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      position: relative;
-      overflow: hidden;
-    }
-    .narrative-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(153,69,255,0.2), transparent);
-    }
+    /* === Narrative Summary (inside hero) === */
     .narrative-title {
       font-family: 'Orbitron', sans-serif;
       font-size: 0.6875rem;
@@ -2475,57 +2501,6 @@ return `<!DOCTYPE html>
     .driver-organic { background: rgba(20,241,149,0.12); color: #14f195; }
     .driver-mixed { background: rgba(153,69,255,0.12); color: #b08cff; }
     .driver-paid { background: rgba(255,77,106,0.1); color: #ff4d6a; }
-    .narrative-dimensions {
-      margin-top: 0.75rem;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-      gap: 0.5rem;
-    }
-    .narrative-dim-card {
-      background: rgba(153,69,255,0.03);
-      border: 1px solid var(--border-subtle);
-      border-radius: 8px;
-      padding: 0.5rem 0.625rem;
-    }
-    .narrative-dim-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.375rem;
-    }
-    .narrative-dim-name {
-      font-size: 0.625rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .narrative-dim-score {
-      font-family: 'Exo 2', sans-serif;
-      font-size: 0.75rem;
-      font-weight: 700;
-    }
-    .narrative-dim-bar {
-      height: 4px;
-      border-radius: 2px;
-      background: rgba(153,69,255,0.1);
-      overflow: hidden;
-      margin-bottom: 0.375rem;
-    }
-    .narrative-dim-bar-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.5s ease;
-    }
-    .narrative-dim-details {
-      font-size: 0.625rem;
-      color: var(--text-muted);
-      line-height: 1.5;
-    }
-    .narrative-dim-details span { color: var(--text-secondary); font-weight: 600; }
-    .dim-bar-green { background: linear-gradient(90deg, #14f195, rgba(20,241,149,0.5)); }
-    .dim-bar-yellow { background: linear-gradient(90deg, #f0a030, rgba(240,160,48,0.5)); }
-    .dim-bar-red { background: linear-gradient(90deg, #ff4d6a, rgba(255,77,106,0.5)); }
     .narrative-source-tag {
       display: inline-block;
       font-size: 0.5625rem;
@@ -2730,6 +2705,8 @@ return `<!DOCTYPE html>
       .page-wrapper { padding: 1rem 0.75rem 2rem; }
       .page-header { flex-direction: column; align-items: flex-start; }
       .token-hero { padding: 1.25rem; border-radius: 16px; }
+      .token-hero-layout { flex-direction: column; gap: 1rem; }
+      .token-hero-right { flex: none; }
       .token-hero-top { gap: 0.75rem; }
       .token-logo, .token-logo-placeholder { width: 48px; height: 48px; border-radius: 12px; font-size: 1.1rem; }
       .token-price { font-size: 1.25rem; }
@@ -2749,7 +2726,7 @@ return `<!DOCTYPE html>
       .stat-icon { width: 26px; height: 26px; border-radius: 4px; }
       .stat-icon svg { width: 14px; height: 14px; }
       .bottom-row { grid-template-columns: 1fr; }
-      .narrative-card { padding: 1rem; }
+      .hero-narrative { padding: 0.75rem; }
     }
     @media (max-width: 900px) {
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -2839,8 +2816,10 @@ return `<!DOCTYPE html>
 
       var html = '';
 
-      // Hero card
+      // Hero card with narrative on the right
       html += '<div class="token-hero">';
+      html += '<div class="token-hero-layout">';
+      html += '<div class="token-hero-left">';
       html += '<div class="token-hero-top">';
       html += '<div class="token-logo-wrap">' + logoHtml + '</div>';
       html += '<div class="token-info">';
@@ -2856,6 +2835,14 @@ return `<!DOCTYPE html>
       html += '</div>';
       html += '</div>';
       html += '</div>';
+      html += '</div>'; // end token-hero-left
+      html += '<div class="token-hero-right">';
+      html += '<div class="hero-narrative" id="narrative-section">';
+      html += '<div class="narrative-title"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8" rx="0.5"/><rect x="10" y="8" width="4" height="12" rx="0.5"/><rect x="17" y="4" width="4" height="16" rx="0.5"/></svg>叙事分析<span class="ai-tag">AI</span></div>';
+      html += '<div id="narrative-content"><div class="narrative-loading">分析中</div></div>';
+      html += '</div>';
+      html += '</div>'; // end token-hero-right
+      html += '</div>'; // end token-hero-layout
       html += '</div>';
 
       // Action bar (contract + links)
@@ -2992,11 +2979,6 @@ return `<!DOCTYPE html>
       html += '</div>';
       html += '</div>';
 
-      // Narrative summary
-      html += '<div class="narrative-card" id="narrative-section">';
-      html += '<div class="narrative-title"><svg style="width:14px;height:14px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8" rx="0.5"/><rect x="10" y="8" width="4" height="12" rx="0.5"/><rect x="17" y="4" width="4" height="16" rx="0.5"/></svg>叙事分析<span class="ai-tag">AI</span></div>';
-      html += '<div id="narrative-content"><div class="narrative-loading">分析中</div></div>';
-      html += '</div>';
       html += '</div>'; // end detail-main
 
       // Right column: hot tweets sidebar
@@ -3260,12 +3242,6 @@ return `<!DOCTYPE html>
       window.addEventListener('resize', _chartResizeHandler);
     }
 
-    function renderDimBar(score, max) {
-      var pct = max > 0 ? Math.round(score / max * 100) : 0;
-      var barClass = pct >= 60 ? 'dim-bar-green' : (pct >= 35 ? 'dim-bar-yellow' : 'dim-bar-red');
-      return '<div class="narrative-dim-bar"><div class="narrative-dim-bar-fill ' + barClass + '" style="width:' + pct + '%"></div></div>';
-    }
-
     function fmtCompact(n) {
       if (n == null) return '—';
       if (n >= 1e9) return (n / 1e9).toFixed(1) + 'B';
@@ -3318,59 +3294,6 @@ return `<!DOCTYPE html>
           html += '</span>';
         });
         html += '</div>';
-      }
-
-      // 链上维度分析（onchain 或 combined 时显示）
-      var dims = tn.dimensions;
-      if (dims) {
-        html += '<div class="narrative-dimensions">';
-
-        // 市场健康度
-        var m = dims.market || {};
-        html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg style="width:12px;height:12px;vertical-align:-1px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8" rx="0.5"/><rect x="10" y="8" width="4" height="12" rx="0.5"/><rect x="17" y="4" width="4" height="16" rx="0.5"/></svg>市场</span><span class="narrative-dim-score">' + (m.score || 0) + '/' + (m.max || 30) + '</span></div>';
-        html += renderDimBar(m.score || 0, m.max || 30);
-        html += '<div class="narrative-dim-details">交易量比 <span>' + (m.velocity || 0) + '</span> · 流动性 <span>' + (m.liqDepth || 0) + '</span><br>24h交易 <span>' + fmtCompact(m.txns24h) + '</span> · 买入 <span>' + (m.buyRatio || 50) + '%</span></div>';
-        html += '</div>';
-
-        // 社区
-        var c = dims.community || {};
-        html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg style="width:12px;height:12px;vertical-align:-1px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>社区</span><span class="narrative-dim-score">' + (c.score || 0) + '/' + (c.max || 25) + '</span></div>';
-        html += renderDimBar(c.score || 0, c.max || 25);
-        html += '<div class="narrative-dim-details">持币人 <span>' + fmtCompact(c.holders) + '</span> · Top10 <span>' + (c.topHolderPct || 0) + '%</span><br>交易对 <span>' + (c.pairCount || 0) + '</span></div>';
-        html += '</div>';
-
-        // 安全
-        var s = dims.security || {};
-        html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg style="width:12px;height:12px;vertical-align:-1px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>安全</span><span class="narrative-dim-score">' + (s.score || 0) + '/' + (s.max || 25) + '</span></div>';
-        html += renderDimBar(s.score || 0, s.max || 25);
-        var secDetails = [];
-        secDetails.push('LP ' + (s.lpLocked ? '<span style="color:var(--positive)">已锁</span>' : '<span style="color:var(--negative)">未锁</span>'));
-        if (s.isMintable) secDetails.push('<span style="color:var(--negative)">可铸币</span>');
-        if (s.isFreezable) secDetails.push('<span style="color:var(--negative)">可冻结</span>');
-        if (s.riskLevel && s.riskLevel !== 'UNKNOWN') secDetails.push('风险 <span>' + s.riskLevel + '</span>');
-        html += '<div class="narrative-dim-details">' + secDetails.join(' · ') + '</div>';
-        html += '</div>';
-
-        // 成熟度
-        var mt = dims.maturity || {};
-        html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg style="width:12px;height:12px;vertical-align:-1px;margin-right:3px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"/><path d="M5 20V8l7-5 7 5v12"/><path d="M9 20v-4h6v4"/></svg>成熟度</span><span class="narrative-dim-score">' + (mt.score || 0) + '/' + (mt.max || 20) + '</span></div>';
-        html += renderDimBar(mt.score || 0, mt.max || 20);
-        var matDetails = [];
-        if (mt.ageDays !== null) matDetails.push('上线 <span>' + mt.ageDays + '</span> 天');
-        var socials = [];
-        if (mt.hasTwitter) socials.push('𝕏');
-        if (mt.hasTelegram) socials.push('TG');
-        if (mt.hasWebsite) socials.push('Web');
-        if (socials.length > 0) matDetails.push('社交 <span>' + socials.join('+') + '</span>');
-        if (mt.hasProfile) matDetails.push('<span>有头像</span>');
-        html += '<div class="narrative-dim-details">' + matDetails.join(' · ') + '</div>';
-        html += '</div>';
-
-        html += '</div>'; // end dimensions
       }
 
       html += '</div>';
