@@ -562,6 +562,16 @@ return `<!DOCTYPE html>
       letter-spacing: 0.02em;
     }
 
+    /* Chain badge (inflow table) */
+    td .chain-badge {
+      font-size: 0.6875rem;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      background: oklch(45% 0.06 290 / 0.4);
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
     .positive { color: var(--positive) !important; }
     .negative { color: var(--negative) !important; }
 
@@ -869,111 +879,10 @@ return `<!DOCTYPE html>
       color: #ff5252;
     }
 
-    /* === 聪明钱卡片 — OKX 黑色风格 === */
-    .signal-cards-okx .signal-card {
-      background: #050505;
-      border-color: rgba(255, 255, 255, 0.08);
-    }
-    .signal-cards-okx .signal-card::before {
-      background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 50%, rgba(255,255,255,0.04));
-    }
-    .signal-cards-okx .signal-card::after {
-      box-shadow: 0 0 20px rgba(255, 255, 255, 0.08);
-    }
-    .signal-cards-okx .signal-card:hover { border-color: rgba(255, 255, 255, 0.2); }
-    .signal-cards-okx .signal-card:focus-visible { outline-color: #e0e0e0; }
-    .signal-cards-okx .signal-card-live-bar {
-      background: rgba(255, 255, 255, 0.04);
-      border-bottom-color: rgba(255, 255, 255, 0.1);
-    }
-    .signal-cards-okx .signal-card-live-dot {
-      background: #e0e0e0;
-      box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
-    }
-    .signal-cards-okx .signal-card-live-text {
-      color: #e0e0e0;
-      text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
-    }
-    .signal-cards-okx .signal-card-head img,
-    .signal-cards-okx .signal-card-logo-placeholder {
-      border-color: rgba(255, 255, 255, 0.15);
-      box-shadow: 0 0 12px rgba(255, 255, 255, 0.06), inset 0 0 12px rgba(255, 255, 255, 0.02);
-    }
-    .signal-cards-okx .signal-card-logo-placeholder {
-      background: oklch(28% 0.02 0 / 0.6);
-    }
-    .signal-cards-okx .signal-card-stats-item .value.inflow-positive {
-      color: #7dd3a8;
-    }
-    .signal-cards-okx .signal-card-active {
-      color: #e0e0e0;
-      text-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
-    }
-    .signal-cards-okx .signal-card-bar-buy {
-      background: repeating-linear-gradient(90deg, #7dd3a8, #7dd3a8 4px, #5a9e7a 4px, #5a9e7a 6px);
-      box-shadow: 0 0 8px rgba(125, 211, 168, 0.35);
-    }
-    .signal-cards-okx .signal-card-bar-labels .buy {
-      color: #7dd3a8;
-      text-shadow: 0 0 4px rgba(125, 211, 168, 0.5);
-    }
-    .signal-cards-okx .signal-card-chain[data-chain="bsc"] {
-      background: rgba(255, 255, 255, 0.1);
-      color: #e0e0e0;
-    }
-
-    /* === 聪明钱卡片 — Gate 蓝色风格 === */
-    .signal-cards-gate .signal-card {
-      background: #050814;
-      border-color: rgba(0, 180, 255, 0.2);
-    }
-    .signal-cards-gate .signal-card::before {
-      background: linear-gradient(135deg, #00b4ff, transparent 50%, rgba(0, 180, 255, 0.15));
-    }
-    .signal-cards-gate .signal-card::after {
-      box-shadow: 0 0 20px rgba(0, 180, 255, 0.35);
-    }
-    .signal-cards-gate .signal-card:hover { border-color: rgba(0, 180, 255, 0.45); }
-    .signal-cards-gate .signal-card:focus-visible { outline-color: #00b4ff; }
-    .signal-cards-gate .signal-card-live-bar {
-      background: rgba(0, 180, 255, 0.08);
-      border-bottom-color: rgba(0, 180, 255, 0.25);
-    }
-    .signal-cards-gate .signal-card-live-dot {
-      background: #00b4ff;
-      box-shadow: 0 0 6px rgba(0, 180, 255, 0.8);
-    }
-    .signal-cards-gate .signal-card-live-text {
-      color: #00b4ff;
-      text-shadow: 0 0 8px rgba(0, 180, 255, 0.5);
-    }
-    .signal-cards-gate .signal-card-head img,
-    .signal-cards-gate .signal-card-logo-placeholder {
-      border-color: rgba(0, 180, 255, 0.35);
-      box-shadow: 0 0 12px rgba(0, 180, 255, 0.15), inset 0 0 12px rgba(0, 180, 255, 0.04);
-    }
-    .signal-cards-gate .signal-card-logo-placeholder {
-      background: oklch(35% 0.12 220 / 0.5);
-    }
-    .signal-cards-gate .signal-card-stats-item .value.inflow-positive {
-      color: #00b4ff;
-      text-shadow: 0 0 6px rgba(0, 180, 255, 0.5);
-    }
-    .signal-cards-gate .signal-card-active {
-      color: #00b4ff;
-      text-shadow: 0 0 6px rgba(0, 180, 255, 0.5);
-    }
-    .signal-cards-gate .signal-card-bar-buy {
-      background: repeating-linear-gradient(90deg, #00b4ff, #00b4ff 4px, #0088c4 4px, #0088c4 6px);
-      box-shadow: 0 0 8px rgba(0, 180, 255, 0.4);
-    }
-    .signal-cards-gate .signal-card-bar-labels .buy {
-      color: #00b4ff;
-      text-shadow: 0 0 4px rgba(0, 180, 255, 0.5);
-    }
-    .signal-cards-gate .signal-card-chain[data-chain="bsc"] {
-      background: oklch(55% 0.15 220 / 0.3);
-      color: #00b4ff;
+    .inflow-realtime-hint {
+      margin-top: 0.5rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
     }
 
     /* === MOBILE === */
@@ -1027,8 +936,7 @@ return `<!DOCTYPE html>
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
         <button type="button" class="tab-btn" data-tab="zhilabs">zhizhilabs 精选</button>
         <button type="button" class="tab-btn" data-tab="signal">binance聪明钱信号</button>
-        <button type="button" class="tab-btn" data-tab="okx-signal">okx聪明钱信号</button>
-        <button type="button" class="tab-btn" data-tab="gate-signal">gate聪明钱信号</button>
+        <button type="button" class="tab-btn" data-tab="inflow">binance聪明钱流入排行</button>
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
@@ -1044,8 +952,7 @@ return `<!DOCTYPE html>
       <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
       <div id="panel-zhilabs" class="panel"><div id="root-zhilabs"><div class="loading-text">加载中</div></div></div>
       <div id="panel-signal" class="panel"><div id="root-signal"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-okx-signal" class="panel"><div id="root-okx-signal"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-gate-signal" class="panel"><div id="root-gate-signal"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-inflow" class="panel"><div id="root-inflow"><div class="loading-text">加载中</div></div><div class="inflow-realtime-hint" id="inflowRealtimeHint"></div></div>
     </div>
   </div>
 
@@ -1123,8 +1030,6 @@ return `<!DOCTYPE html>
         return;
       }
       var gridClass = 'signal-cards-grid';
-      if (variant === 'okx') gridClass += ' signal-cards-okx';
-      else if (variant === 'gate') gridClass += ' signal-cards-gate';
       var html = '<div class="' + gridClass + '">';
       list.forEach(function(item) {
         var ca = item.contractAddress || item.contract_address || '';
@@ -1194,15 +1099,68 @@ return `<!DOCTYPE html>
         });
       });
     }
+    function renderInflowTable(list, rootId) {
+      var root = document.getElementById(rootId);
+      if (!root) return;
+      if (!list.length) {
+        root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>';
+        return;
+      }
+      var sorted = list.slice().filter(function(item) {
+        var v = item.totalTokenValue != null ? parseFloat(item.totalTokenValue) : null;
+        return v != null && !Number.isNaN(v);
+      }).sort(function(a, b) {
+        var va = Math.abs(parseFloat(a.totalTokenValue));
+        var vb = Math.abs(parseFloat(b.totalTokenValue));
+        return vb - va;
+      });
+      var headers = ['#', '代币', '符号', '链', '净流入', '市值', '聪明钱数'];
+      var numColIdx = { 4: true, 5: true, 6: true };
+      var table = '<table><thead><tr>' + headers.map(function(h, idx){ return '<th' + (numColIdx[idx] ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
+      sorted.forEach(function(item, i) {
+        var ca = item.contractAddress || item.contract_address || '';
+        var name = item.ticker || item.symbol || (ca ? ca.slice(0, 8) + '…' : '—');
+        if (typeof name !== 'string') name = String(name);
+        if (name.length > 200) name = name.slice(0, 200) + '…';
+        var symbolStr = item.symbol || item.ticker || (ca ? ca.slice(0, 12) + '…' : '—');
+        if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
+        var chainLabel = (item.chain === 'bsc' || item.bsc) ? 'BSC' : 'Sol';
+        var totalVal = item.totalTokenValue != null ? parseFloat(item.totalTokenValue) : null;
+        var isBuy = (item.direction || '').toLowerCase() === 'buy';
+        var inflowStr = totalVal != null ? (isBuy ? '$' + totalVal.toFixed(2) : '-$' + Math.abs(totalVal).toFixed(2)) : '—';
+        var inflowCl = totalVal != null ? (totalVal >= 0 ? 'positive' : 'negative') : '';
+        var marketCap = item.currentMarketCap != null ? parseFloat(item.currentMarketCap) : (item.alertMarketCap != null ? parseFloat(item.alertMarketCap) : null);
+        var smartCount = item.smartMoneyCount != null ? Number(item.smartMoneyCount) : 0;
+        var logoUrl = item.logoUrl || item.logoUrlFallback || '';
+        var copyBtn = ca ? '<button class="copy-ca-btn" data-ca="' + esc(ca) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+        table += '<tr class="clickable-row" data-token="' + esc(ca) + '" data-chain="' + esc(item.chain || 'solana') + '">';
+        table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
+        table += '<td><div class="token-cell">' + (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(name) + '</span>' + copyBtn + '</div></td>';
+        table += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
+        table += '<td><span class="chain-badge">' + esc(chainLabel) + '</span></td>';
+        table += '<td class="num ' + inflowCl + '">' + esc(inflowStr) + '</td>';
+        table += '<td class="num">' + (marketCap != null ? formatCompact(marketCap) : '—') + '</td>';
+        table += '<td class="num">' + smartCount + '</td>';
+        table += '</tr>';
+      });
+      table += '</tbody></table>';
+      root.innerHTML = table;
+    }
     function refreshTab(tab) {
-      if (tab === 'signal' || tab === 'okx-signal' || tab === 'gate-signal') {
-        var rootId = tab === 'signal' ? 'root-signal' : (tab === 'okx-signal' ? 'root-okx-signal' : 'root-gate-signal');
-        var variant = tab === 'signal' ? 'binance' : (tab === 'okx-signal' ? 'okx' : 'gate');
+      if (tab === 'inflow') {
         return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
-          if (Array.isArray(list)) renderSignalCards(list, rootId, variant);
-          else document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+          if (Array.isArray(list)) renderInflowTable(list, 'root-inflow');
+          else document.getElementById('root-inflow').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
-          document.getElementById(rootId).innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+          document.getElementById('root-inflow').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        });
+      }
+      if (tab === 'signal') {
+        return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
+          if (Array.isArray(list)) renderSignalCards(list, 'root-signal', 'binance');
+          else document.getElementById('root-signal').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        }).catch(function(e) {
+          document.getElementById('root-signal').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       var url = tab === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
@@ -1260,7 +1218,12 @@ return `<!DOCTYPE html>
       var row = e.target.closest('.clickable-row');
       if (row) {
         var token = row.getAttribute('data-token');
-        if (token) window.location.href = '/token/' + encodeURIComponent(token);
+        var chain = row.getAttribute('data-chain');
+        if (token) {
+          var url = '/token/' + encodeURIComponent(token);
+          if (chain && chain !== 'solana') url += '?chain=' + encodeURIComponent(chain);
+          window.location.href = url;
+        }
         return;
       }
       var card = e.target.closest('.clickable-signal-card');
@@ -1275,8 +1238,12 @@ return `<!DOCTYPE html>
       }
     });
     var currentTab = 'pump';
+    var _inflowRefreshTimer = null;
     document.getElementById('updateBtn').querySelector('span').textContent = '更新 Pump 榜单';
     function switchTab(tab) {
+      if (_inflowRefreshTimer) { clearInterval(_inflowRefreshTimer); _inflowRefreshTimer = null; }
+      var hintEl = document.getElementById('inflowRealtimeHint');
+      if (hintEl) hintEl.textContent = '';
       currentTab = tab;
       document.querySelectorAll('.tab-btn').forEach(function(btn){ btn.classList.toggle('active', btn.dataset.tab === tab); });
       document.querySelectorAll('.panel').forEach(function(p){ p.classList.toggle('active', p.id === 'panel-' + tab); });
@@ -1284,9 +1251,15 @@ return `<!DOCTYPE html>
       if (tab === 'pump') descEl.textContent = '已成功发射、上线 < 10 天、市值 > 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序';
       else if (tab === 'zhilabs') descEl.textContent = 'zhizhilabs 精选 Meme 代币，按 24h 交易量排序';
       else if (tab === 'signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
-      else if (tab === 'okx-signal') descEl.textContent = 'OKX 风格聪明钱信号，数据来自 Binance Web3';
-      else if (tab === 'gate-signal') descEl.textContent = 'Gate 风格聪明钱信号，数据来自 Binance Web3';
-      var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : '刷新信号');
+      else if (tab === 'inflow') {
+        descEl.textContent = 'Binance 链上聪明钱净流入排行，按流入金额排序，数据实时刷新';
+        if (hintEl) hintEl.textContent = '⚡ 每 60 秒自动刷新';
+        _inflowRefreshTimer = setInterval(function() {
+          if (currentTab !== 'inflow') return;
+          refreshTab('inflow').then(function(){ setLastSync(new Date()); }).catch(function(){});
+        }, 60000);
+      }
+      var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : (tab === 'inflow' ? '刷新流入榜' : '刷新信号'));
       document.getElementById('updateBtn').querySelector('span').textContent = btnText;
       var narrativeBtn = document.getElementById('refreshNarrativeBtn');
       if (narrativeBtn) narrativeBtn.style.display = tab === 'zhilabs' ? '' : 'none';
@@ -1298,7 +1271,7 @@ return `<!DOCTYPE html>
     document.getElementById('updateBtn').addEventListener('click', function() {
       var btn = document.getElementById('updateBtn');
       var tab = currentTab || 'pump';
-      if (tab === 'signal' || tab === 'okx-signal' || tab === 'gate-signal') {
+      if (tab === 'signal' || tab === 'inflow') {
         btn.disabled = true;
         setUpdateStatus('刷新中…');
         refreshTab(tab).then(function() {
