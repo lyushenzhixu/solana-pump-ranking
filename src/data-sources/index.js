@@ -13,7 +13,8 @@ import * as dexscreener from './dexscreener.js';
 import * as geckoterminal from './geckoterminal.js';
 import * as jupiter from './jupiter.js';
 import * as goplus from './goplus.js';
-import { fetchSmartMoneySignals, fetchSmartMoneyInflowRank } from './binance-smart-money.js';
+import { fetchSmartMoneySignals, fetchSmartMoneyInflowRank, fetchBinanceTokenDynamicInfo } from './binance-smart-money.js';
+import { getTokenHolders as getOKXTokenHolders, isOKXConfigured } from './okx-onchainos.js';
 import { SUPPORTED_CHAINS, supportsJupiter, toGeckoTerminal } from './chain-map.js';
 
 export { fetchSmartMoneySignals, fetchSmartMoneyInflowRank };
@@ -229,7 +230,7 @@ export async function getTokenDetail(address, chain = 'solana') {
 
 /**
  * 获取代币安全/风控详情（等价 fetchAveTokenDetail 中的 LP 和 insider 检查）
- * 使用 GoPlus 替代 AVE
+ * 使用 GoPlus + Binance（Top10 与榜单一致）+ OKX（补充）
  * @returns {{ lpNotLocked: boolean|null, insiderRate: number|null, holderCount: number|null, riskLevel: string|null }}
  */
 export async function getTokenSecurityDetail(address, chain = 'solana') {
@@ -237,7 +238,11 @@ export async function getTokenSecurityDetail(address, chain = 'solana') {
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
-  const secInfo = await goplus.getTokenSecuritySingle(chain, address);
+  const [secInfo, binanceInfo, okxInfo] = await Promise.all([
+    goplus.getTokenSecuritySingle(chain, address),
+    ['solana', 'bsc', 'base'].includes(chain) ? fetchBinanceTokenDynamicInfo(address, chain) : null,
+    isOKXConfigured() ? getOKXTokenHolders(address, chain).catch(() => null) : null,
+  ]);
 
   const result = {
     lpNotLocked: null,
@@ -262,6 +267,19 @@ export async function getTokenSecurityDetail(address, chain = 'solana') {
     result.isMintable = secInfo.is_mintable ?? null;
     result.isFreezable = secInfo.is_freezable ?? null;
     result.topHolderPercent = secInfo.top_holder_percent ?? null;
+  }
+
+  // Top10 优先使用 Binance（与 Pump 榜单数据源一致），其次 OKX，最后 GoPlus
+  const binanceTop10 = binanceInfo?.top10HoldersPercentage;
+  const okxTop10 = okxInfo?.topHolderPercent;
+  if (binanceTop10 != null) {
+    result.topHolderPercent = binanceTop10;
+  } else if (okxTop10 != null) {
+    result.topHolderPercent = okxTop10;
+  }
+
+  if (binanceInfo?.holders != null && result.holderCount == null) {
+    result.holderCount = binanceInfo.holders;
   }
 
   cacheSet(cacheKey, result);

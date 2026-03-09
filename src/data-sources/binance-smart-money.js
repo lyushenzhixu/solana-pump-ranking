@@ -1,11 +1,47 @@
 /**
- * Binance Web3 聪明钱信号 & 流入排行 API
+ * Binance Web3 聪明钱信号 & 流入排行 & 代币动态 API
  * 公开接口，无需 API Key
  * 文档参考：binance-web3-trading-signal skill / binance-web3-crypto-market-rank skill
  */
 const BASE = 'https://web3.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/web/signal/smart-money';
 const INFLOW_RANK_BASE = 'https://web3.binance.com/bapi/defi/v1/public/wallet-direct/tracker/wallet/token/inflow/rank/query';
+const TOKEN_DYNAMIC_BASE = 'https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info';
 const LOGO_BASE = 'https://bin.bnbstatic.com';
+
+/** Binance 链 ID 映射 */
+const BINANCE_CHAIN_MAP = { solana: 'CT_501', bsc: '56', base: '8453' };
+
+/**
+ * 从 Binance Web3 获取代币动态信息（含 Top10 持有人占比）
+ * 与 Pump 榜单使用的数据源一致，确保详情页与榜单数据对齐
+ * @param {string} contractAddress 代币合约地址
+ * @param {string} [chain='solana'] solana/bsc/base
+ * @returns {Promise<{ top10HoldersPercentage: number|null, holders: number|null, insiderHoldingPercent: number|null }>}
+ */
+export async function fetchBinanceTokenDynamicInfo(contractAddress, chain = 'solana') {
+  const chainId = BINANCE_CHAIN_MAP[chain] || 'CT_501';
+  const url = new URL(TOKEN_DYNAMIC_BASE);
+  url.searchParams.set('chainId', chainId);
+  url.searchParams.set('contractAddress', contractAddress);
+  try {
+    const res = await fetch(url.toString(), { headers: { 'Accept-Encoding': 'identity' } });
+    if (!res.ok) return { top10HoldersPercentage: null, holders: null, insiderHoldingPercent: null };
+    const json = await res.json();
+    const d = json?.data;
+    if (!d) return { top10HoldersPercentage: null, holders: null, insiderHoldingPercent: null };
+    const pct = d.top10HoldersPercentage ?? d.holdersTop10Percent;
+    const top10 = pct != null && pct !== '' ? parseFloat(String(pct)) : null;
+    const holders = d.holders != null ? parseInt(String(d.holders), 10) : null;
+    const insider = d.insiderHoldingPercent != null ? parseFloat(String(d.insiderHoldingPercent)) : null;
+    return {
+      top10HoldersPercentage: Number.isFinite(top10) ? top10 : null,
+      holders: Number.isInteger(holders) ? holders : null,
+      insiderHoldingPercent: Number.isFinite(insider) ? insider : null,
+    };
+  } catch {
+    return { top10HoldersPercentage: null, holders: null, insiderHoldingPercent: null };
+  }
+}
 
 /**
  * 获取聪明钱买卖信号列表

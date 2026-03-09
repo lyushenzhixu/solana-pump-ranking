@@ -1,6 +1,6 @@
 # 聪明钱信号模块 — 前端设计规范（与项目统一）
 
-> 榜单页聪明钱信号 Tab 及信号卡片 UI。现有三种风格变体：binance（金黄）、okx（黑色）、gate（蓝色）。数据统一来自 Binance Web3 API。
+> 榜单页「Binance Skill」「OKX Skill」两个一级 Tab，各含二级：聪明钱信号、聪明钱流入、KOL追踪。数据统一来自 Binance Web3 API，风格分别为 binance（金黄）、okx（OKX 黑）。
 
 ## 设计原则
 
@@ -44,8 +44,9 @@
 
 ## 与现有组件对齐
 
-- **Tab**：「binance聪明钱信号」「okx聪明钱信号」「gate聪明钱信号」与「Solana Pump 榜单」「zhilabs 精选」同属 `.tabs`，使用相同 `.tab-btn` 样式。
-- **风格变体**：binance 金黄 `--bn-yellow`；okx 黑色（#050505 背景 + 灰白强调）；gate 蓝色（#00b4ff 主色，深蓝背景）。
+- **一级 Tab**：Solana Pump 榜单 | zhizhilabs 精选 | Binance Skill | OKX Skill
+- **二级 Tab**（仅在 Binance/OKX Skill 下显示）：聪明钱信号 | 聪明钱流入 | KOL追踪
+- **风格变体**：binance 金黄 `--bn-yellow`；okx OKX 黑（#050505 背景 + #e0e0e0 灰白强调）
 - **说明文案**：`#desc` 在 signal 下的文案风格与另外两个 Tab 一致（一句话说明数据来源与含义）。
 - **加载与错误**：复用 `.loading-text` 与现有错误态（如 `color: var(--negative); animation: none`）。
 - **响应式**：小屏下 grid 可改为单列或两列，与现有 `@media (max-width: 768px)` 断点一致；避免卡片过窄导致排版混乱。
