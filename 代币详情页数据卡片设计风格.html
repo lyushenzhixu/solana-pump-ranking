@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Detail — QClaw</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap');
+
+        :root {
+            --bg-deep: #06090f;
+            --bg-panel: rgba(14, 19, 32, 0.85);
+            --bg-card: rgba(16, 22, 38, 0.75);
+            --bg-card-hover: rgba(22, 30, 52, 0.85);
+            --border: rgba(255, 255, 255, 0.045);
+            --border-hover: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.55);
+            --text-muted: rgba(255, 255, 255, 0.28);
+            --green: #00ffa3;
+            --green-dim: rgba(0, 255, 163, 0.12);
+            --red: #ff4466;
+            --red-dim: rgba(255, 68, 102, 0.12);
+            --blue: #38bdf8;
+            --indigo: #818cf8;
+            --purple: #a855f7;
+            --amber: #fbbf24;
+            --pink: #fb7185;
+            --cyan: #22d3ee;
+            --radius-sharp: 4px;
+            --radius-card: 5px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background: var(--bg-deep);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(0, 255, 163, 0.03) 0%, rgba(56, 189, 248, 0.015) 40%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page {
+            position: relative;
+            z-index: 1;
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 24px 20px 60px;
+        }
+
+        /* ===== BACK NAV ===== */
+        .back-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 6px 14px 6px 10px;
+            border-radius: var(--radius-sharp);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            margin-bottom: 18px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+        .back-nav:hover {
+            border-color: var(--border-hover);
+            color: #fff;
+            background: var(--bg-card-hover);
+        }
+        .back-nav svg { width: 16px; height: 16px; }
+
+        /* ===== HEADER CARD ===== */
+        .header-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 22px 28px;
+            margin-bottom: 12px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 5%, var(--green) 30%, var(--blue) 70%, transparent 95%);
+            opacity: 0.4;
+        }
+        .header-card .glow {
+            position: absolute;
+            top: -60px; right: -40px;
+            width: 220px; height: 220px;
+            background: radial-gradient(circle, rgba(0, 255, 163, 0.05), transparent 70%);
+            pointer-events: none;
+        }
+
+        .token-header {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            position: relative;
+        }
+
+        .token-logo {
+            width: 56px; height: 56px;
+            border-radius: var(--radius-sharp);
+            background: linear-gradient(135deg, #ff6b35 0%, #e63946 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            box-shadow: 0 6px 20px rgba(230, 57, 70, 0.3), inset 0 1px 0 rgba(255,255,255,0.15);
+            flex-shrink: 0;
+            position: relative;
+        }
+        .token-logo::after {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 107, 53, 0.2);
+        }
+
+        .token-info { flex: 1; }
+
+        .token-name-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 5px;
+            flex-wrap: wrap;
+        }
+        .token-name {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
+        }
+        .badge {
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            text-transform: uppercase;
+            line-height: 1.6;
+        }
+        .badge-symbol {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(0, 255, 163, 0.18);
+        }
+        .badge-chain {
+            background: rgba(255, 199, 0, 0.08);
+            color: var(--amber);
+            border: 1px solid rgba(255, 199, 0, 0.15);
+        }
+
+        .token-price-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .token-price {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -1px;
+            background: linear-gradient(180deg, #fff 30%, #8b95a8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .price-change-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .price-change-tag.up {
+            background: var(--green-dim);
+            color: var(--green);
+            border: 1px solid rgba(0, 255, 163, 0.12);
+        }
+        .price-change-tag.down {
+            background: var(--red-dim);
+            color: var(--red);
+            border: 1px solid rgba(255, 68, 102, 0.12);
+        }
+        .price-change-tag svg { width: 10px; height: 10px; }
+
+        /* ===== CA BAR ===== */
+        .ca-bar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 11px 18px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .ca-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+            flex: 1;
+        }
+        .ca-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1.5px;
+            flex-shrink: 0;
+            background: rgba(255,255,255,0.04);
+            padding: 3px 7px;
+            border-radius: 2px;
+        }
+        .ca-address {
+            font-size: 12px;
+            color: rgba(56, 189, 248, 0.7);
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 500;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            flex: 1;
+        }
+        .ca-actions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+        .ca-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 11px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .ca-btn:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: var(--border-hover);
+            color: #fff;
+        }
+        .ca-btn svg { width: 13px; height: 13px; opacity: 0.55; }
+        .ca-btn:hover svg { opacity: 0.9; }
+
+        /* ===== STATS GRID ===== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 14px 16px 13px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        /* Left accent stripe */
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 2px; height: 100%;
+            background: var(--accent);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        /* Bottom edge glow */
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, var(--accent), transparent 80%);
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-hover);
+            background: var(--bg-card-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+        }
+        .stat-card:hover::before { opacity: 1; }
+        .stat-card:hover::after { opacity: 0.3; }
+
+        .stat-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+        .stat-icon {
+            width: 30px; height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .stat-icon svg { width: 16px; height: 16px; }
+
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 21px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1;
+            color: #fff;
+        }
+        .stat-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 7px;
+        }
+        .stat-sub {
+            font-size: 10px;
+            color: var(--text-muted);
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .stat-tag {
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 2px;
+            letter-spacing: 0.4px;
+        }
+
+        /* Card color variants */
+        .card-mc { --accent: var(--indigo); }
+        .card-mc .stat-icon { background: rgba(99,102,241,0.1); }
+        .card-mc .stat-icon svg { color: var(--indigo); }
+
+        .card-vol { --accent: var(--blue); }
+        .card-vol .stat-icon { background: rgba(14,165,233,0.1); }
+        .card-vol .stat-icon svg { color: var(--blue); }
+
+        .card-chg { --accent: var(--green); }
+        .card-chg .stat-icon { background: var(--green-dim); }
+        .card-chg .stat-icon svg { color: var(--green); }
+        .card-chg .stat-value { color: var(--green); }
+
+        .card-hold { --accent: var(--amber); }
+        .card-hold .stat-icon { background: rgba(251,191,36,0.08); }
+        .card-hold .stat-icon svg { color: var(--amber); }
+
+        .card-liq { --accent: var(--purple); }
+        .card-liq .stat-icon { background: rgba(168,85,247,0.1); }
+        .card-liq .stat-icon svg { color: var(--purple); }
+
+        .card-time { --accent: var(--pink); }
+        .card-time .stat-icon { background: rgba(244,63,94,0.08); }
+        .card-time .stat-icon svg { color: var(--pink); }
+
+        /* Tag variants */
+        .tag-green {
+            background: var(--green-dim);
+            color: var(--green);
+        }
+        .tag-blue {
+            background: rgba(56,189,248,0.1);
+            color: var(--blue);
+        }
+        .tag-amber {
+            background: rgba(251,191,36,0.08);
+            color: var(--amber);
+        }
+        .tag-purple {
+            background: rgba(168,85,247,0.1);
+            color: var(--purple);
+        }
+
+        /* Live dot */
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.25; }
+        }
+        .live-dot {
+            width: 5px; height: 5px;
+            border-radius: 1px;
+            background: var(--green);
+            display: inline-block;
+            animation: blink 1.6s ease-in-out infinite;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
+        /* ===== BOTTOM ROW ===== */
+        .bottom-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .info-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-card);
+            padding: 16px 18px;
+        }
+        .info-panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .info-panel-title svg { width: 14px; height: 14px; color: var(--text-muted); }
+
+        .info-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.025);
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-row-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        .info-row-value {
+            font-size: 12px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: #fff;
+        }
+        .info-row-value.green { color: var(--green); }
+        .info-row-value.red { color: var(--red); }
+
+        /* Progress bar */
+        .progress-bar-wrap {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 1px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 1px;
+            transition: width 0.6s ease;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 900px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .bottom-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 560px) {
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+            .ca-actions { display: none; }
+            .token-price { font-size: 22px; }
+            .page { padding: 16px 12px 40px; }
+        }
+        @media (max-width: 400px) {
+            .stats-grid { grid-template-columns: 1fr; }
+        }
+
+        /* ===== ENTRANCE ANIMATION ===== */
+        .anim-in {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+
+    <!-- Back Nav -->
+    <a class="back-nav" href="#">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        返回榜单
+    </a>
+
+    <!-- ===== HEADER ===== -->
+    <div class="header-card anim-in">
+        <div class="glow"></div>
+        <div class="token-header">
+            <div class="token-logo">🐾</div>
+            <div class="token-info">
+                <div class="token-name-row">
+                    <span class="token-name">腾讯开发的QClaw</span>
+                    <span class="badge badge-symbol">QClaw</span>
+                    <span class="badge badge-chain">BSC</span>
+                </div>
+                <div class="token-price-row">
+                    <span class="token-price">$0.00007635</span>
+                    <span class="price-change-tag up">
+                        <svg viewBox="0 0 12 12" fill="none"><path d="M6 2L10 7H2L6 2Z" fill="currentColor"/></svg>
+                        +38.18%
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== CA BAR ===== -->
+    <div class="ca-bar anim-in">
+        <div class="ca-left">
+            <span class="ca-label">CA</span>
+            <span class="ca-address" id="caText">0x9BaE0c56C5Eb40D5B47C6c197573bc39aDaD4444</span>
+        </div>
+        <div class="ca-actions">
+            <button class="ca-btn" id="copyBtn" onclick="copyCA()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="1"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                复制
+            </button>
+            <a href="#" class="ca-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                DexScreener
+            </a>
+            <a href="#" class="ca-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                Gecko
+            </a>
+            <a href="#" class="ca-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                BscScan
+            </a>
+        </div>
+    </div>
+
+    <!-- ===== STATS GRID ===== -->
+    <div class="stats-grid">
+        <!-- Market Cap -->
+        <div class="stat-card card-mc anim-in">
+            <div class="stat-top">
+                <span class="stat-label">市值</span>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                </div>
+            </div>
+            <div class="stat-value">$76.35K</div>
+            <div class="stat-footer">
+                <span class="stat-sub"><span class="live-dot"></span>MARKET CAP</span>
+            </div>
+        </div>
+
+        <!-- 24H Volume -->
+        <div class="stat-card card-vol anim-in">
+            <div class="stat-top">
+                <span class="stat-label">24H 交易量</span>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="12" width="4" height="8" rx="0.5"/><rect x="10" y="8" width="4" height="12" rx="0.5"/><rect x="17" y="4" width="4" height="16" rx="0.5"/></svg>
+                </div>
+            </div>
+            <div class="stat-value">$296.95K</div>
+            <div class="stat-footer">
+                <span class="stat-sub">VOLUME</span>
+                <span class="stat-tag tag-blue">3.89×</span>
+            </div>
+        </div>
+
+        <!-- 24H Change -->
+        <div class="stat-card card-chg anim-in">
+            <div class="stat-top">
+                <span class="stat-label">24H 涨跌</span>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+                </div>
+            </div>
+            <div class="stat-value">+38.18%</div>
+            <div class="stat-footer">
+                <span class="stat-sub">CHANGE</span>
+                <span class="stat-tag tag-green">▲ 强势</span>
+            </div>
+        </div>
+
+        <!-- Holders -->
+        <div class="stat-card card-hold anim-in">
+            <div class="stat-top">
+                <span class="stat-label">持币地址</span>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </div>
+            </div>
+            <div class="stat-value">498</div>
+            <div class="stat-footer">
+                <span class="stat-sub">HOLDERS</span>
+                <span class="stat-tag tag-amber">+23 24H</span>
+            </div>
+        </div>
+
+        <!-- Liquidity -->
+        <div class="stat-card card-liq anim-in">
+            <div class="stat-top">
+                <span class="stat-label">流动性</span>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+                </div>
+            </div>
+            <div class="stat-value">$26.73K</div>
+            <div class="stat-footer">
+                <span class="stat-sub">LIQUIDITY</span>
+                <span class="stat-tag tag-purple">35.0%</span>
+            </div>
+        </div>
+
+        <!-- Launch -->
+        <div class="stat-card card-time anim-in">
+            <div class="stat-top">
+                <span class="stat-label">上线时间</span>
+                <div class="stat-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>
+                </div>
+            </div>
+            <div class="stat-value">2026-03-09</div>
+            <div class="stat-footer">
+                <span class="stat-sub">LAUNCHED 3D AGO</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== BOTTOM DETAIL PANELS ===== -->
+    <div class="bottom-row">
+        <!-- Trading Info -->
+        <div class="info-panel anim-in">
+            <div class="info-panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                交易数据
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">买入次数 (24H)</span>
+                <span class="info-row-value green">1,284</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">卖出次数 (24H)</span>
+                <span class="info-row-value red">567</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">买卖比</span>
+                <span class="info-row-value green">2.26 : 1</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">买入压力</span>
+                <span class="info-row-value">
+                    <div class="progress-bar-wrap" style="width:120px;">
+                        <div class="progress-bar-fill" style="width:69%; background: linear-gradient(90deg, var(--green), rgba(0,255,163,0.4));"></div>
+                    </div>
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">最大单笔</span>
+                <span class="info-row-value">$4,320</span>
+            </div>
+        </div>
+
+        <!-- Token Info -->
+        <div class="info-panel anim-in">
+            <div class="info-panel-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                代币信息
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">总供应量</span>
+                <span class="info-row-value">1,000,000,000</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">流通率</span>
+                <span class="info-row-value">100%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">税率 (买/卖)</span>
+                <span class="info-row-value green">0% / 0%</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">合约验证</span>
+                <span class="info-row-value green">✓ 已验证</span>
+            </div>
+            <div class="info-row">
+                <span class="info-row-label">LP 锁定</span>
+                <span class="info-row-value">
+                    <div class="progress-bar-wrap" style="width:120px;">
+                        <div class="progress-bar-fill" style="width:100%; background: linear-gradient(90deg, var(--purple), rgba(168,85,247,0.4));"></div>
+                    </div>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Copy CA
+    function copyCA() {
+        const addr = document.getElementById('caText').textContent;
+        const btn = document.getElementById('copyBtn');
+        const saved = btn.innerHTML;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(addr).then(() => {
+                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> 已复制`;
+                btn.style.borderColor = 'rgba(0,255,163,0.35)';
+                btn.style.color = 'var(--green)';
+                setTimeout(() => {
+                    btn.innerHTML = saved;
+                    btn.style.borderColor = '';
+                    btn.style.color = '';
+                }, 1800);
+            });
+        }
+    }
+
+    // Staggered entrance animation
+    document.addEventListener('DOMContentLoaded', () => {
+        const items = document.querySelectorAll('.anim-in');
+        items.forEach((el, i) => {
+            el.style.transition = `opacity 0.4s cubic-bezier(0.25,0.46,0.45,0.94) ${i * 0.055}s, transform 0.4s cubic-bezier(0.25,0.46,0.45,0.94) ${i * 0.055}s`;
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'translateY(0)';
+                });
+            });
+        });
+    });
+</script>
+</body>
+</html>
