@@ -1274,9 +1274,9 @@ return `<!DOCTYPE html>
       <button type="button" class="sub-tab-btn" data-subtab="bn-kol">Binance KOL 追踪</button>
     </div>
     <div class="sub-tabs okx-sub-tabs" id="subTabsOkx" style="display:none">
-      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">OKX 涨幅榜</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">OKX 交易量榜</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">OKX 市值榜</button>
+      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">Meme 涨幅榜</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">Meme 交易量榜</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">Meme 市值榜</button>
     </div>
 
     <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
@@ -1347,6 +1347,61 @@ return `<!DOCTYPE html>
       });
       table += '</tbody></table>';
       root.innerHTML = table;
+    }
+    function renderMemeTable(list, rootId, mode) {
+      var root = document.getElementById(rootId);
+      if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无 Meme 数据</div>'; return; }
+      var headers = ['#', '代币', '价格', '市值', '流动性'];
+      if (mode === 'change') { headers.push('5m', '1h', '24h'); }
+      else if (mode === 'volume') { headers.push('1h 量', '24h 量', '24h txs'); }
+      else { headers.push('24h 量', '24h 涨跌', '持有人'); }
+      var table = '<table class="meme-tbl"><thead><tr>';
+      headers.forEach(function(h, idx) { table += '<th' + (idx >= 2 ? ' class="num"' : '') + '>' + h + '</th>'; });
+      table += '</tr></thead><tbody>';
+      list.forEach(function(row, i) {
+        var ca = row.token || '';
+        table += '<tr class="clickable-row" data-token="' + esc(ca) + '">';
+        table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
+        var copyBtn = ca ? '<button class="copy-ca-btn" data-ca="' + esc(ca) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+        table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(row.name || '—') + '</span><span class="symbol" style="margin-left:4px">' + esc(row.symbol || '') + '</span>' + copyBtn + '</div></td>';
+        var priceStr = row.price != null ? formatPrice(row.price) : '—';
+        table += '<td class="num">' + priceStr + '</td>';
+        table += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
+        table += '<td class="num">' + formatCompact(row.liquidity) + '</td>';
+        if (mode === 'change') {
+          table += '<td class="num ' + changeClass(row.change5M) + '">' + changeStr(row.change5M) + '</td>';
+          table += '<td class="num ' + changeClass(row.change1H) + '">' + changeStr(row.change1H) + '</td>';
+          table += '<td class="num ' + changeClass(row.change24H) + '">' + changeStr(row.change24H) + '</td>';
+        } else if (mode === 'volume') {
+          table += '<td class="num">' + formatCompact(row.volume1H) + '</td>';
+          table += '<td class="num">' + formatCompact(row.volume24H) + '</td>';
+          table += '<td class="num">' + (row.txs24H ? Number(row.txs24H).toLocaleString() : '—') + '</td>';
+        } else {
+          table += '<td class="num">' + formatCompact(row.volume24H) + '</td>';
+          table += '<td class="num ' + changeClass(row.change24H) + '">' + changeStr(row.change24H) + '</td>';
+          table += '<td class="num">' + (row.holders ? Number(row.holders).toLocaleString() : '—') + '</td>';
+        }
+        table += '</tr>';
+      });
+      table += '</tbody></table>';
+      root.innerHTML = table;
+    }
+    function changeClass(v) { return v != null ? (v >= 0 ? 'positive' : 'negative') : ''; }
+    function changeStr(v) { return v != null ? (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%' : '—'; }
+    function formatPrice(p) {
+      if (p == null || isNaN(p)) return '—';
+      var n = Number(p);
+      if (n === 0) return '$0';
+      if (n >= 1) return '$' + n.toFixed(2);
+      if (n >= 0.01) return '$' + n.toFixed(4);
+      var s = n.toFixed(20).replace(/0+$/, '');
+      var m = s.match(/^0\\.0*[1-9]/);
+      if (m) {
+        var zeros = m[0].length - 3;
+        var sig = s.slice(m[0].length, m[0].length + 3);
+        return '$0.0{' + zeros + '}' + sig;
+      }
+      return '$' + n.toPrecision(4);
     }
     function formatSignalTime(ms) {
       if (ms == null || !Number(ms)) return '';
@@ -1547,24 +1602,24 @@ return `<!DOCTYPE html>
         });
       }
       if (panelKey === 'okx-signal') {
-        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=1').then(function(list) {
-          if (Array.isArray(list)) renderTable(list, rootId);
+        return fetchJsonOrThrow('/api/okx/meme-ranking?sortType=1').then(function(list) {
+          if (Array.isArray(list)) renderMemeTable(list, rootId, 'change');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'okx-inflow') {
-        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=2').then(function(list) {
-          if (Array.isArray(list)) renderTable(list, rootId);
+        return fetchJsonOrThrow('/api/okx/meme-ranking?sortType=2').then(function(list) {
+          if (Array.isArray(list)) renderMemeTable(list, rootId, 'volume');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'okx-kol') {
-        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=3').then(function(list) {
-          if (Array.isArray(list)) renderTable(list, rootId);
+        return fetchJsonOrThrow('/api/okx/meme-ranking?sortType=3').then(function(list) {
+          if (Array.isArray(list)) renderMemeTable(list, rootId, 'mcap');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
@@ -1671,9 +1726,9 @@ return `<!DOCTYPE html>
         else if (subTab === 'bn-inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
         else if (subTab === 'bn-kol') descEl.textContent = 'Binance KOL 大 V 资金流入排行，追踪 KOL 投资动向';
       } else if (tab === 'okx') {
-        if (subTab === 'okx-signal') descEl.textContent = 'OKX OnchainOS 代币涨幅排行（Solana），按 24h 涨跌排序';
-        else if (subTab === 'okx-inflow') descEl.textContent = 'OKX OnchainOS 代币交易量排行（Solana），按 24h 成交量排序';
-        else if (subTab === 'okx-kol') descEl.textContent = 'OKX OnchainOS 代币市值排行（Solana），按市值排序';
+        if (subTab === 'okx-signal') descEl.textContent = 'OKX Meme 链上挖掘 — 24h 涨幅最大的 Meme 代币（Solana），多关键词聚合发现';
+        else if (subTab === 'okx-inflow') descEl.textContent = 'OKX Meme 链上挖掘 — 24h 交易量最大的 Meme 代币（Solana），追踪热门交易标的';
+        else if (subTab === 'okx-kol') descEl.textContent = 'OKX Meme 链上挖掘 — 市值最高的 Meme 代币（Solana），发现头部 Meme 项目';
       }
     }
 
@@ -4002,6 +4057,50 @@ const server = http.createServer(async (req, res) => {
         tx_volume_u_24h: parseFloat(item.volume || item.volume24h || item.liquidity || item.tx_volume_u_24h || 0) || null,
         price_change_24h: parseFloat(item.change || item.priceChange24h || item.price_change_24h || 0) || null,
         holders: item.holders != null ? parseInt(item.holders, 10) : null,
+      }));
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(JSON.stringify(data));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
+    }
+    return;
+  }
+  if (urlPath === '/api/okx/meme-ranking') {
+    try {
+      if (!okxOnchain.isConfigured()) {
+        res.statusCode = 503;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.end(JSON.stringify({ error: 'OKX API 未配置，请设置 OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE' }));
+        return;
+      }
+      const u = new URL(req.url || '/', 'http://localhost');
+      const sortType = parseInt(u.searchParams.get('sortType') || '1', 10) || 1;
+      const chain = u.searchParams.get('chain') || 'solana';
+      const page = parseInt(u.searchParams.get('page') || '1', 10) || 1;
+      const pageSize = Math.min(parseInt(u.searchParams.get('pageSize') || '50', 10) || 50, 100);
+      const raw = await okxOnchain.getMemeRanking({ chain, sortType, page, pageSize });
+      const data = (Array.isArray(raw) ? raw : []).map((item) => ({
+        token: item.tokenContractAddress || '',
+        name: item.tokenName || '',
+        symbol: item.tokenSymbol || '',
+        logo_url: item.tokenLogoUrl || null,
+        price: item.price ?? null,
+        market_cap: item.marketCap ?? null,
+        liquidity: item.liquidity ?? null,
+        volume24H: item.volume24H ?? null,
+        volume1H: item.volume1H ?? null,
+        change24H: item.change24H ?? null,
+        change1H: item.change1H ?? null,
+        change5M: item.change5M ?? null,
+        holders: item.holders ?? null,
+        txs24H: item.txs24H ?? null,
+        txs1H: item.txs1H ?? null,
       }));
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
