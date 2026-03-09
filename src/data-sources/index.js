@@ -262,6 +262,8 @@ export async function getTokenSecurityDetail(address, chain = 'solana') {
     result.isMintable = secInfo.is_mintable ?? null;
     result.isFreezable = secInfo.is_freezable ?? null;
     result.topHolderPercent = secInfo.top_holder_percent ?? null;
+    result.totalSupply = secInfo.total_supply ?? null;
+    result.isOpenSource = secInfo.is_open_source ?? null;
   }
 
   cacheSet(cacheKey, result);

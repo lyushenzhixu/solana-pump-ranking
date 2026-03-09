@@ -698,6 +698,8 @@ return `<!DOCTYPE html>
       border-bottom: 1px solid rgba(240, 185, 11, 0.2);
       font-family: 'JetBrains Mono', 'Exo 2', monospace;
     }
+    .signal-card-active { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .signal-card-active svg { flex-shrink: 0; color: var(--bn-yellow); }
     .signal-card-live-dot {
       width: 6px;
       height: 6px;
@@ -1245,7 +1247,7 @@ return `<!DOCTYPE html>
         html += '</div>';
         html += '<div class="signal-card-row">';
         if (timeStr) html += '<span class="signal-card-time">' + esc(timeStr) + '</span>';
-        html += '<span class="signal-card-active">⚡ Active</span></div>';
+        html += '<span class="signal-card-active"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Active</span></div>';
         html += '<div class="signal-card-bar-wrap"><div class="signal-card-bar-buy" style="width:' + buyW + '%"></div><div class="signal-card-bar-sell" style="width:' + sellW + '%"></div></div>';
         html += '<div class="signal-card-bar-labels"><span class="buy">BUY ' + buyPct + '%</span><span class="sell">SELL ' + sellPct + '%</span></div>';
         html += '</div></div></div>';
@@ -1947,64 +1949,199 @@ return `<!DOCTYPE html>
     .ext-link .ext-arrow { font-size: 0.75em; opacity: 0.5; transition: opacity 0.2s; }
     .ext-link:hover .ext-arrow { opacity: 1; }
 
-    /* === Stats Grid === */
+    /* === Stats Grid (代币详情页设计风格) === */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 0.875rem;
-      margin-bottom: 1.5rem;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 12px;
       animation: fadeSlideUp 0.5s ease 0.15s both;
     }
     .stat-card {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: 14px;
-      padding: 1.125rem 1.25rem;
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      transition: all 0.3s ease;
+      border-radius: 5px;
+      padding: 14px 16px 13px;
       position: relative;
       overflow: hidden;
+      transition: all 0.2s ease;
+      cursor: default;
     }
     .stat-card::before {
       content: '';
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 2px;
-      background: var(--stat-accent, linear-gradient(90deg, transparent, rgba(153,69,255,0.2), transparent));
+      position: absolute;
+      top: 0; left: 0;
+      width: 2px; height: 100%;
+      background: var(--stat-accent, var(--sol-purple));
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, var(--stat-accent, var(--sol-purple)), transparent 80%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
     }
     .stat-card:hover {
-      border-color: var(--border-glow);
-      box-shadow: 0 4px 24px rgba(153,69,255,0.08);
-      transform: translateY(-2px);
+      border-color: rgba(255,255,255,0.1);
+      background: rgba(22,30,52,0.85);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.25);
     }
-    .stat-header {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 0.625rem;
+    .stat-card:hover::before { opacity: 1; }
+    .stat-card:hover::after { opacity: 0.3; }
+    .stat-header, .stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
     }
     .stat-label {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 0.625rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
+      font-size: 11px;
+      font-weight: 600;
       color: var(--text-muted);
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
     }
     .stat-icon {
-      width: 28px; height: 28px;
-      border-radius: 8px;
+      width: 30px; height: 30px;
+      border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 0.875rem;
       flex-shrink: 0;
     }
+    .stat-icon svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
     .stat-value {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 1.3rem;
+      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-size: 21px;
       font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1;
       color: var(--text-primary);
       font-variant-numeric: tabular-nums;
-      letter-spacing: -0.02em;
     }
     .stat-value.positive { color: var(--positive); }
     .stat-value.negative { color: var(--negative); }
+    .stat-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 7px;
+    }
+    .stat-sub {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    .stat-tag {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 2px;
+      letter-spacing: 0.4px;
+    }
+    .stat-card.card-mc { --stat-accent: #818cf8; }
+    .stat-card.card-mc .stat-icon { background: rgba(99,102,241,0.1); }
+    .stat-card.card-mc .stat-icon svg { color: #818cf8; }
+    .stat-card.card-vol { --stat-accent: #38bdf8; }
+    .stat-card.card-vol .stat-icon { background: rgba(14,165,233,0.1); }
+    .stat-card.card-vol .stat-icon svg { color: #38bdf8; }
+    .stat-card.card-chg .stat-icon { background: rgba(20,241,149,0.12); }
+    .stat-card.card-chg .stat-icon svg { color: var(--positive); }
+    .stat-card.card-chg .stat-value { color: var(--positive); }
+    .stat-card.card-chg.negative .stat-icon { background: rgba(255,68,102,0.12); }
+    .stat-card.card-chg.negative .stat-icon svg { color: var(--negative); }
+    .stat-card.card-chg.negative .stat-value { color: var(--negative); }
+    .stat-card.card-hold { --stat-accent: #fbbf24; }
+    .stat-card.card-hold .stat-icon { background: rgba(251,191,36,0.08); }
+    .stat-card.card-hold .stat-icon svg { color: #fbbf24; }
+    .stat-card.card-liq { --stat-accent: #a855f7; }
+    .stat-card.card-liq .stat-icon { background: rgba(168,85,247,0.1); }
+    .stat-card.card-liq .stat-icon svg { color: #a855f7; }
+    .stat-card.card-time { --stat-accent: #fb7185; }
+    .stat-card.card-time .stat-icon { background: rgba(244,63,94,0.08); }
+    .stat-card.card-time .stat-icon svg { color: #fb7185; }
+    .tag-green { background: rgba(20,241,149,0.12); color: var(--positive); }
+    .tag-blue { background: rgba(56,189,248,0.1); color: #38bdf8; }
+    .tag-amber { background: rgba(251,191,36,0.08); color: #fbbf24; }
+    .tag-purple { background: rgba(168,85,247,0.1); color: #a855f7; }
+    .stat-footer .live-dot {
+      width: 5px; height: 5px; border-radius: 1px;
+      background: var(--positive);
+      display: inline-block;
+      animation: statBlink 1.6s ease-in-out infinite;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    @keyframes statBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    /* === Bottom row: 交易数据 + 代币信息 === */
+    .detail-bottom-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 1.5rem;
+      animation: fadeSlideUp 0.5s ease 0.2s both;
+    }
+    .info-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 5px;
+      padding: 16px 18px;
+    }
+    .info-panel-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .info-panel-title svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; color: var(--text-muted); }
+    .info-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.025);
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row-label {
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .info-row-value {
+      font-size: 12px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+    }
+    .info-row-value.positive { color: var(--positive); }
+    .info-row-value.negative { color: var(--negative); }
+    .info-panel-title svg { flex-shrink: 0; }
+    .progress-bar-wrap {
+      width: 100%;
+      max-width: 120px;
+      height: 4px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 1px;
+      margin-top: 6px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 1px;
+      transition: width 0.6s ease;
+    }
 
     /* === Chart Card (TradingView style) === */
     .chart-card {
@@ -2190,7 +2327,8 @@ return `<!DOCTYPE html>
       margin-bottom: 0.875rem;
       display: flex; align-items: center; gap: 0.5rem;
     }
-    .narrative-title .icon { font-size: 0.875rem; }
+    .narrative-title .icon { display: inline-flex; align-items: center; }
+    .narrative-title .icon svg { flex-shrink: 0; }
     .narrative-title .ai-tag {
       font-family: 'Exo 2', sans-serif;
       font-size: 0.5625rem;
@@ -2348,6 +2486,12 @@ return `<!DOCTYPE html>
       font-size: 0.6875rem;
       color: var(--text-secondary);
     }
+    .narrative-kol-tag .verified-check,
+    .verified-check, .verified {
+      display: inline-flex;
+      align-items: center;
+    }
+    .verified-check svg, .verified svg { flex-shrink: 0; }
     .narrative-kol-tag .verified-check {
       color: var(--sol-blue);
       font-size: 0.625rem;
@@ -2387,7 +2531,11 @@ return `<!DOCTYPE html>
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
     }
+    .narrative-dim-name svg { flex-shrink: 0; stroke: var(--text-muted); }
     .narrative-dim-score {
       font-family: 'Exo 2', sans-serif;
       font-size: 0.75rem;
@@ -2450,7 +2598,8 @@ return `<!DOCTYPE html>
       margin-bottom: 1rem;
       display: flex; align-items: center; gap: 0.5rem;
     }
-    .tweets-title .icon { font-size: 0.875rem; }
+    .tweets-title .icon { display: inline-flex; align-items: center; }
+    .tweets-title .icon svg { flex-shrink: 0; }
     .tweets-title .update-tag {
       font-family: 'Exo 2', sans-serif;
       font-size: 0.625rem;
@@ -2549,6 +2698,7 @@ return `<!DOCTYPE html>
       cursor: default;
       transition: color 0.2s;
     }
+    .tweet-stats svg { flex-shrink: 0; }
     .tweet-stats .likes:hover { color: var(--negative); }
     .tweet-stats .retweets:hover { color: var(--positive); }
     .tweet-stats .replies:hover { color: var(--sol-blue); }
@@ -2632,9 +2782,11 @@ return `<!DOCTYPE html>
       .chart-ohlcv-bar .ohlcv-pair { font-size: 0.6875rem; }
       .chart-intervals button { padding: 0.25rem 0.4rem; font-size: 0.625rem; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.625rem; }
-      .stat-card { padding: 0.875rem; border-radius: 12px; }
+      .stat-card { padding: 0.875rem; border-radius: 8px; }
       .stat-value { font-size: 1rem; }
-      .stat-icon { width: 24px; height: 24px; font-size: 0.75rem; border-radius: 6px; }
+      .stat-icon { width: 24px; height: 24px; border-radius: 6px; }
+      .stat-icon svg { width: 14px; height: 14px; }
+      .detail-bottom-row { grid-template-columns: 1fr; }
       .narrative-card { padding: 1rem; }
     }
     @media (max-width: 480px) {
@@ -2756,21 +2908,62 @@ return `<!DOCTYPE html>
       html += '</div>';
       html += '</div>';
 
-      // Stats grid (full width, prominent)
+      // Stats grid (代币详情页设计风格 + SVG 图标)
+      var svgMc = '<svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>';
+      var svgVol = '<svg viewBox="0 0 24 24"><rect x="3" y="12" width="4" height="8" rx="0.5"/><rect x="10" y="8" width="4" height="12" rx="0.5"/><rect x="17" y="4" width="4" height="16" rx="0.5"/></svg>';
+      var svgChgUp = '<svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+      var svgChgDown = '<svg viewBox="0 0 24 24"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>';
+      var svgHold = '<svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+      var svgLiq = '<svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>';
+      var svgTime = '<svg viewBox="0 0 24 24"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>';
       html += '<div class="stats-grid">';
-      html += '<div class="stat-card" style="--stat-accent:linear-gradient(90deg,transparent,rgba(153,69,255,0.35),transparent)"><div class="stat-header"><span class="stat-label">市值</span><span class="stat-icon" style="background:var(--accent-purple);color:var(--sol-purple)">💎</span></div><div class="stat-value">' + formatCompact(token.market_cap) + '</div></div>';
-      html += '<div class="stat-card" style="--stat-accent:linear-gradient(90deg,transparent,rgba(0,209,255,0.35),transparent)"><div class="stat-header"><span class="stat-label">24H 交易量</span><span class="stat-icon" style="background:var(--accent-blue);color:var(--sol-blue)">📊</span></div><div class="stat-value">' + formatCompact(token.tx_volume_u_24h) + '</div></div>';
-      html += '<div class="stat-card" style="--stat-accent:linear-gradient(90deg,transparent,' + (change >= 0 ? 'rgba(20,241,149,0.35)' : 'rgba(255,77,106,0.35)') + ',transparent)"><div class="stat-header"><span class="stat-label">24H 涨跌</span><span class="stat-icon" style="background:' + (change >= 0 ? 'var(--accent-green)' : 'var(--accent-pink)') + ';color:' + (change >= 0 ? 'var(--positive)' : 'var(--negative)') + '">' + (change >= 0 ? '📈' : '📉') + '</span></div><div class="stat-value ' + changeCl + '">' + (changeStr || '—') + '</div></div>';
-      html += '<div class="stat-card" style="--stat-accent:linear-gradient(90deg,transparent,rgba(20,241,149,0.35),transparent)"><div class="stat-header"><span class="stat-label">持币地址</span><span class="stat-icon" style="background:var(--accent-green);color:var(--sol-green)">👥</span></div><div class="stat-value">' + formatNumber(token.holders) + '</div></div>';
+      html += '<div class="stat-card card-mc"><div class="stat-top"><span class="stat-label">市值</span><div class="stat-icon">' + svgMc + '</div></div><div class="stat-value">' + formatCompact(token.market_cap) + '</div><div class="stat-footer"><span class="stat-sub"><span class="live-dot"></span>MARKET CAP</span></div></div>';
+      html += '<div class="stat-card card-vol"><div class="stat-top"><span class="stat-label">24H 交易量</span><div class="stat-icon">' + svgVol + '</div></div><div class="stat-value">' + formatCompact(token.tx_volume_u_24h) + '</div><div class="stat-footer"><span class="stat-sub">VOLUME</span></div></div>';
+      html += '<div class="stat-card card-chg' + (change < 0 ? ' negative' : '') + '"><div class="stat-top"><span class="stat-label">24H 涨跌</span><div class="stat-icon">' + (change >= 0 ? svgChgUp : svgChgDown) + '</div></div><div class="stat-value ' + changeCl + '">' + (changeStr || '—') + '</div><div class="stat-footer"><span class="stat-sub">CHANGE</span><span class="stat-tag tag-' + (change >= 0 ? 'green' : 'blue') + '">' + (change >= 0 ? '▲ 强势' : '▼ 弱势') + '</span></div></div>';
+      html += '<div class="stat-card card-hold"><div class="stat-top"><span class="stat-label">持币地址</span><div class="stat-icon">' + svgHold + '</div></div><div class="stat-value">' + formatNumber(token.holders) + '</div><div class="stat-footer"><span class="stat-sub">HOLDERS</span></div></div>';
       if (token._liquidity_usd != null) {
-        html += '<div class="stat-card" style="--stat-accent:linear-gradient(90deg,transparent,rgba(0,209,255,0.35),transparent)"><div class="stat-header"><span class="stat-label">流动性</span><span class="stat-icon" style="background:var(--accent-blue);color:var(--sol-blue)">💧</span></div><div class="stat-value">' + formatCompact(token._liquidity_usd) + '</div></div>';
+        html += '<div class="stat-card card-liq"><div class="stat-top"><span class="stat-label">流动性</span><div class="stat-icon">' + svgLiq + '</div></div><div class="stat-value">' + formatCompact(token._liquidity_usd) + '</div><div class="stat-footer"><span class="stat-sub">LIQUIDITY</span></div></div>';
       }
       if (token.launch_at) {
         var launchDate = new Date(token.launch_at * 1000);
         var launchStr = launchDate.getFullYear() + '-' + String(launchDate.getMonth()+1).padStart(2,'0') + '-' + String(launchDate.getDate()).padStart(2,'0');
-        html += '<div class="stat-card" style="--stat-accent:linear-gradient(90deg,transparent,rgba(153,69,255,0.35),transparent)"><div class="stat-header"><span class="stat-label">上线时间</span><span class="stat-icon" style="background:var(--accent-purple);color:var(--sol-purple)">🚀</span></div><div class="stat-value" style="font-size:1rem">' + launchStr + '</div></div>';
+        html += '<div class="stat-card card-time"><div class="stat-top"><span class="stat-label">上线时间</span><div class="stat-icon">' + svgTime + '</div></div><div class="stat-value" style="font-size:1rem">' + launchStr + '</div><div class="stat-footer"><span class="stat-sub">LAUNCHED</span></div></div>';
       }
       html += '</div>';
+
+      // Bottom row: 交易数据 + 代币信息
+      var txns = token._txns_h24 || {};
+      var buys = txns.buys ?? 0;
+      var sells = txns.sells ?? 0;
+      var totalTx = buys + sells;
+      var buyRatio = totalTx > 0 ? Math.round((buys / totalTx) * 100) : 50;
+      var buySellRatio = (sells > 0 && buys > 0) ? (buys / sells).toFixed(2) + ' : 1' : (buys > 0 ? '—' : '—');
+      var svgTrade = '<svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>';
+      var svgInfo = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
+      html += '<div class="detail-bottom-row">';
+      html += '<div class="info-panel"><div class="info-panel-title">' + svgTrade + '交易数据</div>';
+      html += '<div class="info-row"><span class="info-row-label">买入次数 (24H)</span><span class="info-row-value positive">' + formatNumber(buys) + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">卖出次数 (24H)</span><span class="info-row-value negative">' + formatNumber(sells) + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">买卖比</span><span class="info-row-value' + (buys >= sells ? ' positive' : ' negative') + '">' + buySellRatio + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">买入压力</span><span class="info-row-value"><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + buyRatio + '%; background: linear-gradient(90deg, var(--positive), rgba(20,241,149,0.4));"></div></div></span></div>';
+      html += '<div class="info-row"><span class="info-row-label">最大单笔</span><span class="info-row-value">—</span></div>';
+      html += '</div>';
+      var totalSupply = token._total_supply;
+      var supplyStr = totalSupply != null ? (totalSupply >= 1e9 ? (totalSupply / 1e9).toFixed(2) + 'B' : totalSupply >= 1e6 ? (totalSupply / 1e6).toFixed(2) + 'M' : totalSupply >= 1e3 ? (totalSupply / 1e3).toFixed(2) + 'K' : String(Math.round(totalSupply))) : '—';
+      var taxBuy = token._buy_tax;
+      var taxSell = token._sell_tax;
+      var taxStr = (taxBuy != null || taxSell != null) ? (taxBuy != null ? taxBuy + '%' : '—') + ' / ' + (taxSell != null ? taxSell + '%' : '—') : '—';
+      var verifiedCl = token._is_open_source === true ? 'positive' : (token._is_open_source === false ? 'negative' : '');
+      var verifiedText = token._is_open_source === true ? '已验证' : (token._is_open_source === false ? '未验证' : '—');
+      var lpLocked = token._is_lp_locked;
+      var lpPct = lpLocked === true ? 100 : (lpLocked === false ? 0 : null);
+      html += '<div class="info-panel"><div class="info-panel-title">' + svgInfo + '代币信息</div>';
+      html += '<div class="info-row"><span class="info-row-label">总供应量</span><span class="info-row-value">' + supplyStr + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">流通率</span><span class="info-row-value">' + (totalSupply != null ? '100%' : '—') + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">税率 (买/卖)</span><span class="info-row-value' + ((taxBuy || 0) === 0 && (taxSell || 0) === 0 ? ' positive' : '') + '">' + taxStr + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">合约验证</span><span class="info-row-value' + (verifiedCl ? ' ' + verifiedCl : '') + '">' + verifiedText + '</span></div>';
+      html += '<div class="info-row"><span class="info-row-label">LP 锁定</span><span class="info-row-value"><div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:' + (lpPct != null ? lpPct : 0) + '%; background: linear-gradient(90deg, #a855f7, rgba(168,85,247,0.4));"></div></div></span></div>';
+      html += '</div></div>';
 
       // Two-column layout
       html += '<div class="detail-layout">';
@@ -2801,7 +2994,7 @@ return `<!DOCTYPE html>
 
       // Narrative summary
       html += '<div class="narrative-card" id="narrative-section">';
-      html += '<div class="narrative-title"><span class="icon">📊</span>叙事分析<span class="ai-tag">AI</span></div>';
+      html += '<div class="narrative-title"><span class="icon"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" fill="none" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg></span>叙事分析<span class="ai-tag">AI</span></div>';
       html += '<div id="narrative-content"><div class="narrative-loading">分析中</div></div>';
       html += '</div>';
       html += '</div>'; // end detail-main
@@ -2809,7 +3002,7 @@ return `<!DOCTYPE html>
       // Right column: hot tweets sidebar
       html += '<div class="detail-sidebar">';
       html += '<div class="tweets-card" id="tweets-section">';
-      html += '<div class="tweets-title"><span class="icon">𝕏</span>热门推特<span class="update-tag">每日更新</span></div>';
+      html += '<div class="tweets-title"><span class="icon"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></span>热门推特<span class="update-tag">每日更新</span></div>';
       html += '<div id="tweets-content"><div class="tweets-loading">加载中</div></div>';
       html += '</div>';
       html += '</div>'; // end detail-sidebar
@@ -3118,7 +3311,7 @@ return `<!DOCTYPE html>
         tn.topKols.forEach(function(k) {
           html += '<span class="narrative-kol-tag">';
           html += '@' + esc(k.user);
-          if (k.verified) html += ' <span class="verified-check">✓</span>';
+          if (k.verified) html += ' <span class="verified-check"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>';
           var f = k.followers || 0;
           var fStr = f >= 1000000 ? (f / 1000000).toFixed(1) + 'M' : (f >= 1000 ? (f / 1000).toFixed(1) + 'K' : f);
           html += ' <span style="color:var(--text-muted);font-size:0.6rem">' + fStr + '</span>';
@@ -3135,7 +3328,7 @@ return `<!DOCTYPE html>
         // 市场健康度
         var m = dims.market || {};
         html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">📊 市场</span><span class="narrative-dim-score">' + (m.score || 0) + '/' + (m.max || 30) + '</span></div>';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="12" width="4" height="8" rx="0.5"/><rect x="10" y="8" width="4" height="12" rx="0.5"/><rect x="17" y="4" width="4" height="16" rx="0.5"/></svg> 市场</span><span class="narrative-dim-score">' + (m.score || 0) + '/' + (m.max || 30) + '</span></div>';
         html += renderDimBar(m.score || 0, m.max || 30);
         html += '<div class="narrative-dim-details">交易量比 <span>' + (m.velocity || 0) + '</span> · 流动性 <span>' + (m.liqDepth || 0) + '</span><br>24h交易 <span>' + fmtCompact(m.txns24h) + '</span> · 买入 <span>' + (m.buyRatio || 50) + '%</span></div>';
         html += '</div>';
@@ -3143,7 +3336,7 @@ return `<!DOCTYPE html>
         // 社区
         var c = dims.community || {};
         html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">👥 社区</span><span class="narrative-dim-score">' + (c.score || 0) + '/' + (c.max || 25) + '</span></div>';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> 社区</span><span class="narrative-dim-score">' + (c.score || 0) + '/' + (c.max || 25) + '</span></div>';
         html += renderDimBar(c.score || 0, c.max || 25);
         html += '<div class="narrative-dim-details">持币人 <span>' + fmtCompact(c.holders) + '</span> · Top10 <span>' + (c.topHolderPct || 0) + '%</span><br>交易对 <span>' + (c.pairCount || 0) + '</span></div>';
         html += '</div>';
@@ -3151,7 +3344,7 @@ return `<!DOCTYPE html>
         // 安全
         var s = dims.security || {};
         html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">🔒 安全</span><span class="narrative-dim-score">' + (s.score || 0) + '/' + (s.max || 25) + '</span></div>';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> 安全</span><span class="narrative-dim-score">' + (s.score || 0) + '/' + (s.max || 25) + '</span></div>';
         html += renderDimBar(s.score || 0, s.max || 25);
         var secDetails = [];
         secDetails.push('LP ' + (s.lpLocked ? '<span style="color:var(--positive)">已锁</span>' : '<span style="color:var(--negative)">未锁</span>'));
@@ -3164,12 +3357,12 @@ return `<!DOCTYPE html>
         // 成熟度
         var mt = dims.maturity || {};
         html += '<div class="narrative-dim-card">';
-        html += '<div class="narrative-dim-header"><span class="narrative-dim-name">🏗 成熟度</span><span class="narrative-dim-score">' + (mt.score || 0) + '/' + (mt.max || 20) + '</span></div>';
+        html += '<div class="narrative-dim-header"><span class="narrative-dim-name"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M2 20h20"/><path d="M5 20V8l7-4 7 4v12"/><path d="M9 20v-6h6v6"/></svg> 成熟度</span><span class="narrative-dim-score">' + (mt.score || 0) + '/' + (mt.max || 20) + '</span></div>';
         html += renderDimBar(mt.score || 0, mt.max || 20);
         var matDetails = [];
         if (mt.ageDays !== null) matDetails.push('上线 <span>' + mt.ageDays + '</span> 天');
         var socials = [];
-        if (mt.hasTwitter) socials.push('𝕏');
+        if (mt.hasTwitter) socials.push('X');
         if (mt.hasTelegram) socials.push('TG');
         if (mt.hasWebsite) socials.push('Web');
         if (socials.length > 0) matDetails.push('社交 <span>' + socials.join('+') + '</span>');
@@ -3281,7 +3474,7 @@ return `<!DOCTYPE html>
             html += avatarHtml;
             html += '<div class="tweet-user-info">';
             html += '<div class="tweet-user-name">' + esc(t.userName || t.userScreenName);
-            if (t.userVerified) html += ' <span class="verified">✓</span>';
+            if (t.userVerified) html += ' <span class="verified"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></span>';
             html += '</div>';
             html += '<div class="tweet-user-handle">@' + esc(t.userScreenName) + ' · ' + formatTimeAgo(t.createdAt) + '</div>';
             html += '</div></div>';
@@ -3290,9 +3483,9 @@ return `<!DOCTYPE html>
               html += '<div class="tweet-media"><img src="' + esc(t.mediaUrls[0]) + '" alt="" loading="lazy" onerror="this.parentElement.style.display=\\'none\\'"></div>';
             }
             html += '<div class="tweet-stats">';
-            html += '<span class="likes">♡ ' + formatCount(t.likes) + '</span>';
-            html += '<span class="retweets">⟲ ' + formatCount(t.retweets) + '</span>';
-            html += '<span class="replies">💬 ' + formatCount(t.replies) + '</span>';
+            html += '<span class="likes"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg> ' + formatCount(t.likes) + '</span>';
+            html += '<span class="retweets"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg> ' + formatCount(t.retweets) + '</span>';
+            html += '<span class="replies"><svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" fill="none" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> ' + formatCount(t.replies) + '</span>';
             html += '</div>';
             html += '</div>';
           });
@@ -3814,6 +4007,14 @@ const server = http.createServer(async (req, res) => {
       }
       if (detail.holders == null && secDetail?.holderCount != null) {
         detail.holders = secDetail.holderCount;
+      }
+      // 合并安全数据供详情页代币信息卡片使用
+      if (secDetail) {
+        detail._buy_tax = secDetail.buyTax;
+        detail._sell_tax = secDetail.sellTax;
+        detail._total_supply = secDetail.totalSupply;
+        detail._is_lp_locked = secDetail.lpNotLocked === false ? true : (secDetail.lpNotLocked === true ? false : null);
+        detail._is_open_source = secDetail.isOpenSource;
       }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
