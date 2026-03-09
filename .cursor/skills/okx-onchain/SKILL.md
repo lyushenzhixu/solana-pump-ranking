@@ -65,6 +65,13 @@ const tokens = await okxOnchain.searchTokens('SOL');
 const detail = await okxOnchain.getTokenDetail(address, 'solana');
 ```
 
+### 5. 代币榜单（涨幅/成交量/市值）
+
+```javascript
+const list = await okxOnchain.getTokenRanking({ chain: 'solana', sortType: 1 });
+// sortType: 1=涨跌 2=成交量 3=市值
+```
+
 ## 认证
 
 所有请求自动签名，使用 HMAC-SHA256。请求头包含：

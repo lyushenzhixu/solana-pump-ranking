@@ -1274,9 +1274,9 @@ return `<!DOCTYPE html>
       <button type="button" class="sub-tab-btn" data-subtab="bn-kol">Binance KOL 追踪</button>
     </div>
     <div class="sub-tabs okx-sub-tabs" id="subTabsOkx" style="display:none">
-      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">OKX 聪明钱信号</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">OKX 聪明钱流入</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">OKX KOL 追踪</button>
+      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">OKX 涨幅榜</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">OKX 交易量榜</button>
+      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">OKX 市值榜</button>
     </div>
 
     <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
@@ -1547,24 +1547,24 @@ return `<!DOCTYPE html>
         });
       }
       if (panelKey === 'okx-signal') {
-        return fetchJsonOrThrow('/api/smart-money-signals').then(function(list) {
-          if (Array.isArray(list)) renderSignalCards(list, rootId, 'okx');
+        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=1').then(function(list) {
+          if (Array.isArray(list)) renderTable(list, rootId);
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'okx-inflow') {
-        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=1').then(function(list) {
-          if (Array.isArray(list)) renderInflowRank(list, rootId, 'okx');
+        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=2').then(function(list) {
+          if (Array.isArray(list)) renderTable(list, rootId);
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'okx-kol') {
-        return fetchJsonOrThrow('/api/smart-money-inflow?tagType=2').then(function(list) {
-          if (Array.isArray(list)) renderInflowRank(list, rootId, 'okx');
+        return fetchJsonOrThrow('/api/okx/token-ranking?sortType=3').then(function(list) {
+          if (Array.isArray(list)) renderTable(list, rootId);
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
@@ -1671,9 +1671,9 @@ return `<!DOCTYPE html>
         else if (subTab === 'bn-inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
         else if (subTab === 'bn-kol') descEl.textContent = 'Binance KOL 大 V 资金流入排行，追踪 KOL 投资动向';
       } else if (tab === 'okx') {
-        if (subTab === 'okx-signal') descEl.textContent = 'OKX 链上聪明钱买入/卖出信号，追踪链上聪明钱最新动态';
-        else if (subTab === 'okx-inflow') descEl.textContent = 'OKX 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
-        else if (subTab === 'okx-kol') descEl.textContent = 'OKX KOL 大 V 资金流入排行，追踪 KOL 投资动向';
+        if (subTab === 'okx-signal') descEl.textContent = 'OKX OnchainOS 代币涨幅排行（Solana），按 24h 涨跌排序';
+        else if (subTab === 'okx-inflow') descEl.textContent = 'OKX OnchainOS 代币交易量排行（Solana），按 24h 成交量排序';
+        else if (subTab === 'okx-kol') descEl.textContent = 'OKX OnchainOS 代币市值排行（Solana），按市值排序';
       }
     }
 
@@ -3975,6 +3975,43 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: e.message }));
+    }
+    return;
+  }
+  if (urlPath === '/api/okx/token-ranking') {
+    try {
+      if (!okxOnchain.isConfigured()) {
+        res.statusCode = 503;
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        res.end(JSON.stringify({ error: 'OKX API 未配置，请设置 OKX_API_KEY / OKX_SECRET_KEY / OKX_PASSPHRASE' }));
+        return;
+      }
+      const u = new URL(req.url || '/', 'http://localhost');
+      const sortType = parseInt(u.searchParams.get('sortType') || '1', 10) || 1;
+      const chain = u.searchParams.get('chain') || 'solana';
+      const page = parseInt(u.searchParams.get('page') || '1', 10) || 1;
+      const pageSize = Math.min(parseInt(u.searchParams.get('pageSize') || '50', 10) || 50, 100);
+      const raw = await okxOnchain.getTokenRanking({ chain, sortType, page, pageSize });
+      const data = (Array.isArray(raw) ? raw : []).map((item) => ({
+        token: item.tokenContractAddress || item.address || item.token || '',
+        name: item.tokenName || item.name || '',
+        symbol: item.tokenSymbol || item.symbol || '',
+        logo_url: item.tokenLogoUrl || item.logoUrl || item.icon || null,
+        market_cap: parseFloat(item.marketCap || item.market_cap || 0) || null,
+        tx_volume_u_24h: parseFloat(item.volume || item.volume24h || item.liquidity || item.tx_volume_u_24h || 0) || null,
+        price_change_24h: parseFloat(item.change || item.priceChange24h || item.price_change_24h || 0) || null,
+        holders: item.holders != null ? parseInt(item.holders, 10) : null,
+      }));
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'no-store');
+      res.end(JSON.stringify(data));
+    } catch (e) {
+      res.statusCode = 500;
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.end(JSON.stringify({ error: e?.message || String(e) }));
     }
     return;
   }
