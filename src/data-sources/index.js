@@ -13,10 +13,10 @@ import * as dexscreener from './dexscreener.js';
 import * as geckoterminal from './geckoterminal.js';
 import * as jupiter from './jupiter.js';
 import * as goplus from './goplus.js';
-import { fetchSmartMoneySignals } from './binance-smart-money.js';
+import { fetchSmartMoneySignals, fetchSmartMoneyInflowRank } from './binance-smart-money.js';
 import { SUPPORTED_CHAINS, supportsJupiter, toGeckoTerminal } from './chain-map.js';
 
-export { fetchSmartMoneySignals };
+export { fetchSmartMoneySignals, fetchSmartMoneyInflowRank };
 
 // ─── 内存缓存 ───────────────────────────────────────────────
 const cache = new Map();
