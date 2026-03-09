@@ -2,14 +2,13 @@
  * OKX OnchainOS Market API 数据源
  * 文档：https://web3.okx.com/zh-hans/onchainos/dev-docs/home/what-is-onchainos
  *
- * 提供代币搜索、持仓分布、价格/交易信息等接口
+ * 提供代币搜索、持仓分布、价格/交易信息、Meme 发现等接口
  * 用于补充现有数据源（DexScreener / GeckoTerminal / GoPlus）不足之处
  */
 
 import crypto from 'crypto';
 
 const BASE_URL = 'https://web3.okx.com';
-const MARKET_BASE = `${BASE_URL}/api/v6/dex/market`;
 
 const OKX_API_KEY = (process.env.OKX_API_KEY || '').trim();
 const OKX_SECRET_KEY = (process.env.OKX_SECRET_KEY || '').trim();
@@ -75,17 +74,20 @@ async function okxFetch(method, path, body = null) {
 // ─── 内存缓存 ───
 const cache = new Map();
 const CACHE_TTL = 2 * 60_000;
+const MEME_CACHE_TTL = 3 * 60_000;
 
-function cacheGet(key) {
+function cacheGet(key, ttl) {
   const entry = cache.get(key);
   if (!entry) return undefined;
-  if (Date.now() - entry.ts > CACHE_TTL) { cache.delete(key); return undefined; }
+  if (Date.now() - entry.ts > (ttl || CACHE_TTL)) { cache.delete(key); return undefined; }
   return entry.value;
 }
 
 function cacheSet(key, value) {
   cache.set(key, { value, ts: Date.now() });
 }
+
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * 获取代币 Top20 持有者
@@ -129,14 +131,17 @@ export async function getTop10HolderPercent(address, chain = 'solana', totalSupp
 
 /**
  * 搜索代币
- * GET /api/v6/dex/market/token/search?keyword=xxx
+ * GET /api/v6/dex/market/token/search?chains=xxx&search=xxx
+ * @param {string} keyword 搜索关键词
+ * @param {string} [chain='solana'] 链
  */
-export async function searchTokens(keyword) {
-  const cacheKey = `okx:search:${keyword}`;
+export async function searchTokens(keyword, chain = 'solana') {
+  const chainIdx = getChainIndex(chain);
+  const cacheKey = `okx:search:${chainIdx}:${keyword}`;
   const cached = cacheGet(cacheKey);
   if (cached) return cached;
 
-  const path = `/api/v6/dex/market/token/search?keyword=${encodeURIComponent(keyword)}`;
+  const path = `/api/v6/dex/market/token/search?chains=${chainIdx}&search=${encodeURIComponent(keyword)}`;
   const data = await okxFetch('GET', path);
   const result = Array.isArray(data) ? data : [];
   cacheSet(cacheKey, result);
@@ -274,6 +279,118 @@ export async function getTokenRanking(options = {}) {
 
   const start = (Math.max(1, page) - 1) * Math.min(100, Math.max(1, pageSize));
   const result = combined.slice(start, start + Math.min(100, Math.max(1, pageSize)));
+  cacheSet(cacheKey, result);
+  return result;
+}
+
+// ─── Meme 发现引擎 ─────────────────────────────────────────
+
+const MEME_KEYWORDS = [
+  'pump', 'meme', 'pepe', 'bonk', 'doge', 'dog', 'cat',
+  'wif', 'popcat', 'frog', 'trump', 'ai agent', 'shib',
+];
+
+/**
+ * 搜索并聚合 Meme 代币（多关键词 + 去重）
+ * 结果缓存 3 分钟以减少 API 调用
+ */
+async function discoverMemeTokens(chain = 'solana') {
+  const chainIdx = getChainIndex(chain);
+  const cacheKey = `okx:meme-discovery:${chainIdx}`;
+  const cached = cacheGet(cacheKey, MEME_CACHE_TTL);
+  if (cached) return cached;
+
+  const seen = new Map();
+  for (const kw of MEME_KEYWORDS) {
+    try {
+      const list = await searchTokens(kw, chain);
+      for (const t of list || []) {
+        const addr = (t.tokenContractAddress || '').toLowerCase();
+        if (!addr || seen.has(addr)) continue;
+        seen.set(addr, t);
+      }
+    } catch (e) {
+      if (/Too Many/i.test(e.message)) await delay(1200);
+    }
+    await delay(300);
+  }
+
+  const result = [...seen.values()];
+  cacheSet(cacheKey, result);
+  return result;
+}
+
+/**
+ * Meme 代币排行榜
+ * 通过多关键词搜索发现 Meme 代币，再用 price-info 获取详细交易数据
+ *
+ * @param {object} [options]
+ * @param {string} [options.chain='solana']
+ * @param {number} [options.sortType=1] 1=涨幅 2=交易量 3=市值
+ * @param {number} [options.page=1]
+ * @param {number} [options.pageSize=50]
+ */
+export async function getMemeRanking(options = {}) {
+  const {
+    chain = 'solana',
+    sortType = 1,
+    page = 1,
+    pageSize = 50,
+  } = options;
+
+  const chainIdx = getChainIndex(chain);
+  const cacheKey = `okx:meme-ranking:${chainIdx}:${sortType}:${page}:${pageSize}`;
+  const cached = cacheGet(cacheKey, MEME_CACHE_TTL);
+  if (cached) return cached;
+
+  const tokens = await discoverMemeTokens(chain);
+  if (!tokens || tokens.length === 0) return [];
+
+  const batch = tokens.slice(0, 100).map((t) => ({
+    chainIndex: chainIdx,
+    tokenContractAddress: t.tokenContractAddress,
+  }));
+
+  let priceMap = new Map();
+  try {
+    const priceList = await getTokenPriceInfo(batch);
+    for (const p of priceList || []) {
+      const addr = (p.tokenContractAddress || '').toLowerCase();
+      if (addr) priceMap.set(addr, p);
+    }
+  } catch { /* price-info 失败时回退到 search 中的基础数据 */ }
+
+  const combined = tokens.map((t) => {
+    const addr = (t.tokenContractAddress || '').toLowerCase();
+    const p = priceMap.get(addr) || {};
+    const mc = parseFloat(p.marketCap || t.marketCap || 0);
+    return {
+      tokenContractAddress: t.tokenContractAddress,
+      tokenName: t.tokenName || '',
+      tokenSymbol: t.tokenSymbol || '',
+      tokenLogoUrl: t.tokenLogoUrl || '',
+      chainIndex: chainIdx,
+      price: parseFloat(p.price || t.price || 0),
+      marketCap: mc,
+      volume24H: parseFloat(p.volume24H || 0),
+      volume1H: parseFloat(p.volume1H || 0),
+      change24H: parseFloat(p.priceChange24H || t.change || 0),
+      change1H: parseFloat(p.priceChange1H || 0),
+      change5M: parseFloat(p.priceChange5M || 0),
+      holders: parseInt(p.holders || t.holders || 0, 10) || 0,
+      liquidity: parseFloat(p.liquidity || t.liquidity || 0),
+      txs24H: parseInt(p.txs24H || 0, 10) || 0,
+      txs1H: parseInt(p.txs1H || 0, 10) || 0,
+      circSupply: parseFloat(p.circSupply || 0),
+    };
+  }).filter((t) => t.price > 0);
+
+  const sortKey = sortType === 1 ? 'change24H' : sortType === 2 ? 'volume24H' : 'marketCap';
+  combined.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+
+  const safePageSize = Math.min(100, Math.max(1, pageSize));
+  const start = (Math.max(1, page) - 1) * safePageSize;
+  const result = combined.slice(start, start + safePageSize);
   cacheSet(cacheKey, result);
   return result;
 }
