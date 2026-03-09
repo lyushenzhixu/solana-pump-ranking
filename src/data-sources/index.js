@@ -14,9 +14,11 @@ import * as geckoterminal from './geckoterminal.js';
 import * as jupiter from './jupiter.js';
 import * as goplus from './goplus.js';
 import { fetchSmartMoneySignals, fetchSmartMoneyInflowRank } from './binance-smart-money.js';
+import * as okxOnchain from './okx-onchain.js';
 import { SUPPORTED_CHAINS, supportsJupiter, toGeckoTerminal } from './chain-map.js';
 
 export { fetchSmartMoneySignals, fetchSmartMoneyInflowRank };
+export { okxOnchain };
 
 // ─── 内存缓存 ───────────────────────────────────────────────
 const cache = new Map();
