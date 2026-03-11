@@ -10,7 +10,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { updatePumpRanking } from '../scripts/fetch-pump-ranking.js';
 import { updateZhilabsRanking } from '../scripts/fetch-zhilabs-ranking.js';
-import { getTokenDetail, getKline, getTokenSecurityDetail, fetchSmartMoneySignals, fetchSmartMoneyInflowRank, okxOnchain } from './data-sources/index.js';
+import { getTokenDetail, getKline, getTokenSecurityDetail, fetchSmartMoneySignals, fetchSmartMoneyInflowRank, okxOnchain, cacheManager } from './data-sources/index.js';
+import { getCircuitBreakerStatus } from './data-sources/geckoterminal.js';
 import * as dexscreener from './data-sources/dexscreener.js';
 import { getTokenNarrative, getTokenHotTweets, batchPrefetch } from './data-sources/sixfivefiveone.js';
 import { refreshZhilabsNarratives } from '../scripts/refresh-zhilabs-narratives.js';
@@ -3962,6 +3963,18 @@ const server = http.createServer(async (req, res) => {
         has_secret_key: !!process.env.OKX_SECRET_KEY,
         has_passphrase: !!process.env.OKX_PASSPHRASE,
       },
+      cache: cacheManager.getStats(),
+      geckoTerminal: getCircuitBreakerStatus(),
+    }));
+    return;
+  }
+  if (urlPath === '/api/cache/stats') {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Cache-Control', 'no-store');
+    res.end(JSON.stringify({
+      cache: cacheManager.getStats(),
+      geckoTerminal: getCircuitBreakerStatus(),
     }));
     return;
   }
@@ -4027,7 +4040,7 @@ const server = http.createServer(async (req, res) => {
       const data = await getRanking();
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=180');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;
@@ -4041,7 +4054,7 @@ const server = http.createServer(async (req, res) => {
       const data = await getRankingZhilabs();
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=120, stale-while-revalidate=180');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;
@@ -4078,7 +4091,7 @@ const server = http.createServer(async (req, res) => {
       }));
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=90, stale-while-revalidate=120');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;
@@ -4123,7 +4136,7 @@ const server = http.createServer(async (req, res) => {
       }));
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=90, stale-while-revalidate=120');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;
@@ -4172,7 +4185,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;
@@ -4194,7 +4207,7 @@ const server = http.createServer(async (req, res) => {
         .sort((a, b) => (b.inflow || 0) - (a.inflow || 0));
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;
@@ -4388,7 +4401,7 @@ const server = http.createServer(async (req, res) => {
       }
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
       res.end(JSON.stringify(detail));
     } catch (e) {
       res.statusCode = 500;
@@ -4408,7 +4421,7 @@ const server = http.createServer(async (req, res) => {
       const data = await getKline(pairAddress, chain, interval, size);
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=60');
       res.end(JSON.stringify(data));
     } catch (e) {
       res.statusCode = 500;

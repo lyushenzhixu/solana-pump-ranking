@@ -7,6 +7,11 @@
  *   - GeckoTerminal: 趋势池、新池、OHLCV、交易记录（30 req/min，免费无 Key）
  *   - Jupiter: Solana 代币价格（免费无 Key）
  *   - GoPlus: 合约安全检测（30 req/min，免费无 Key）
+ *
+ * 性能优化：
+ *   - 分层缓存：不同数据类型使用差异化 TTL（trending 5min, detail 3min, security 10min 等）
+ *   - stale-while-revalidate：缓存过期后立即返回旧数据，后台异步刷新
+ *   - GeckoTerminal 降级为补充源：DexScreener 有数据时跳过 GT 调用
  */
 
 import * as dexscreener from './dexscreener.js';
@@ -16,24 +21,11 @@ import * as goplus from './goplus.js';
 import { fetchSmartMoneySignals, fetchSmartMoneyInflowRank } from './binance-smart-money.js';
 import * as okxOnchain from './okx-onchain.js';
 import { SUPPORTED_CHAINS, supportsJupiter, toGeckoTerminal } from './chain-map.js';
+import { cache, cachedFetch } from './cache-manager.js';
 
 export { fetchSmartMoneySignals, fetchSmartMoneyInflowRank };
 export { okxOnchain };
-
-// ─── 内存缓存 ───────────────────────────────────────────────
-const cache = new Map();
-const CACHE_TTL = 3 * 60_000; // 3 分钟，避免同一更新周期重复请求
-
-function cacheGet(key) {
-  const entry = cache.get(key);
-  if (!entry) return undefined;
-  if (Date.now() - entry.ts > CACHE_TTL) { cache.delete(key); return undefined; }
-  return entry.value;
-}
-
-function cacheSet(key, value) {
-  cache.set(key, { value, ts: Date.now() });
-}
+export { cache as cacheManager };
 
 // ─── 去重辅助 ───────────────────────────────────────────────
 function deduplicateByToken(tokens) {
@@ -59,24 +51,22 @@ function deduplicateByToken(tokens) {
  */
 export async function searchTokens(keyword, chain, limit = 100) {
   const cacheKey = `search:${keyword}:${chain || ''}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached.slice(0, limit);
+  const results = await cachedFetch(cacheKey, 'search', async () => {
+    const [dsPairs, gtPools] = await Promise.all([
+      dexscreener.search(keyword).catch(() => []),
+      geckoterminal.searchPools(keyword).catch(() => []),
+    ]);
 
-  const [dsPairs, gtPools] = await Promise.all([
-    dexscreener.search(keyword).catch(() => []),
-    geckoterminal.searchPools(keyword).catch(() => []),
-  ]);
+    let merged = [
+      ...dsPairs.map(dexscreener.normalizePair),
+      ...gtPools,
+    ];
 
-  let results = [
-    ...dsPairs.map(dexscreener.normalizePair),
-    ...gtPools,
-  ];
-
-  if (chain) results = results.filter((t) => t.chain === chain);
-  results = deduplicateByToken(results);
-  results.sort((a, b) => (b.tx_volume_u_24h || 0) - (a.tx_volume_u_24h || 0));
-
-  cacheSet(cacheKey, results);
+    if (chain) merged = merged.filter((t) => t.chain === chain);
+    merged = deduplicateByToken(merged);
+    merged.sort((a, b) => (b.tx_volume_u_24h || 0) - (a.tx_volume_u_24h || 0));
+    return merged;
+  });
   return results.slice(0, limit);
 }
 
@@ -88,82 +78,80 @@ export async function searchTokens(keyword, chain, limit = 100) {
  */
 export async function getPlatformTokens(tag, limit = 200) {
   const cacheKey = `platform:${tag}:${limit}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached.slice(0, limit);
+  const results = await cachedFetch(cacheKey, 'trending', async () => {
+    const isHot = /hot|trending/i.test(tag);
+    const isNew = /new/i.test(tag);
+    const chain = extractChainFromTag(tag) || 'solana';
+    const pages = Math.min(Math.ceil(limit / 20), 3);
 
-  const isHot = /hot|trending/i.test(tag);
-  const isNew = /new/i.test(tag);
-  const chain = extractChainFromTag(tag) || 'solana';
-  const pages = Math.min(Math.ceil(limit / 20), 5);
+    const dsFilter = (p) => fromChain(p.chainId) === chain;
+    const dsNorm = (pairs) => pairs.filter(dsFilter).map(dexscreener.normalizePair);
 
-  const dsFilter = (p) => fromChain(p.chainId) === chain;
-  const dsNorm = (pairs) => pairs.filter(dsFilter).map(dexscreener.normalizePair);
+    const hotKeywords = [
+      'pump solana', 'solana meme', 'raydium SOL', 'solana hot',
+      'pumpfun', 'solana new token', 'meteora solana',
+    ];
+    const newKeywords = [
+      'new solana', 'solana launch', 'pumpfun new', 'raydium new',
+      'solana meme new', 'pump.fun',
+    ];
 
-  const hotKeywords = [
-    'pump solana', 'solana meme', 'raydium SOL', 'solana hot',
-    'pumpfun', 'solana new token', 'meteora solana',
-  ];
-  const newKeywords = [
-    'new solana', 'solana launch', 'pumpfun new', 'raydium new',
-    'solana meme new', 'pump.fun',
-  ];
+    let tokens = [];
 
-  let tokens = [];
+    if (isNew) {
+      const searchTerms = newKeywords;
+      const [gtNew, profiles, ...dsResults] = await Promise.all([
+        geckoterminal.getNewPools(chain, pages).catch(() => []),
+        dexscreener.getLatestProfiles().catch(() => []),
+        ...searchTerms.map((q) => dexscreener.search(q).catch(() => [])),
+      ]);
 
-  if (isNew) {
-    const searchTerms = newKeywords;
-    const [gtNew, profiles, ...dsResults] = await Promise.all([
-      geckoterminal.getNewPools(chain, pages).catch(() => []),
-      dexscreener.getLatestProfiles().catch(() => []),
-      ...searchTerms.map((q) => dexscreener.search(q).catch(() => [])),
-    ]);
+      const profileAddrs = profiles.filter((p) => fromChain(p.chainId) === chain).map((p) => p.tokenAddress).filter(Boolean);
+      let profileTokens = [];
+      if (profileAddrs.length > 0) {
+        const pairs = await dexscreener.batchGetTokenPairs(profileAddrs.slice(0, 90));
+        profileTokens = dsNorm(pairs);
+      }
 
-    const profileAddrs = profiles.filter((p) => fromChain(p.chainId) === chain).map((p) => p.tokenAddress).filter(Boolean);
-    let profileTokens = [];
-    if (profileAddrs.length > 0) {
-      const pairs = await dexscreener.batchGetTokenPairs(profileAddrs.slice(0, 90));
-      profileTokens = dsNorm(pairs);
+      tokens = [...gtNew, ...profileTokens];
+      for (const r of dsResults) tokens.push(...dsNorm(r));
+    } else if (isHot) {
+      const searchTerms = hotKeywords;
+      const [trending, boosts, profiles, ...dsResults] = await Promise.all([
+        geckoterminal.getTrendingPools(chain, pages).catch(() => []),
+        dexscreener.getLatestBoosts().catch(() => []),
+        dexscreener.getLatestProfiles().catch(() => []),
+        ...searchTerms.map((q) => dexscreener.search(q).catch(() => [])),
+      ]);
+
+      const boostAddrs = boosts.filter((b) => fromChain(b.chainId) === chain).map((b) => b.tokenAddress).filter(Boolean);
+      const profileAddrs = profiles.filter((p) => fromChain(p.chainId) === chain).map((p) => p.tokenAddress).filter(Boolean);
+      const allAddrs = [...new Set([...boostAddrs, ...profileAddrs])];
+
+      let enrichedTokens = [];
+      if (allAddrs.length > 0) {
+        const pairs = await dexscreener.batchGetTokenPairs(allAddrs.slice(0, 120));
+        enrichedTokens = dsNorm(pairs);
+      }
+
+      tokens = [...trending, ...enrichedTokens];
+      for (const r of dsResults) tokens.push(...dsNorm(r));
+    } else {
+      const searchTerms = ['solana meme', 'solana trending'];
+      const [gtTrending, ...dsResults] = await Promise.all([
+        geckoterminal.getTrendingPools(chain, pages).catch(() => []),
+        ...searchTerms.map((q) => dexscreener.search(q).catch(() => [])),
+      ]);
+      tokens = [...gtTrending];
+      for (const r of dsResults) tokens.push(...dsNorm(r));
     }
 
-    tokens = [...gtNew, ...profileTokens];
-    for (const r of dsResults) tokens.push(...dsNorm(r));
-  } else if (isHot) {
-    const searchTerms = hotKeywords;
-    const [trending, boosts, profiles, ...dsResults] = await Promise.all([
-      geckoterminal.getTrendingPools(chain, pages).catch(() => []),
-      dexscreener.getLatestBoosts().catch(() => []),
-      dexscreener.getLatestProfiles().catch(() => []),
-      ...searchTerms.map((q) => dexscreener.search(q).catch(() => [])),
-    ]);
-
-    const boostAddrs = boosts.filter((b) => fromChain(b.chainId) === chain).map((b) => b.tokenAddress).filter(Boolean);
-    const profileAddrs = profiles.filter((p) => fromChain(p.chainId) === chain).map((p) => p.tokenAddress).filter(Boolean);
-    const allAddrs = [...new Set([...boostAddrs, ...profileAddrs])];
-
-    let enrichedTokens = [];
-    if (allAddrs.length > 0) {
-      const pairs = await dexscreener.batchGetTokenPairs(allAddrs.slice(0, 120));
-      enrichedTokens = dsNorm(pairs);
-    }
-
-    tokens = [...trending, ...enrichedTokens];
-    for (const r of dsResults) tokens.push(...dsNorm(r));
-  } else {
-    const searchTerms = ['solana meme', 'solana trending'];
-    const [gtTrending, ...dsResults] = await Promise.all([
-      geckoterminal.getTrendingPools(chain, pages).catch(() => []),
-      ...searchTerms.map((q) => dexscreener.search(q).catch(() => [])),
-    ]);
-    tokens = [...gtTrending];
-    for (const r of dsResults) tokens.push(...dsNorm(r));
-  }
-
-  tokens = tokens.filter((t) => t.chain === chain);
-  tokens = deduplicateByToken(tokens);
-  tokens.sort((a, b) => (b.tx_volume_u_24h || 0) - (a.tx_volume_u_24h || 0));
-
-  cacheSet(cacheKey, tokens);
-  return tokens.slice(0, limit);
+    tokens = tokens.filter((t) => t.chain === chain);
+    tokens = deduplicateByToken(tokens);
+    tokens.sort((a, b) => (b.tx_volume_u_24h || 0) - (a.tx_volume_u_24h || 0));
+    return tokens;
+  });
+  return results.slice(0, limit);
 }
 
 /**
@@ -172,61 +160,59 @@ export async function getPlatformTokens(tag, limit = 200) {
  */
 export async function getRanks(topic) {
   const cacheKey = `ranks:${topic}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached;
+  return cachedFetch(cacheKey, 'ranking', async () => {
+    const chain = topic || 'solana';
+    const [gtTokens, dsPairs] = await Promise.all([
+      geckoterminal.getTrendingPools(chain, 3).catch(() => []),
+      dexscreener.search(`${chain} top`).catch(() => []),
+    ]);
 
-  const chain = topic || 'solana';
-  const [gtTokens, dsPairs] = await Promise.all([
-    geckoterminal.getTrendingPools(chain, 3).catch(() => []),
-    dexscreener.search(`${chain} top`).catch(() => []),
-  ]);
+    const dsNormalized = dsPairs
+      .filter((p) => fromChain(p.chainId) === chain)
+      .map(dexscreener.normalizePair);
 
-  const dsNormalized = dsPairs
-    .filter((p) => fromChain(p.chainId) === chain)
-    .map(dexscreener.normalizePair);
-
-  const all = [...gtTokens, ...dsNormalized];
-  const deduped = deduplicateByToken(all);
-  deduped.sort((a, b) => (b.tx_volume_u_24h || 0) - (a.tx_volume_u_24h || 0));
-
-  cacheSet(cacheKey, deduped);
-  return deduped;
+    const all = [...gtTokens, ...dsNormalized];
+    const deduped = deduplicateByToken(all);
+    deduped.sort((a, b) => (b.tx_volume_u_24h || 0) - (a.tx_volume_u_24h || 0));
+    return deduped;
+  });
 }
 
 /**
  * 获取单个代币详情（等价 AVE /v2/tokens/{address}-{chain}）
  * 聚合 DexScreener + GeckoTerminal + Jupiter（Solana）数据
- * 返回 AVE 兼容格式
+ *
+ * 优化：DexScreener 有完整数据时跳过 GeckoTerminal 调用
  */
 export async function getTokenDetail(address, chain = 'solana') {
   const cacheKey = `detail:${address}:${chain}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached;
+  return cachedFetch(cacheKey, 'detail', async () => {
+    const dsResult = await dexscreener.getTokenDetail(address, chain).catch(() => null);
 
-  const [dsResult, gtResult] = await Promise.all([
-    dexscreener.getTokenDetail(address, chain).catch(() => null),
-    geckoterminal.getToken(chain, address).catch(() => null),
-  ]);
+    let gtResult = null;
+    const needGt = !dsResult || dsResult.current_price_usd == null || dsResult.market_cap == null;
+    if (needGt) {
+      gtResult = await geckoterminal.getToken(chain, address).catch(() => null);
+    }
 
-  if (!dsResult && !gtResult) return null;
+    if (!dsResult && !gtResult) return null;
 
-  const merged = { ...(gtResult || {}), ...(dsResult || {}) };
+    const merged = { ...(gtResult || {}), ...(dsResult || {}) };
 
-  if (supportsJupiter(chain)) {
-    try {
-      const price = await jupiter.getPrice(address);
-      if (price != null && (merged.current_price_usd == null || merged.current_price_usd === 0)) {
-        merged.current_price_usd = price;
-      }
-    } catch { /* 忽略 */ }
-  }
+    if (supportsJupiter(chain)) {
+      try {
+        const price = await jupiter.getPrice(address);
+        if (price != null && (merged.current_price_usd == null || merged.current_price_usd === 0)) {
+          merged.current_price_usd = price;
+        }
+      } catch { /* 忽略 */ }
+    }
 
-  if (!merged.logo_url && gtResult?.logo_url) merged.logo_url = gtResult.logo_url;
-  if (!merged.main_pair && gtResult?.main_pair) merged.main_pair = gtResult.main_pair;
-  if (merged.market_cap == null && gtResult?.market_cap) merged.market_cap = gtResult.market_cap;
-
-  cacheSet(cacheKey, merged);
-  return merged;
+    if (!merged.logo_url && gtResult?.logo_url) merged.logo_url = gtResult.logo_url;
+    if (!merged.main_pair && gtResult?.main_pair) merged.main_pair = gtResult.main_pair;
+    if (merged.market_cap == null && gtResult?.market_cap) merged.market_cap = gtResult.market_cap;
+    return merged;
+  });
 }
 
 /**
@@ -236,38 +222,35 @@ export async function getTokenDetail(address, chain = 'solana') {
  */
 export async function getTokenSecurityDetail(address, chain = 'solana') {
   const cacheKey = `security:${address}:${chain}`;
-  const cached = cacheGet(cacheKey);
-  if (cached) return cached;
+  return cachedFetch(cacheKey, 'security', async () => {
+    const secInfo = await goplus.getTokenSecuritySingle(chain, address);
 
-  const secInfo = await goplus.getTokenSecuritySingle(chain, address);
+    const result = {
+      lpNotLocked: null,
+      insiderRate: null,
+      holderCount: null,
+      riskLevel: null,
+      isHoneypot: null,
+      buyTax: null,
+      sellTax: null,
+    };
 
-  const result = {
-    lpNotLocked: null,
-    insiderRate: null,
-    holderCount: null,
-    riskLevel: null,
-    isHoneypot: null,
-    buyTax: null,
-    sellTax: null,
-  };
+    if (secInfo) {
+      if (secInfo.is_lp_locked === true) result.lpNotLocked = false;
+      else if (secInfo.is_lp_locked === false) result.lpNotLocked = true;
+      else result.lpNotLocked = null;
 
-  if (secInfo) {
-    if (secInfo.is_lp_locked === true) result.lpNotLocked = false;
-    else if (secInfo.is_lp_locked === false) result.lpNotLocked = true;
-    else result.lpNotLocked = null;
-
-    result.holderCount = secInfo.holder_count;
-    result.riskLevel = secInfo.risk_level;
-    result.isHoneypot = secInfo.is_honeypot;
-    result.buyTax = secInfo.buy_tax;
-    result.sellTax = secInfo.sell_tax;
-    result.isMintable = secInfo.is_mintable ?? null;
-    result.isFreezable = secInfo.is_freezable ?? null;
-    result.topHolderPercent = secInfo.top_holder_percent ?? null;
-  }
-
-  cacheSet(cacheKey, result);
-  return result;
+      result.holderCount = secInfo.holder_count;
+      result.riskLevel = secInfo.risk_level;
+      result.isHoneypot = secInfo.is_honeypot;
+      result.buyTax = secInfo.buy_tax;
+      result.sellTax = secInfo.sell_tax;
+      result.isMintable = secInfo.is_mintable ?? null;
+      result.isFreezable = secInfo.is_freezable ?? null;
+      result.topHolderPercent = secInfo.top_holder_percent ?? null;
+    }
+    return result;
+  });
 }
 
 /**
@@ -319,28 +302,31 @@ export async function getTokenPrices(tokens) {
  * @param {number} [size=24] 数量
  */
 export async function getKline(pairOrTokenAddress, chain, interval = 60, size = 24) {
-  let timeframe = 'hour';
-  let aggregate = 1;
+  const cacheKey = `kline:${pairOrTokenAddress}:${chain}:${interval}:${size}`;
+  return cachedFetch(cacheKey, 'kline', async () => {
+    let timeframe = 'hour';
+    let aggregate = 1;
 
-  if (interval < 60) {
-    timeframe = 'minute';
-    aggregate = interval;
-  } else if (interval >= 1440) {
-    timeframe = 'day';
-    aggregate = Math.round(interval / 1440);
-  } else {
-    timeframe = 'hour';
-    aggregate = Math.round(interval / 60);
-  }
+    if (interval < 60) {
+      timeframe = 'minute';
+      aggregate = interval;
+    } else if (interval >= 1440) {
+      timeframe = 'day';
+      aggregate = Math.round(interval / 1440);
+    } else {
+      timeframe = 'hour';
+      aggregate = Math.round(interval / 60);
+    }
 
-  const ohlcvList = await geckoterminal.getPoolOhlcv(chain, pairOrTokenAddress, timeframe, {
-    aggregate,
-    limit: size,
-  });
+    const ohlcvList = await geckoterminal.getPoolOhlcv(chain, pairOrTokenAddress, timeframe, {
+      aggregate,
+      limit: size,
+    });
 
-  return ohlcvList.map((item) => {
-    const [ts, open, high, low, close, volume] = item;
-    return { time: ts, open, high, low, close, volume };
+    return ohlcvList.map((item) => {
+      const [ts, open, high, low, close, volume] = item;
+      return { time: ts, open, high, low, close, volume };
+    });
   });
 }
 
@@ -402,11 +388,14 @@ export async function getTrendingTokens(chain, page = 0, pageSize = 20) {
  * 获取支持的链列表
  */
 export async function getSupportedChains() {
-  try {
-    return await geckoterminal.getNetworks();
-  } catch {
-    return SUPPORTED_CHAINS.map((id) => ({ id, name: id, chain: id }));
-  }
+  const cacheKey = 'networks:all';
+  return cachedFetch(cacheKey, 'network', async () => {
+    try {
+      return await geckoterminal.getNetworks();
+    } catch {
+      return SUPPORTED_CHAINS.map((id) => ({ id, name: id, chain: id }));
+    }
+  });
 }
 
 /**

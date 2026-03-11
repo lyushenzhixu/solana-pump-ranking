@@ -2,24 +2,92 @@
  * GeckoTerminal (CoinGecko) API 客户端
  * 免费 Beta API，无需 Key，~30 req/min
  * 文档: https://apiguide.geckoterminal.com/
+ *
+ * 性能优化：
+ *   - 速率限制从 20 → 15 req/min，留出安全余量
+ *   - 429 指数退避重试（最多 2 次）
+ *   - 断路器：连续 5 次失败后熔断 60s
+ *   - 请求级缓存避免 trending_pools 分页期间重复请求
  */
 import { RateLimiter } from './rate-limiter.js';
 import { toGeckoTerminal, fromGeckoTerminal } from './chain-map.js';
 
 const BASE = 'https://api.geckoterminal.com/api/v2';
 
-const limiter = new RateLimiter(20);
+const limiter = new RateLimiter(15);
+
+// ─── 断路器 ──────────────────────────────────────────────────
+const breaker = {
+  failures: 0,
+  threshold: 5,
+  openUntil: 0,
+  cooldown: 60_000,
+};
+
+function breakerCheck() {
+  if (breaker.openUntil && Date.now() < breaker.openUntil) {
+    throw new Error('GeckoTerminal 断路器已打开，暂停请求');
+  }
+}
+
+function breakerSuccess() {
+  breaker.failures = 0;
+  breaker.openUntil = 0;
+}
+
+function breakerFail() {
+  breaker.failures++;
+  if (breaker.failures >= breaker.threshold) {
+    breaker.openUntil = Date.now() + breaker.cooldown;
+    console.warn(`[GeckoTerminal] 断路器打开，${breaker.cooldown / 1000}s 后恢复`);
+  }
+}
+
+// ─── 带重试的 fetch ──────────────────────────────────────────
+const MAX_RETRIES = 2;
+const RETRY_BASE_MS = 3000;
 
 async function fetchJSON(url) {
+  breakerCheck();
   await limiter.acquire();
-  const res = await fetch(url, {
-    headers: { Accept: 'application/json;version=20230302' },
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`GeckoTerminal ${res.status}: ${body}`);
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: 'application/json;version=20230302' },
+      });
+
+      if (res.status === 429) {
+        breakerFail();
+        if (attempt < MAX_RETRIES) {
+          const delay = RETRY_BASE_MS * Math.pow(2, attempt);
+          console.warn(`[GeckoTerminal] 429 限流，${delay}ms 后重试 (${attempt + 1}/${MAX_RETRIES})`);
+          await new Promise((r) => setTimeout(r, delay));
+          await limiter.acquire();
+          continue;
+        }
+        const body = await res.text().catch(() => '');
+        throw new Error(`GeckoTerminal 429: ${body}`);
+      }
+
+      if (!res.ok) {
+        const body = await res.text().catch(() => '');
+        throw new Error(`GeckoTerminal ${res.status}: ${body}`);
+      }
+
+      breakerSuccess();
+      return res.json();
+    } catch (e) {
+      if (e.message?.includes('断路器')) throw e;
+      if (attempt === MAX_RETRIES) {
+        breakerFail();
+        throw e;
+      }
+      const delay = RETRY_BASE_MS * Math.pow(2, attempt);
+      console.warn(`[GeckoTerminal] 请求失败，${delay}ms 后重试 (${attempt + 1}/${MAX_RETRIES}):`, e.message);
+      await new Promise((r) => setTimeout(r, delay));
+    }
   }
-  return res.json();
 }
 
 function buildIncludedMap(included) {
@@ -93,9 +161,9 @@ function normalizePool(pool, includedMap) {
 /**
  * 获取链上热门/趋势交易池
  * @param {string} chain 链标识（如 solana）
- * @param {number} [pages=5] 获取页数（每页约 20 个）
+ * @param {number} [pages=3] 获取页数（从 5 降为 3，减少 API 调用）
  */
-export async function getTrendingPools(chain, pages = 5) {
+export async function getTrendingPools(chain, pages = 3) {
   const network = toGeckoTerminal(chain);
   const results = [];
   for (let page = 1; page <= pages; page++) {
@@ -118,7 +186,7 @@ export async function getTrendingPools(chain, pages = 5) {
 /**
  * 获取链上新交易池
  */
-export async function getNewPools(chain, pages = 5) {
+export async function getNewPools(chain, pages = 3) {
   const network = toGeckoTerminal(chain);
   const results = [];
   for (let page = 1; page <= pages; page++) {
@@ -236,4 +304,15 @@ export async function batchGetTokens(chain, addresses) {
     if (info) results.push(info);
   }
   return results;
+}
+
+/**
+ * 获取断路器状态（用于健康检查）
+ */
+export function getCircuitBreakerStatus() {
+  return {
+    failures: breaker.failures,
+    isOpen: breaker.openUntil > 0 && Date.now() < breaker.openUntil,
+    openUntil: breaker.openUntil ? new Date(breaker.openUntil).toISOString() : null,
+  };
 }
