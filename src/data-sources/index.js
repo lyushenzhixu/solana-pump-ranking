@@ -22,7 +22,7 @@ export { okxOnchain };
 
 // ─── 内存缓存 ───────────────────────────────────────────────
 const cache = new Map();
-const CACHE_TTL = 3 * 60_000; // 3 分钟，避免同一更新周期重复请求
+const CACHE_TTL = 5 * 60_000; // 5 分钟，减少 GeckoTerminal 等外部 API 调用，缓解 429
 
 function cacheGet(key) {
   const entry = cache.get(key);

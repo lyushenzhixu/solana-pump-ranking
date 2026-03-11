@@ -1,25 +1,75 @@
 /**
  * GeckoTerminal (CoinGecko) API 客户端
- * 免费 Beta API，无需 Key，~30 req/min
+ * 免费 Beta API，无需 Key，实际限制 ~20 req/min（比文档更严格）
  * 文档: https://apiguide.geckoterminal.com/
+ *
+ * 性能优化：响应级缓存 + 429 重试 + 保守限流，减少 429 和响应时间波动
  */
 import { RateLimiter } from './rate-limiter.js';
 import { toGeckoTerminal, fromGeckoTerminal } from './chain-map.js';
 
 const BASE = 'https://api.geckoterminal.com/api/v2';
 
-const limiter = new RateLimiter(20);
+// 保守限流：15 req/min，留余量避免 429
+const limiter = new RateLimiter(15);
+
+// ─── 响应级缓存 ─────────────────────────────────────────────
+const responseCache = new Map();
+const CACHE_TTL_DEFAULT = 5 * 60_000;      // 5 分钟
+const CACHE_TTL_NETWORKS = 10 * 60_000;    // 网络列表 10 分钟
+
+function getCacheTTL(url) {
+  return url.includes('/networks') && !url.includes('/networks/') ? CACHE_TTL_NETWORKS : CACHE_TTL_DEFAULT;
+}
+
+function cacheGet(url) {
+  const entry = responseCache.get(url);
+  if (!entry) return undefined;
+  if (Date.now() > entry.expires) {
+    responseCache.delete(url);
+    return undefined;
+  }
+  return entry.data;
+}
+
+function cacheSet(url, data) {
+  responseCache.set(url, { data, expires: Date.now() + getCacheTTL(url) });
+}
+
+async function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 async function fetchJSON(url) {
-  await limiter.acquire();
-  const res = await fetch(url, {
-    headers: { Accept: 'application/json;version=20230302' },
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`GeckoTerminal ${res.status}: ${body}`);
-  }
-  return res.json();
+  const cached = cacheGet(url);
+  if (cached) return cached;
+
+  const doFetch = async (retried = false) => {
+    await limiter.acquire();
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json;version=20230302' },
+    });
+
+    if (res.status === 429) {
+      const body = await res.text().catch(() => '');
+      const retryAfter = res.headers.get('Retry-After');
+      const waitMs = retryAfter ? Math.min(parseInt(retryAfter, 10) * 1000, 120_000) : 60_000;
+      console.warn(`GeckoTerminal 429 限流，${waitMs / 1000}s 后重试:`, body.slice(0, 100));
+      await sleep(waitMs);
+      if (retried) throw new Error(`GeckoTerminal 429 (重试后仍限流): ${body.slice(0, 150)}`);
+      return doFetch(true);
+    }
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      throw new Error(`GeckoTerminal ${res.status}: ${body}`);
+    }
+    const data = await res.json();
+    cacheSet(url, data);
+    return data;
+  };
+
+  return doFetch();
 }
 
 function buildIncludedMap(included) {
