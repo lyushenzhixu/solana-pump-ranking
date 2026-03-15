@@ -222,11 +222,6 @@ return `<!DOCTYPE html>
       --sol-green: #14F195;
       --sol-blue: #00D1FF;
       --bn-yellow: #F0B90B;
-      --okx-black: #050505;
-      --okx-white: #e0e0e0;
-      --okx-accent: #a0a0a0;
-      --okx-green: #7dd3a8;
-      --okx-border: rgba(255,255,255,0.08);
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -1085,123 +1080,6 @@ return `<!DOCTYPE html>
     }
     .sub-tabs button:hover { color: var(--text-secondary); }
     .sub-tabs button.active { color: var(--bn-yellow); border-bottom-color: var(--bn-yellow); font-weight: 600; }
-    .sub-tabs.okx-sub-tabs button.active { color: var(--okx-white); border-bottom-color: var(--okx-white); }
-
-    /* === OKX VARIANT STYLES === */
-    .signal-cards-okx .signal-card {
-      background: var(--okx-black);
-      border-color: var(--okx-border);
-    }
-    .signal-cards-okx .signal-card::before {
-      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, transparent 60%);
-    }
-    .signal-cards-okx .signal-card:hover {
-      border-color: rgba(255,255,255,0.25);
-      box-shadow: 0 0 24px rgba(255,255,255,0.06), 0 4px 16px rgba(0,0,0,0.5);
-    }
-    .signal-cards-okx .signal-card-live-bar {
-      background: rgba(255,255,255,0.03);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
-    }
-    .signal-cards-okx .signal-card-live-dot {
-      background: var(--okx-white);
-      box-shadow: 0 0 6px rgba(224,224,224,0.6);
-    }
-    .signal-cards-okx .signal-card-live-text {
-      color: var(--okx-white);
-      text-shadow: none;
-    }
-    .signal-cards-okx .signal-card-live-sm { color: rgba(255,255,255,0.3); }
-    .signal-cards-okx .signal-card-head img {
-      border-color: rgba(255,255,255,0.15);
-      background: rgba(20,20,20,0.5);
-      box-shadow: 0 0 8px rgba(255,255,255,0.04);
-    }
-    .signal-cards-okx .signal-card-logo-placeholder {
-      border-color: rgba(255,255,255,0.15);
-      background: rgba(255,255,255,0.06);
-      color: var(--okx-white);
-      box-shadow: none;
-    }
-    .signal-cards-okx .signal-card-chain {
-      background: rgba(255,255,255,0.08);
-      color: var(--okx-accent);
-    }
-    .signal-cards-okx .signal-card-chain[data-chain="bsc"] {
-      background: rgba(255,255,255,0.1);
-      color: var(--okx-white);
-    }
-    .signal-cards-okx .signal-card-active {
-      color: var(--okx-green);
-      text-shadow: 0 0 6px rgba(125,211,168,0.3);
-    }
-    .signal-cards-okx .signal-card-stats-item {
-      background: rgba(255,255,255,0.02);
-    }
-    .signal-cards-okx .signal-card-stats-item:not(:last-child) {
-      border-right-color: rgba(255,255,255,0.04);
-    }
-    .signal-cards-okx .signal-card-stats-item .label { color: rgba(255,255,255,0.3); }
-    .signal-cards-okx .signal-card-stats-item .value.inflow-positive {
-      color: var(--okx-green);
-      text-shadow: 0 0 6px rgba(125,211,168,0.3);
-    }
-    .signal-cards-okx .signal-card-bar-buy {
-      background: repeating-linear-gradient(90deg, var(--okx-white), var(--okx-white) 4px, #888 4px, #888 6px);
-      box-shadow: 0 0 6px rgba(224,224,224,0.2);
-    }
-    .signal-cards-okx .signal-card-bar-sell {
-      background: repeating-linear-gradient(90deg, #ff5252, #ff5252 4px, rgba(255,82,82,0.4) 4px, rgba(255,82,82,0.4) 6px);
-    }
-    .signal-cards-okx .signal-card-bar-labels .buy {
-      color: var(--okx-white);
-      text-shadow: none;
-    }
-    .signal-cards-okx .signal-card-ca { color: rgba(255,255,255,0.25); }
-    .signal-cards-okx .signal-card-time { color: rgba(255,255,255,0.25); }
-    .signal-cards-okx .signal-card-scanline { background: linear-gradient(90deg, transparent, rgba(255,255,255,0.015), transparent); }
-    .signal-cards-okx .signal-card-stats { border-color: rgba(255,255,255,0.04); }
-
-    .inflow-cards-okx .inflow-rank-card {
-      background: var(--okx-black);
-      border-color: var(--okx-border);
-    }
-    .inflow-cards-okx .inflow-rank-card:hover { border-color: rgba(255,255,255,0.2); }
-    .inflow-cards-okx .inflow-rank-pos {
-      background: rgba(255,255,255,0.08);
-      color: var(--okx-white);
-    }
-    .inflow-cards-okx .inflow-rank-pos.top3 {
-      background: var(--okx-white);
-      color: var(--okx-black);
-    }
-    .inflow-cards-okx .inflow-rank-logo {
-      border-color: rgba(255,255,255,0.15);
-    }
-    .inflow-cards-okx .inflow-rank-logo-placeholder {
-      background: rgba(255,255,255,0.08);
-      color: var(--okx-white);
-      border-color: rgba(255,255,255,0.15);
-    }
-    .inflow-cards-okx .inflow-rank-chain {
-      background: rgba(255,255,255,0.08);
-      color: var(--okx-white);
-    }
-    .inflow-cards-okx .inflow-rank-traders {
-      color: var(--okx-white);
-    }
-    .inflow-cards-okx .inflow-rank-bar-buy {
-      background: var(--okx-white);
-    }
-    .inflow-cards-okx .inflow-rank-bar-labels .buy { color: var(--okx-white); }
-    .inflow-cards-okx .inflow-rank-tag {
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.1);
-    }
-    .inflow-cards-okx .inflow-rank-live-dot {
-      background: var(--okx-white);
-      box-shadow: 0 0 6px rgba(224,224,224,0.4);
-    }
 
     /* === MOBILE === */
     @media (max-width: 768px) {
@@ -1259,7 +1137,6 @@ return `<!DOCTYPE html>
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
         <button type="button" class="tab-btn" data-tab="zhilabs">zhizhilabs 精选</button>
         <button type="button" class="tab-btn" data-tab="binance">Binance Skill</button>
-        <button type="button" class="tab-btn" data-tab="okx">OKX Skill</button>
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
@@ -1274,12 +1151,6 @@ return `<!DOCTYPE html>
       <button type="button" class="sub-tab-btn" data-subtab="bn-inflow">Binance 聪明钱流入</button>
       <button type="button" class="sub-tab-btn" data-subtab="bn-kol">Binance KOL 追踪</button>
     </div>
-    <div class="sub-tabs okx-sub-tabs" id="subTabsOkx" style="display:none">
-      <button type="button" class="sub-tab-btn active" data-subtab="okx-signal">Meme 涨幅榜</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-inflow">Meme 交易量榜</button>
-      <button type="button" class="sub-tab-btn" data-subtab="okx-kol">Meme 市值榜</button>
-    </div>
-
     <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
 
     <div class="table-card">
@@ -1288,9 +1159,6 @@ return `<!DOCTYPE html>
       <div id="panel-bn-signal" class="panel"><div id="root-bn-signal"><div class="loading-text">加载中</div></div></div>
       <div id="panel-bn-inflow" class="panel"><div id="root-bn-inflow"><div class="loading-text">加载中</div></div></div>
       <div id="panel-bn-kol" class="panel"><div id="root-bn-kol"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-okx-signal" class="panel"><div id="root-okx-signal"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-okx-inflow" class="panel"><div id="root-okx-inflow"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-okx-kol" class="panel"><div id="root-okx-kol"><div class="loading-text">加载中</div></div></div>
     </div>
   </div>
 
@@ -1423,7 +1291,6 @@ return `<!DOCTYPE html>
         return;
       }
       var gridClass = 'signal-cards-grid';
-      if (variant === 'okx') gridClass += ' signal-cards-okx';
       var html = '<div class="' + gridClass + '">';
       list.forEach(function(item) {
         var ca = item.contractAddress || item.contract_address || '';
@@ -1490,7 +1357,6 @@ return `<!DOCTYPE html>
       }
       list.sort(function(a, b) { return (b.inflow || 0) - (a.inflow || 0); });
       var gridClass = 'inflow-rank-grid';
-      if (variant === 'okx') gridClass += ' inflow-cards-okx';
       var html = '<div class="' + gridClass + '">';
       list.forEach(function(item, idx) {
         var ca = item.ca || '';
@@ -1602,30 +1468,6 @@ return `<!DOCTYPE html>
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
-      if (panelKey === 'okx-signal') {
-        return fetchJsonOrThrow('/api/okx/meme-ranking?sortType=1').then(function(list) {
-          if (Array.isArray(list)) renderMemeTable(list, rootId, 'change');
-          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
-        }).catch(function(e) {
-          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
-        });
-      }
-      if (panelKey === 'okx-inflow') {
-        return fetchJsonOrThrow('/api/okx/meme-ranking?sortType=2').then(function(list) {
-          if (Array.isArray(list)) renderMemeTable(list, rootId, 'volume');
-          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
-        }).catch(function(e) {
-          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
-        });
-      }
-      if (panelKey === 'okx-kol') {
-        return fetchJsonOrThrow('/api/okx/meme-ranking?sortType=3').then(function(list) {
-          if (Array.isArray(list)) renderMemeTable(list, rootId, 'mcap');
-          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
-        }).catch(function(e) {
-          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
-        });
-      }
       var url = panelKey === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
       return fetchJsonOrThrow(url).then(function(list) {
         if (Array.isArray(list)) renderTable(list, rootId);
@@ -1636,7 +1478,6 @@ return `<!DOCTYPE html>
     }
     function refreshTab(tab) {
       if (tab === 'binance') return refreshPanel(currentSubTab || 'bn-signal');
-      if (tab === 'okx') return refreshPanel(currentSubTab || 'okx-signal');
       return refreshPanel(tab);
     }
     function setUpdateStatus(text, isError) {
@@ -1702,14 +1543,11 @@ return `<!DOCTYPE html>
     var currentTab = 'pump';
     var currentSubTab = '';
     var bnSubTabs = { 'bn-signal': true, 'bn-inflow': true, 'bn-kol': true };
-    var okxSubTabs = { 'okx-signal': true, 'okx-inflow': true, 'okx-kol': true };
     var defaultBnSub = 'bn-signal';
-    var defaultOkxSub = 'okx-signal';
     document.getElementById('updateBtn').querySelector('span').textContent = '更新 Pump 榜单';
 
     function showSubTabs(tab) {
       document.getElementById('subTabsBinance').style.display = tab === 'binance' ? 'flex' : 'none';
-      document.getElementById('subTabsOkx').style.display = tab === 'okx' ? 'flex' : 'none';
     }
 
     function activatePanel(panelKey) {
@@ -1726,11 +1564,6 @@ return `<!DOCTYPE html>
         if (subTab === 'bn-signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
         else if (subTab === 'bn-inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
         else if (subTab === 'bn-kol') descEl.textContent = 'Binance KOL 大 V 资金流入排行，追踪 KOL 投资动向';
-      } else if (tab === 'okx') {
-        if (subTab === 'okx-signal') descEl.textContent = 'OKX Meme 链上挖掘 — 24h 涨幅最大的 Meme 代币（Solana），多关键词聚合发现';
-        else if (subTab === 'okx-inflow') descEl.textContent = 'OKX Meme 链上挖掘 — 24h 交易量最大的 Meme 代币（Solana），追踪热门交易标的';
-        else if (subTab === 'okx-kol') descEl.textContent = 'OKX Meme 链上挖掘 — 市值最高的 Meme 代币（Solana），发现头部 Meme 项目';
-      }
     }
 
     function switchTab(tab) {
@@ -1741,10 +1574,6 @@ return `<!DOCTYPE html>
         currentSubTab = defaultBnSub;
         activatePanel(currentSubTab);
         document.querySelectorAll('#subTabsBinance .sub-tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.subtab === currentSubTab); });
-      } else if (tab === 'okx') {
-        currentSubTab = defaultOkxSub;
-        activatePanel(currentSubTab);
-        document.querySelectorAll('#subTabsOkx .sub-tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.subtab === currentSubTab); });
       } else {
         currentSubTab = '';
         activatePanel(tab);
@@ -1759,7 +1588,7 @@ return `<!DOCTYPE html>
 
     function switchSubTab(subTab) {
       currentSubTab = subTab;
-      var parentId = bnSubTabs[subTab] ? 'subTabsBinance' : 'subTabsOkx';
+      var parentId = 'subTabsBinance';
       document.querySelectorAll('#' + parentId + ' .sub-tab-btn').forEach(function(b){ b.classList.toggle('active', b.dataset.subtab === subTab); });
       activatePanel(subTab);
       updateDesc(currentTab, subTab);
@@ -1775,7 +1604,7 @@ return `<!DOCTYPE html>
     document.getElementById('updateBtn').addEventListener('click', function() {
       var btn = document.getElementById('updateBtn');
       var tab = currentTab || 'pump';
-      if (tab === 'binance' || tab === 'okx') {
+      if (tab === 'binance') {
         btn.disabled = true;
         setUpdateStatus('刷新中…');
         refreshTab(tab).then(function() {
@@ -1870,7 +1699,7 @@ return `<!DOCTYPE html>
     var origSwitchTab = switchTab;
     switchTab = function(tab) {
       origSwitchTab(tab);
-      if (tab === 'binance' || tab === 'okx') startInflowAutoRefresh();
+      if (tab === 'binance') startInflowAutoRefresh();
       else stopInflowAutoRefresh();
     };
     var origSwitchSubTab = switchSubTab;
@@ -3901,14 +3730,6 @@ async function scheduleNarrativePrefetch() {
   }
 }
 
-function okxMissingVars() {
-  const missing = [];
-  if (!process.env.OKX_API_KEY) missing.push('OKX_API_KEY');
-  if (!process.env.OKX_SECRET_KEY) missing.push('OKX_SECRET_KEY');
-  if (!process.env.OKX_PASSPHRASE) missing.push('OKX_PASSPHRASE');
-  return missing;
-}
-
 function startScheduler() {
   if (scheduler.timer) clearInterval(scheduler.timer);
   scheduler.timer = setInterval(runScheduledUpdate, scheduler.intervalMs);
@@ -3957,12 +3778,6 @@ const server = http.createServer(async (req, res) => {
     res.end(JSON.stringify({
       ok: true,
       port: PORT,
-      okx: {
-        configured: okxOnchain.isConfigured(),
-        has_api_key: !!process.env.OKX_API_KEY,
-        has_secret_key: !!process.env.OKX_SECRET_KEY,
-        has_passphrase: !!process.env.OKX_PASSPHRASE,
-      },
       cache: cacheManager.getStats(),
       geckoTerminal: getCircuitBreakerStatus(),
     }));
@@ -4060,89 +3875,6 @@ const server = http.createServer(async (req, res) => {
       res.statusCode = 500;
       res.setHeader('Content-Type', 'application/json');
       res.end(JSON.stringify({ error: e.message }));
-    }
-    return;
-  }
-  if (urlPath === '/api/okx/token-ranking') {
-    try {
-      if (!okxOnchain.isConfigured()) {
-        const missing = okxMissingVars();
-        res.statusCode = 503;
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.end(JSON.stringify({ error: 'OKX API 未配置，请在 Railway Variables 中设置: ' + missing.join(' / '), missing }));
-        return;
-      }
-      const u = new URL(req.url || '/', 'http://localhost');
-      const sortType = parseInt(u.searchParams.get('sortType') || '1', 10) || 1;
-      const chain = u.searchParams.get('chain') || 'solana';
-      const page = parseInt(u.searchParams.get('page') || '1', 10) || 1;
-      const pageSize = Math.min(parseInt(u.searchParams.get('pageSize') || '50', 10) || 50, 100);
-      const raw = await okxOnchain.getTokenRanking({ chain, sortType, page, pageSize });
-      const data = (Array.isArray(raw) ? raw : []).map((item) => ({
-        token: item.tokenContractAddress || item.address || item.token || '',
-        name: item.tokenName || item.name || '',
-        symbol: item.tokenSymbol || item.symbol || '',
-        logo_url: item.tokenLogoUrl || item.logoUrl || item.icon || null,
-        market_cap: parseFloat(item.marketCap || item.market_cap || 0) || null,
-        tx_volume_u_24h: parseFloat(item.volume || item.volume24h || item.liquidity || item.tx_volume_u_24h || 0) || null,
-        price_change_24h: parseFloat(item.change || item.priceChange24h || item.price_change_24h || 0) || null,
-        holders: item.holders != null ? parseInt(item.holders, 10) : null,
-      }));
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'public, max-age=90, stale-while-revalidate=120');
-      res.end(JSON.stringify(data));
-    } catch (e) {
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.end(JSON.stringify({ error: e?.message || String(e) }));
-    }
-    return;
-  }
-  if (urlPath === '/api/okx/meme-ranking') {
-    try {
-      if (!okxOnchain.isConfigured()) {
-        const missing = okxMissingVars();
-        res.statusCode = 503;
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader('Access-Control-Allow-Origin', '*');
-        res.end(JSON.stringify({ error: 'OKX API 未配置，请在 Railway Variables 中设置: ' + missing.join(' / '), missing }));
-        return;
-      }
-      const u = new URL(req.url || '/', 'http://localhost');
-      const sortType = parseInt(u.searchParams.get('sortType') || '1', 10) || 1;
-      const chain = u.searchParams.get('chain') || 'solana';
-      const page = parseInt(u.searchParams.get('page') || '1', 10) || 1;
-      const pageSize = Math.min(parseInt(u.searchParams.get('pageSize') || '50', 10) || 50, 100);
-      const raw = await okxOnchain.getMemeRanking({ chain, sortType, page, pageSize });
-      const data = (Array.isArray(raw) ? raw : []).map((item) => ({
-        token: item.tokenContractAddress || '',
-        name: item.tokenName || '',
-        symbol: item.tokenSymbol || '',
-        logo_url: item.tokenLogoUrl || null,
-        price: item.price ?? null,
-        market_cap: item.marketCap ?? null,
-        liquidity: item.liquidity ?? null,
-        volume24H: item.volume24H ?? null,
-        volume1H: item.volume1H ?? null,
-        change24H: item.change24H ?? null,
-        change1H: item.change1H ?? null,
-        change5M: item.change5M ?? null,
-        holders: item.holders ?? null,
-        txs24H: item.txs24H ?? null,
-        txs1H: item.txs1H ?? null,
-      }));
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.setHeader('Cache-Control', 'public, max-age=90, stale-while-revalidate=120');
-      res.end(JSON.stringify(data));
-    } catch (e) {
-      res.statusCode = 500;
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Access-Control-Allow-Origin', '*');
-      res.end(JSON.stringify({ error: e?.message || String(e) }));
     }
     return;
   }
@@ -4517,7 +4249,7 @@ server.listen(PORT, HOST, () => {
     if (!okxKey) missing.push('OKX_API_KEY');
     if (!okxSecret) missing.push('OKX_SECRET_KEY');
     if (!okxPass) missing.push('OKX_PASSPHRASE');
-    console.warn('[OKX] ⚠️  缺少环境变量: ' + missing.join(', ') + '（OKX Skill 相关功能不可用）');
+    console.warn('[OKX] ⚠️  缺少环境变量: ' + missing.join(', ') + '（代币 Top10 持仓补充不可用）');
   }
 
   startScheduler();
