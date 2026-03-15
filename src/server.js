@@ -174,7 +174,8 @@ async function getRankingZhilabs() {
 }
 
 function buildRankingPage() {
-const seoMeta = buildSeoMeta({
+  const hideOkxSkillSection = process.env.HIDE_OKX_SKILL_SECTION === 'true' || process.env.HIDE_OKX_SKILL_SECTION === '1';
+  const seoMeta = buildSeoMeta({
   title: 'Solana Meme 代币榜单 | Zhizhi Labs',
   description: '实时 Solana Meme 代币排行榜 — 按 24h 交易量排序，查看市值、涨跌、持仓分布等关键指标。由 Zhizhi Labs 提供。',
   canonicalPath: '/ranking',
@@ -1136,7 +1137,7 @@ return `<!DOCTYPE html>
       <div class="tabs">
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
         <button type="button" class="tab-btn" data-tab="zhilabs">zhizhilabs 精选</button>
-        <button type="button" class="tab-btn" data-tab="binance">Binance Skill</button>
+        ${hideOkxSkillSection ? '' : '<button type="button" class="tab-btn" data-tab="binance">Binance Skill</button>'}
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
@@ -1146,19 +1147,19 @@ return `<!DOCTYPE html>
       </div>
     </div>
 
-    <div class="sub-tabs" id="subTabsBinance" style="display:none">
+    ${hideOkxSkillSection ? '' : `<div class="sub-tabs" id="subTabsBinance" style="display:none">
       <button type="button" class="sub-tab-btn active" data-subtab="bn-signal">Binance 聪明钱信号</button>
       <button type="button" class="sub-tab-btn" data-subtab="bn-inflow">Binance 聪明钱流入</button>
       <button type="button" class="sub-tab-btn" data-subtab="bn-kol">Binance KOL 追踪</button>
-    </div>
+    </div>`}
     <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
 
     <div class="table-card">
       <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
       <div id="panel-zhilabs" class="panel"><div id="root-zhilabs"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-bn-signal" class="panel"><div id="root-bn-signal"><div class="loading-text">加载中</div></div></div>
+      ${hideOkxSkillSection ? '' : `<div id="panel-bn-signal" class="panel"><div id="root-bn-signal"><div class="loading-text">加载中</div></div></div>
       <div id="panel-bn-inflow" class="panel"><div id="root-bn-inflow"><div class="loading-text">加载中</div></div></div>
-      <div id="panel-bn-kol" class="panel"><div id="root-bn-kol"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-bn-kol" class="panel"><div id="root-bn-kol"><div class="loading-text">加载中</div></div></div>`}
     </div>
   </div>
 
@@ -1547,7 +1548,8 @@ return `<!DOCTYPE html>
     document.getElementById('updateBtn').querySelector('span').textContent = '更新 Pump 榜单';
 
     function showSubTabs(tab) {
-      document.getElementById('subTabsBinance').style.display = tab === 'binance' ? 'flex' : 'none';
+      var el = document.getElementById('subTabsBinance');
+      if (el) el.style.display = tab === 'binance' ? 'flex' : 'none';
     }
 
     function activatePanel(panelKey) {
