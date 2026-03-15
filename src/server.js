@@ -1217,61 +1217,6 @@ return `<!DOCTYPE html>
       table += '</tbody></table>';
       root.innerHTML = table;
     }
-    function renderMemeTable(list, rootId, mode) {
-      var root = document.getElementById(rootId);
-      if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无 Meme 数据</div>'; return; }
-      var headers = ['#', '代币', '价格', '市值', '流动性'];
-      if (mode === 'change') { headers.push('5m', '1h', '24h'); }
-      else if (mode === 'volume') { headers.push('1h 量', '24h 量', '24h txs'); }
-      else { headers.push('24h 量', '24h 涨跌', '持有人'); }
-      var table = '<table class="meme-tbl"><thead><tr>';
-      headers.forEach(function(h, idx) { table += '<th' + (idx >= 2 ? ' class="num"' : '') + '>' + h + '</th>'; });
-      table += '</tr></thead><tbody>';
-      list.forEach(function(row, i) {
-        var ca = row.token || '';
-        table += '<tr class="clickable-row" data-token="' + esc(ca) + '">';
-        table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
-        var copyBtn = ca ? '<button class="copy-ca-btn" data-ca="' + esc(ca) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
-        table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(row.name || '—') + '</span><span class="symbol" style="margin-left:4px">' + esc(row.symbol || '') + '</span>' + copyBtn + '</div></td>';
-        var priceStr = row.price != null ? formatPrice(row.price) : '—';
-        table += '<td class="num">' + priceStr + '</td>';
-        table += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
-        table += '<td class="num">' + formatCompact(row.liquidity) + '</td>';
-        if (mode === 'change') {
-          table += '<td class="num ' + changeClass(row.change5M) + '">' + changeStr(row.change5M) + '</td>';
-          table += '<td class="num ' + changeClass(row.change1H) + '">' + changeStr(row.change1H) + '</td>';
-          table += '<td class="num ' + changeClass(row.change24H) + '">' + changeStr(row.change24H) + '</td>';
-        } else if (mode === 'volume') {
-          table += '<td class="num">' + formatCompact(row.volume1H) + '</td>';
-          table += '<td class="num">' + formatCompact(row.volume24H) + '</td>';
-          table += '<td class="num">' + (row.txs24H ? Number(row.txs24H).toLocaleString() : '—') + '</td>';
-        } else {
-          table += '<td class="num">' + formatCompact(row.volume24H) + '</td>';
-          table += '<td class="num ' + changeClass(row.change24H) + '">' + changeStr(row.change24H) + '</td>';
-          table += '<td class="num">' + (row.holders ? Number(row.holders).toLocaleString() : '—') + '</td>';
-        }
-        table += '</tr>';
-      });
-      table += '</tbody></table>';
-      root.innerHTML = table;
-    }
-    function changeClass(v) { return v != null ? (v >= 0 ? 'positive' : 'negative') : ''; }
-    function changeStr(v) { return v != null ? (v >= 0 ? '+' : '') + Number(v).toFixed(2) + '%' : '—'; }
-    function formatPrice(p) {
-      if (p == null || isNaN(p)) return '—';
-      var n = Number(p);
-      if (n === 0) return '$0';
-      if (n >= 1) return '$' + n.toFixed(2);
-      if (n >= 0.01) return '$' + n.toFixed(4);
-      var s = n.toFixed(20).replace(/0+$/, '');
-      var m = s.match(/^0\\.0*[1-9]/);
-      if (m) {
-        var zeros = m[0].length - 3;
-        var sig = s.slice(m[0].length, m[0].length + 3);
-        return '$0.0{' + zeros + '}' + sig;
-      }
-      return '$' + n.toPrecision(4);
-    }
     function formatSignalTime(ms) {
       if (ms == null || !Number(ms)) return '';
       var diff = Math.max(0, Math.floor((Date.now() - Number(ms)) / 60000));
@@ -1564,6 +1509,7 @@ return `<!DOCTYPE html>
         if (subTab === 'bn-signal') descEl.textContent = 'Binance 链上聪明钱买入/卖出信号，数据来自 Binance Web3';
         else if (subTab === 'bn-inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
         else if (subTab === 'bn-kol') descEl.textContent = 'Binance KOL 大 V 资金流入排行，追踪 KOL 投资动向';
+      }
     }
 
     function switchTab(tab) {
