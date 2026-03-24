@@ -19,6 +19,7 @@
     "test-data-source": "node scripts/test-data-source.js",
     "test-okx-quick": "node scripts/test-okx-quick.js",
     "test-okx-ranking": "node scripts/test-okx-ranking.js",
+    "phase0-validate": "node scripts/phase0-validate.js",
     "test": "node -e \"import('./src/index.js').then(m => console.log('Supabase 客户端已导出:', !!m.supabase))\""
   },
   "dependencies": {
