@@ -4,7 +4,7 @@
  * 或由服务端 POST /api/ranking/zhilabs/refresh-narratives 触发
  */
 import 'dotenv/config';
-import { supabase } from '../src/index.js';
+import { supabase } from '../src/supabase.js';
 import { getTokenNarrative } from '../src/data-sources/sixfivefiveone.js';
 
 const CONCURRENCY = 2;
@@ -63,13 +63,22 @@ export async function refreshZhilabsNarratives() {
   return { updated, errors, tokens: tokens.length };
 }
 
-async function main() {
-  console.log('正在刷新 zhilabs 精选榜单内代币的叙事缓存…');
-  const result = await refreshZhilabsNarratives();
-  console.log('完成：成功', result.updated, '条，失败', result.errors, '条（共', result.tokens, '个代币）');
+import path from 'path';
+import { pathToFileURL } from 'url';
+
+function isDirectRun() {
+  const entry = process.argv?.[1];
+  if (!entry) return false;
+  const abs = path.resolve(entry);
+  return import.meta.url === pathToFileURL(abs).href;
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (isDirectRun()) {
+  console.log('正在刷新 zhilabs 精选榜单内代币的叙事缓存…');
+  refreshZhilabsNarratives()
+    .then((result) => console.log('完成：成功', result.updated, '条，失败', result.errors, '条（共', result.tokens, '个代币）'))
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}

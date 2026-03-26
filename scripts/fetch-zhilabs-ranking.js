@@ -6,17 +6,14 @@
  * 替代原 AVE 数据源，无需 AVE_API_KEY，无请求限制/收费
  */
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import * as dataSource from '../src/data-sources/index.js';
+import { supabase } from '../src/supabase.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const CA_FILE = path.join(__dirname, '..', 'zhilabs meme榜单精选', 'ca.md');
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 async function fetchBinanceHolders(contractAddress) {
   const url = new URL('https://web3.binance.com/bapi/defi/v4/public/wallet-direct/buw/wallet/market/token/dynamic/info');
@@ -83,7 +80,6 @@ async function main() {
 }
 
 export async function updateZhilabsRanking() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('缺少 Supabase 配置');
 
   if (!fs.existsSync(CA_FILE)) {
     throw new Error(`CA 文件不存在: ${CA_FILE}`);
@@ -156,7 +152,6 @@ export async function updateZhilabsRanking() {
     return [];
   }
 
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   const { data, error } = await supabase
     .from('zhilabs_ranking')
     .upsert(rows, { onConflict: 'token' })

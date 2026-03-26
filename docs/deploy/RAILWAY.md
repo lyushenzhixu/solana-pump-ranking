@@ -34,12 +34,15 @@ git push -u origin main
 |--------|-----|------|
 | `SUPABASE_URL` | `https://rkzljtotquogikekxhcw.supabase.co` | 你的 Supabase 项目 URL |
 | `SUPABASE_ANON_KEY` | 你的 anon 公钥 | Supabase 项目设置 → API 里的 anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | 你的 service_role 密钥 | Supabase 项目设置 → API 里的 service_role key（服务端写入必需，RLS 加固后 anon key 只读） |
+| `GA_MEASUREMENT_ID` | `G-K2PCHH0FV6` | Google Analytics 4 衡量 ID；**不配置则线上页面不会发送任何数据到 GA**，GA 控制台无数据 |
 | `OKX_API_KEY` | 你的 OKX API Key | OKX OnchainOS 凭证（OKX Skill 功能必需） |
 | `OKX_SECRET_KEY` | 你的 OKX Secret Key | OKX OnchainOS 凭证（OKX Skill 功能必需） |
 | `OKX_PASSPHRASE` | 你的 OKX Passphrase | OKX OnchainOS 凭证（OKX Skill 功能必需） |
 
 > **注意**：OKX 变量名必须完全匹配（区分大小写）。保存后 Railway 会自动重新部署。
 > 部署后可访问 `https://你的域名/api/health` 检查各环境变量是否生效。
+> **GA**：仅前端页面访问统计需要 `GA_MEASUREMENT_ID`；配置后 GA 控制台可能需最多 48 小时才开始显示数据。
 
 ## 四、生成公网域名
 

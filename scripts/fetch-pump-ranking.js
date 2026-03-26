@@ -6,13 +6,10 @@
  * 替代原 AVE 数据源，无需 AVE_API_KEY，无请求限制/收费
  */
 import 'dotenv/config';
-import { createClient } from '@supabase/supabase-js';
 import path from 'path';
 import { pathToFileURL } from 'url';
 import * as dataSource from '../src/data-sources/index.js';
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
+import { supabase } from '../src/supabase.js';
 
 const TEN_DAYS_SEC = 10 * 24 * 3600;
 const MIN_MARKET_CAP = 100_000;
@@ -115,7 +112,6 @@ function toRow(t) {
 }
 
 export async function updatePumpRanking() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) throw new Error('缺少 Supabase 配置');
 
   console.log('正在从自研数据源拉取 Solana 代币 (new + hot + ranked)...');
   const raw = await fetchAllTokens();
@@ -172,8 +168,6 @@ export async function updatePumpRanking() {
   }
   list = list.filter((t) => !t._excludeByTop10).slice(0, 20);
   console.log('排除 Top10 占比 >' + MAX_TOP10_HOLDERS_PERCENT + '% 后取前 20:', list.length, '条');
-
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const rows = list.map((t) => toRow(t));
 
