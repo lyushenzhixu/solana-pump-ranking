@@ -380,6 +380,10 @@ return `<!DOCTYPE html>
       border-color: rgba(205,127,50,0.25);
     }
 
+    /* KB signal pills + disclaimer */
+    .kb-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: 1px solid; background: oklch(20% 0.02 270 / 0.5); white-space: nowrap; }
+    .kb-disclaimer { font-size: 0.75rem; color: var(--text-muted); padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); }
+
     /* Token name + logo */
     td .token-cell {
       display: flex; align-items: center; gap: 0.625rem;
@@ -976,6 +980,7 @@ return `<!DOCTYPE html>
         <button type="button" class="tab-btn active" data-tab="pump">Solana Pump 榜单</button>
         <button type="button" class="tab-btn" data-tab="zhilabs">zhizhilabs 精选</button>
         <button type="button" class="tab-btn" data-tab="binance">Binance Skill</button>
+        <button type="button" class="tab-btn" data-tab="kb">知智 KB 信号</button>
       </div>
       <div class="actions">
         <button type="button" id="updateBtn"><span>更新 Pump 榜单</span></button>
@@ -998,6 +1003,7 @@ return `<!DOCTYPE html>
       <div id="panel-bn-signal" class="panel"><div id="root-bn-signal"><div class="loading-text">加载中</div></div></div>
       <div id="panel-bn-inflow" class="panel"><div id="root-bn-inflow"><div class="loading-text">加载中</div></div></div>
       <div id="panel-bn-kol" class="panel"><div id="root-bn-kol"><div class="loading-text">加载中</div></div></div>
+      <div id="panel-kb" class="panel"><div id="root-kb"><div class="loading-text">加载中</div></div></div>
     </div>
   </div>
 
@@ -1027,6 +1033,7 @@ return `<!DOCTYPE html>
       var isPump = rootId === 'root-pump';
       var headers = ['#', '代币', '符号', '市值', '24h 交易量', '24h 涨跌', '持币地址'];
       if (isPump) { headers.push('Top10%'); }
+      headers.push('知智信号');
       var numColIdx = { 3: true, 4: true, 5: true, 6: true };
       if (isPump) numColIdx[7] = true;
       var table = '<table><thead><tr>' + headers.map(function(h, idx){ return '<th' + (numColIdx[idx] ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
@@ -1051,10 +1058,57 @@ return `<!DOCTYPE html>
         if (isPump) {
           table += '<td class="num">' + (row.holders_top10_percent != null ? Number(row.holders_top10_percent).toFixed(1) + '%' : '—') + '</td>';
         }
+        var kbSig = kbSignalsMap[caStr];
+        var kbCell = '—';
+        if (kbSig) {
+          if (kbSig.conviction_rating) kbCell = kbRatingPill(kbSig.conviction_rating);
+          else if (kbSig.cluster_risk && kbSig.cluster_risk.level && kbSig.cluster_risk.level !== 'none') kbCell = kbClusterPill(kbSig.cluster_risk);
+          else if (kbSig.smart_money_24h && kbSig.smart_money_24h.wallet_count) kbCell = kbPill('聪明钱', '--positive');
+        }
+        table += '<td>' + kbCell + '</td>';
         table += '</tr>';
       });
       table += '</tbody></table>';
       root.innerHTML = table;
+    }
+    function kbPill(text, colorVar) {
+      return '<span class="kb-pill" style="color:var(' + colorVar + ');border-color:var(' + colorVar + ')">' + esc(text) + '</span>';
+    }
+    function kbRatingPill(r) {
+      if (!r) return '—';
+      var m = { '高信心': '--positive', '中信心': '--sol-blue', '关注': '--accent', '观望': '--text-muted' };
+      return kbPill(r, m[r] || '--text-muted');
+    }
+    function kbClusterPill(c) {
+      if (!c || !c.level || c.level === 'none') return '—';
+      var m = { high: '--negative', med: '--bn-yellow', low: '--text-muted' };
+      var label = { high: '⚠ 高', med: '中', low: '低' }[c.level] || c.level;
+      return kbPill(label, m[c.level] || '--text-muted');
+    }
+    function renderKBSignals(list, rootId) {
+      var root = document.getElementById(rootId);
+      if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无 KB 信号</div>'; return; }
+      var disc = (list[0] && list[0].disclaimer) ? list[0].disclaimer : '';
+      var html = disc ? '<div class="kb-disclaimer">' + esc(disc) + '</div>' : '';
+      html += '<table><thead><tr><th>#</th><th>代币</th><th>研究评级</th><th>庄家风险</th><th>聪明钱(24h)</th><th>Revival</th></tr></thead><tbody>';
+      list.forEach(function(row, i) {
+        var caStr = typeof row.ca === 'string' ? row.ca : '';
+        var nameStr = row.symbol || row.name || (caStr ? caStr.slice(0, 8) + '…' : '—');
+        var sm = row.smart_money_24h, rev = row.revival;
+        var smStr = sm && sm.wallet_count ? kbPill(sm.wallet_count + ' 钱包买入', '--positive') : '—';
+        var revStr = rev && rev.status ? kbPill(rev.status === 'confirmed' ? '确认' : '观察中', rev.status === 'confirmed' ? '--sol-green' : '--text-secondary') : '—';
+        var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+        html += '<tr class="clickable-row" data-token="' + esc(caStr) + '">';
+        html += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
+        html += '<td><div class="token-cell"><span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
+        html += '<td>' + kbRatingPill(row.conviction_rating) + '</td>';
+        html += '<td>' + kbClusterPill(row.cluster_risk) + '</td>';
+        html += '<td>' + smStr + '</td>';
+        html += '<td>' + revStr + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      root.innerHTML = html;
     }
     function formatSignalTime(ms) {
       if (ms == null || !Number(ms)) return '';
@@ -1252,6 +1306,14 @@ return `<!DOCTYPE html>
           rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
         });
       }
+      if (panelKey === 'kb') {
+        return fetchJsonOrThrow('/api/kb-signals').then(function(list) {
+          if (Array.isArray(list)) renderKBSignals(list, rootId);
+          else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
+        }).catch(function(e) {
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+        });
+      }
       var url = panelKey === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
       return fetchJsonOrThrow(url).then(function(list) {
         if (Array.isArray(list)) renderTable(list, rootId);
@@ -1349,6 +1411,7 @@ return `<!DOCTYPE html>
         else if (subTab === 'bn-inflow') descEl.textContent = 'Binance 聪明钱净流入排行（Solana + BSC），实时追踪聪明钱资金流向';
         else if (subTab === 'bn-kol') descEl.textContent = 'Binance KOL 大 V 资金流入排行，追踪 KOL 投资动向';
       }
+      else if (tab === 'kb') descEl.textContent = '知智 KB 链上分析信号(庄家风险 / 聪明钱 / Revival / 研究评级)· 仅研究参考,非投资建议';
     }
 
     function switchTab(tab) {
@@ -1364,7 +1427,7 @@ return `<!DOCTYPE html>
         activatePanel(tab);
       }
       updateDesc(tab, currentSubTab);
-      var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : '刷新数据');
+      var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : (tab === 'kb' ? 'KB 信号' : '刷新数据'));
       document.getElementById('updateBtn').querySelector('span').textContent = btnText;
       var narrativeBtn = document.getElementById('refreshNarrativeBtn');
       if (narrativeBtn) narrativeBtn.style.display = tab === 'zhilabs' ? '' : 'none';
@@ -1465,6 +1528,15 @@ return `<!DOCTYPE html>
       el.textContent = mm + ':' + ss;
       if (diff <= 0) fetchSchedulerStatus();
     }
+    var kbSignalsMap = {};
+    function loadKbMap() {
+      return fetch('/api/kb-signals').then(function(r){ return r.json(); }).then(function(list) {
+        kbSignalsMap = {};
+        (Array.isArray(list) ? list : []).forEach(function(s){ if (s.ca) kbSignalsMap[s.ca] = s; });
+        if (currentTab === 'pump' || currentTab === 'zhilabs') refreshPanel(currentTab);
+      }).catch(function(){});
+    }
+    loadKbMap();
     fetchSchedulerStatus();
     setInterval(fetchSchedulerStatus, 15000);
     setInterval(updateCountdown, 1000);
