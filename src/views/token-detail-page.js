@@ -1395,6 +1395,12 @@ return `<!DOCTYPE html>
       }
       html += '</div>';
 
+      // KB 分析卡片(默认隐藏,loadKBSignals 有信号才显示)
+      html += '<div class="info-panel" id="kb-section" style="display:none">';
+      html += '<div class="info-panel-title"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> 知智 KB 信号</div>';
+      html += '<div id="kb-content"></div>';
+      html += '</div>';
+
       html += '</div>';
 
       // Two-column layout
@@ -1470,6 +1476,7 @@ return `<!DOCTYPE html>
       loadKlineChart(token, 15);
       loadNarrative(token);
       loadTweets(token);
+      loadKBSignals(token.token);
     }
 
     var _chartInstance = null;
@@ -1862,6 +1869,44 @@ return `<!DOCTYPE html>
         .catch(function() {
           hideTweetsSidebar();
         });
+    }
+
+    function kbCardPill(text, color) {
+      return '<span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;border:1px solid ' + color + ';color:' + color + ';background:oklch(20% 0.02 270 / 0.5)">' + text + '</span>';
+    }
+    function loadKBSignals(ca) {
+      if (!ca) return;
+      fetch('/api/kb-signals/' + encodeURIComponent(ca))
+        .then(function(r) { return r.json(); })
+        .then(function(sig) {
+          if (!sig) return;
+          var sec = document.getElementById('kb-section');
+          var content = document.getElementById('kb-content');
+          if (!sec || !content) return;
+          var rows = '';
+          if (sig.conviction_rating) {
+            var rm = { '高信心': 'var(--positive)', '中信心': 'var(--sol-blue)', '关注': 'var(--accent)', '观望': 'var(--text-muted)' };
+            rows += '<div class="info-row"><span class="info-row-label">研究评级</span><span class="info-row-value">' + kbCardPill(esc(sig.conviction_rating), rm[sig.conviction_rating] || 'var(--text-muted)') + '</span></div>';
+          }
+          if (sig.cluster_risk && sig.cluster_risk.level && sig.cluster_risk.level !== 'none') {
+            var cm = { high: 'var(--negative)', med: 'var(--bn-yellow)', low: 'var(--text-muted)' };
+            var cl = { high: '⚠ 高风险', med: '中', low: '低' }[sig.cluster_risk.level] || sig.cluster_risk.level;
+            rows += '<div class="info-row"><span class="info-row-label">庄家/集群风险</span><span class="info-row-value">' + kbCardPill(cl, cm[sig.cluster_risk.level] || 'var(--text-muted)') + '</span></div>';
+            if (sig.cluster_risk.reason) rows += '<div class="info-row"><span class="info-row-label">说明</span><span class="info-row-value" style="font-size:0.8rem;color:var(--text-muted)">' + esc(sig.cluster_risk.reason) + '</span></div>';
+          }
+          if (sig.smart_money_24h && sig.smart_money_24h.wallet_count) {
+            rows += '<div class="info-row"><span class="info-row-label">聪明钱 (24h)</span><span class="info-row-value green">' + sig.smart_money_24h.wallet_count + ' 个已验证钱包买入</span></div>';
+          }
+          if (sig.revival && sig.revival.status) {
+            var rv = sig.revival.status === 'confirmed' ? '确认重启' : '观察中';
+            rows += '<div class="info-row"><span class="info-row-label">Revival</span><span class="info-row-value">' + rv + (sig.revival.drawdown_pct != null ? '（回撤 ' + Number(sig.revival.drawdown_pct).toFixed(0) + '%）' : '') + '</span></div>';
+          }
+          if (!rows) return;
+          if (sig.disclaimer) rows += '<div class="info-row" style="border:none"><span class="info-row-value" style="font-size:0.72rem;color:var(--text-muted)">' + esc(sig.disclaimer) + '</span></div>';
+          content.innerHTML = rows;
+          sec.style.display = '';
+        })
+        .catch(function() {});
     }
 
     // Fetch token detail
