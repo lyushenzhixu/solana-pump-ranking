@@ -1090,10 +1090,10 @@ return `<!DOCTYPE html>
       if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无 KB 信号</div>'; return; }
       var disc = (list[0] && list[0].disclaimer) ? list[0].disclaimer : '';
       var html = disc ? '<div class="kb-disclaimer">' + esc(disc) + '</div>' : '';
-      html += '<table><thead><tr><th>#</th><th>代币</th><th>研究评级</th><th>庄家风险</th><th>聪明钱(24h)</th><th>Revival</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>#</th><th>代币</th><th class="num">综合分</th><th>研究评级</th><th>庄家风险</th><th>聪明钱(24h)</th><th>Revival</th></tr></thead><tbody>';
       list.forEach(function(row, i) {
         var caStr = typeof row.ca === 'string' ? row.ca : '';
-        var nameStr = row.symbol || row.name || (caStr ? caStr.slice(0, 8) + '…' : '—');
+        var nameStr = row.name || row.symbol || '未命名';   // 永不直显 CA
         var sm = row.smart_money_24h, rev = row.revival;
         var smStr = sm && sm.wallet_count ? kbPill(sm.wallet_count + ' 钱包买入', '--positive') : '—';
         var revStr = rev && rev.status ? kbPill(rev.status === 'confirmed' ? '确认' : '观察中', rev.status === 'confirmed' ? '--sol-green' : '--text-secondary') : '—';
@@ -1101,6 +1101,7 @@ return `<!DOCTYPE html>
         html += '<tr class="clickable-row" data-token="' + esc(caStr) + '">';
         html += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
         html += '<td><div class="token-cell"><span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
+        html += '<td class="num">' + (row.score != null ? Number(row.score).toFixed(1) : '—') + '</td>';
         html += '<td>' + kbRatingPill(row.conviction_rating) + '</td>';
         html += '<td>' + kbClusterPill(row.cluster_risk) + '</td>';
         html += '<td>' + smStr + '</td>';

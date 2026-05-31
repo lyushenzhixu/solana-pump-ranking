@@ -1758,6 +1758,7 @@ return `<!DOCTYPE html>
         .then(function(data) {
           var el = document.getElementById('narrative-content');
           if (!el) return;
+          if (window.__kbNarr) return;   // KB 验证叙事已填,6551 跳过(KB 优先)
           var hasTwitter = data.twitterNarrative && data.twitterNarrative.narrativeGrade;
           var hasNews = data.summary || (data.articles && data.articles.length > 0);
           if (!hasTwitter && !hasNews) {
@@ -1880,6 +1881,24 @@ return `<!DOCTYPE html>
         .then(function(r) { return r.json(); })
         .then(function(sig) {
           if (!sig) return;
+          // 叙事:KB 验证版优先 → 填进 6551 叙事卡 + 「知智验证」标(loadNarrative 检 __kbNarr 跳过)
+          if (sig.narrative && sig.narrative.summary) {
+            window.__kbNarr = true;
+            var nc0 = document.getElementById('narrative-content');
+            if (nc0) {
+              var nh = '<div style="margin-bottom:8px"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:600;background:rgba(153,69,255,0.15);color:var(--sol-purple)">知智验证</span></div>';
+              nh += '<div class="narrative-text">' + esc(sig.narrative.summary) + '</div>';
+              var tws = sig.narrative.cited_tweets || [];
+              if (tws.length) {
+                nh += '<div class="narrative-articles">';
+                tws.forEach(function(t) {
+                  nh += '<div class="narrative-article"><div style="flex:1;min-width:0"><a href="https://x.com/i/status/' + encodeURIComponent(t.tweet_id) + '" target="_blank" rel="noopener">' + esc(t.author) + ': ' + esc(t.text) + '</a></div><span class="source-tag">' + esc(t.engagement || '') + '</span></div>';
+                });
+                nh += '</div>';
+              }
+              nc0.innerHTML = nh;
+            }
+          }
           var sec = document.getElementById('kb-section');
           var content = document.getElementById('kb-content');
           if (!sec || !content) return;
@@ -1900,6 +1919,13 @@ return `<!DOCTYPE html>
           if (sig.revival && sig.revival.status) {
             var rv = sig.revival.status === 'confirmed' ? '确认重启' : '观察中';
             rows += '<div class="info-row"><span class="info-row-label">Revival</span><span class="info-row-value">' + rv + (sig.revival.drawdown_pct != null ? '（回撤 ' + Number(sig.revival.drawdown_pct).toFixed(0) + '%）' : '') + '</span></div>';
+          }
+          if (sig.onchain_cluster) {
+            var oc = sig.onchain_cluster;
+            var plabel = { equal_amounts: '等额注资', treasury_funder: '私人 treasury', router_chain: 'router 链', cooldown: '冷却期', same_second_snipe: '同分钟狙击' };
+            var pats = (oc.patterns_hit || []).map(function(p) { return plabel[p] || p; }).join(' · ');
+            rows += '<div class="info-row"><span class="info-row-label">链上协同钱包</span><span class="info-row-value" style="font-size:0.82rem">' + esc(oc.verdict || '') + '</span></div>';
+            if (pats) rows += '<div class="info-row"><span class="info-row-label">命中 pattern</span><span class="info-row-value" style="font-size:0.8rem;color:var(--text-muted)">' + esc(pats) + '</span></div>';
           }
           if (!rows) return;
           if (sig.disclaimer) rows += '<div class="info-row" style="border:none"><span class="info-row-value" style="font-size:0.72rem;color:var(--text-muted)">' + esc(sig.disclaimer) + '</span></div>';

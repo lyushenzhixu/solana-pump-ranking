@@ -150,7 +150,7 @@ router.get('/kb-signals', cache(60, 120), async (_req, res) => {
   const { data, error } = await supabase
     .from('kb_signals')
     .select('*')
-    .order('updated_at', { ascending: false });
+    .order('score', { ascending: false, nullsFirst: false });
   if (error) throw error;
   res.json(data || []);
 });
