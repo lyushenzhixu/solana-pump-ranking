@@ -145,6 +145,27 @@ router.get('/smart-money-inflow', cache(60, 120), async (req, res) => {
   res.json(data);
 });
 
+// ── GET /kb-signals ── KB 公开信号列表(供 KB tab + 榜单徽章)
+router.get('/kb-signals', cache(60, 120), async (_req, res) => {
+  const { data, error } = await supabase
+    .from('kb_signals')
+    .select('*')
+    .order('updated_at', { ascending: false });
+  if (error) throw error;
+  res.json(data || []);
+});
+
+// ── GET /kb-signals/:ca ── 单 token KB 信号(供详情页卡片)
+router.get('/kb-signals/:ca', cache(60, 120), async (req, res) => {
+  const { data, error } = await supabase
+    .from('kb_signals')
+    .select('*')
+    .eq('ca', req.params.ca)
+    .maybeSingle();
+  if (error) throw error;
+  res.json(data || null);
+});
+
 // ── POST /ranking/zhilabs/refresh-narratives ──
 router.post('/ranking/zhilabs/refresh-narratives', async (_req, res) => {
   const result = await refreshZhilabsNarratives();
