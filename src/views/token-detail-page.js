@@ -1185,6 +1185,136 @@ return `<!DOCTYPE html>
       .stats-grid { grid-template-columns: 1fr; }
     }
 
+    /* ── KB 专属详情结构 ── */
+    #kb-section { grid-column: 1 / -1; }
+    .kb-head {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .kb-head-item {
+      background: rgba(153,69,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 0.625rem 0.75rem;
+    }
+    .kb-head-label {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.25rem;
+    }
+    .kb-head-value { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); }
+    .kb-head-value.green { color: var(--positive); }
+    .kb-head-value.red { color: var(--negative); }
+    .kb-narrative-block {
+      background: linear-gradient(135deg, rgba(153,69,255,0.08), rgba(20,241,149,0.03));
+      border: 1px solid rgba(153,69,255,0.22);
+      border-radius: 14px;
+      padding: 1.125rem 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .kb-narrative-head {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8125rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--sol-purple);
+      display: flex; align-items: center; gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .kb-narrative-head svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .kb-verified-tag {
+      font-family: 'Exo 2', sans-serif;
+      font-size: 0.5625rem;
+      font-weight: 700;
+      color: var(--sol-purple);
+      background: rgba(153,69,255,0.15);
+      padding: 0.15em 0.5em;
+      border-radius: 4px;
+      text-transform: none;
+      letter-spacing: 0.04em;
+    }
+    .kb-narrative-text {
+      font-size: 1.0625rem;
+      line-height: 1.75;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    .kb-narrative-catalyst {
+      margin-top: 0.75rem;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+    .kb-narrative-catalyst-label {
+      display: inline-block;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      color: var(--positive);
+      background: rgba(20,241,149,0.1);
+      padding: 0.1em 0.5em;
+      border-radius: 4px;
+      margin-right: 0.5rem;
+    }
+    .kb-narrative-pending {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .kb-tweet-list {
+      margin-top: 0.875rem;
+      padding-top: 0.875rem;
+      border-top: 1px solid var(--border-subtle);
+      display: flex; flex-direction: column; gap: 0.25rem;
+    }
+    .kb-tweet-item {
+      display: flex; align-items: flex-start; gap: 0.5rem;
+      padding: 0.5rem;
+      border-radius: 8px;
+      font-size: 0.8125rem;
+      transition: background 0.2s;
+    }
+    .kb-tweet-item:hover { background: rgba(153,69,255,0.05); }
+    .kb-tweet-item a, .kb-tweet-item > div { flex: 1; min-width: 0; text-decoration: none; }
+    .kb-tweet-handle {
+      color: var(--sol-blue);
+      font-weight: 600;
+      margin-right: 0.4rem;
+    }
+    .kb-tweet-text { color: var(--text-secondary); }
+    .kb-tweet-item a:hover .kb-tweet-text { color: var(--text-primary); }
+    .kb-tweet-eng {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      background: rgba(153,69,255,0.06);
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .kb-block { margin-bottom: 0.875rem; }
+    .kb-block-foot { margin-bottom: 0; }
+    .kb-block-title {
+      font-size: 0.6875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-bottom: 0.375rem;
+      padding-bottom: 0.25rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    @media (max-width: 768px) {
+      .kb-narrative-text { font-size: 0.95rem; }
+      .kb-head { gap: 0.5rem; }
+      .kb-head-value { font-size: 0.9rem; }
+    }
+
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: rgba(153,69,255,0.2); border-radius: 3px; }
@@ -1758,6 +1888,7 @@ return `<!DOCTYPE html>
         .then(function(data) {
           var el = document.getElementById('narrative-content');
           if (!el) return;
+          if (window.__isKB) return;     // KB 币:6551 叙事整体抑制(KB 完善叙事取代,见 loadKBSignals)
           if (window.__kbNarr) return;   // KB 验证叙事已填,6551 跳过(KB 优先)
           var hasTwitter = data.twitterNarrative && data.twitterNarrative.narrativeGrade;
           var hasNews = data.summary || (data.articles && data.articles.length > 0);
@@ -1798,6 +1929,7 @@ return `<!DOCTYPE html>
           el.innerHTML = html;
         })
         .catch(function() {
+          if (window.__isKB) return;
           var el = document.getElementById('narrative-content');
           if (el) el.innerHTML = '<div class="narrative-empty">暂无该代币的相关叙事分析</div>';
         });
@@ -1875,61 +2007,131 @@ return `<!DOCTYPE html>
     function kbCardPill(text, color) {
       return '<span style="display:inline-flex;padding:2px 8px;border-radius:6px;font-size:0.75rem;font-weight:600;border:1px solid ' + color + ';color:' + color + ';background:oklch(20% 0.02 270 / 0.5)">' + text + '</span>';
     }
+    // cited_tweet defensive shape: handle = item.handle||item.author, text = item.quote||item.text
+    function renderKBCitedTweets(tws) {
+      if (!tws || !tws.length) return '';
+      var h = '<div class="kb-tweet-list">';
+      tws.forEach(function(t) {
+        var handle = t.handle || t.author || '';
+        var text = t.quote || t.text || '';
+        var hClean = String(handle).replace(/^@/, '');
+        var inner = '<span class="kb-tweet-handle">' + esc(handle) + '</span>'
+          + '<span class="kb-tweet-text">' + esc(text) + '</span>';
+        h += '<div class="kb-tweet-item">';
+        if (t.tweet_id && hClean) {
+          h += '<a href="https://x.com/' + encodeURIComponent(hClean) + '/status/' + encodeURIComponent(t.tweet_id) + '" target="_blank" rel="noopener">' + inner + '</a>';
+        } else if (t.tweet_id) {
+          h += '<a href="https://x.com/i/status/' + encodeURIComponent(t.tweet_id) + '" target="_blank" rel="noopener">' + inner + '</a>';
+        } else {
+          h += '<div>' + inner + '</div>';
+        }
+        if (t.engagement) h += '<span class="kb-tweet-eng">' + esc(t.engagement) + '</span>';
+        h += '</div>';
+      });
+      h += '</div>';
+      return h;
+    }
+
     function loadKBSignals(ca) {
       if (!ca) return;
       fetch('/api/kb-signals/' + encodeURIComponent(ca))
         .then(function(r) { return r.json(); })
         .then(function(sig) {
           if (!sig) return;
-          // 叙事:KB 验证版优先 → 填进 6551 叙事卡 + 「知智验证」标(loadNarrative 检 __kbNarr 跳过)
-          if (sig.narrative && sig.narrative.summary) {
-            window.__kbNarr = true;
-            var nc0 = document.getElementById('narrative-content');
-            if (nc0) {
-              var nh = '<div style="margin-bottom:8px"><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:600;background:rgba(153,69,255,0.15);color:var(--sol-purple)">知智验证</span></div>';
-              nh += '<div class="narrative-text">' + esc(sig.narrative.summary) + '</div>';
-              var tws = sig.narrative.cited_tweets || [];
-              if (tws.length) {
-                nh += '<div class="narrative-articles">';
-                tws.forEach(function(t) {
-                  nh += '<div class="narrative-article"><div style="flex:1;min-width:0"><a href="https://x.com/i/status/' + encodeURIComponent(t.tweet_id) + '" target="_blank" rel="noopener">' + esc(t.author) + ': ' + esc(t.text) + '</a></div><span class="source-tag">' + esc(t.engagement || '') + '</span></div>';
-                });
-                nh += '</div>';
-              }
-              nc0.innerHTML = nh;
-            }
-          }
+          // 这是 KB 信号币 → 抑制 6551/hero 叙事(KB 完善叙事取代),改用 KB 专属详情结构
+          window.__isKB = true;
+          var heroNarr = document.getElementById('narrative-section');
+          if (heroNarr) heroNarr.style.display = 'none';
+
           var sec = document.getElementById('kb-section');
           var content = document.getElementById('kb-content');
           if (!sec || !content) return;
-          var rows = '';
-          if (sig.conviction_rating) {
-            var rm = { '高信心': 'var(--positive)', '中信心': 'var(--sol-blue)', '关注': 'var(--accent)', '观望': 'var(--text-muted)' };
-            rows += '<div class="info-row"><span class="info-row-label">研究评级</span><span class="info-row-value">' + kbCardPill(esc(sig.conviction_rating), rm[sig.conviction_rating] || 'var(--text-muted)') + '</span></div>';
+
+          var html = '';
+
+          // ① 头部:市值 / 价格 / 24h 涨跌
+          var pc = sig.price_change_24h != null ? Number(sig.price_change_24h) : null;
+          var pcCl = pc != null ? (pc >= 0 ? 'green' : 'red') : '';
+          var pcStr = pc != null ? (pc >= 0 ? '+' : '') + pc.toFixed(2) + '%' : '—';
+          html += '<div class="kb-head">';
+          html += '<div class="kb-head-item"><div class="kb-head-label">市值</div><div class="kb-head-value">' + formatCompact(sig.market_cap) + '</div></div>';
+          html += '<div class="kb-head-item"><div class="kb-head-label">价格</div><div class="kb-head-value">' + formatPrice(sig.price_usd) + '</div></div>';
+          html += '<div class="kb-head-item"><div class="kb-head-label">24H</div><div class="kb-head-value ' + pcCl + '">' + pcStr + '</div></div>';
+          html += '</div>';
+
+          // ② 完善叙事(核心,醒目大字块)
+          var narr = sig.narrative || {};
+          html += '<div class="kb-narrative-block">';
+          html += '<div class="kb-narrative-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>完善叙事<span class="kb-verified-tag">知智验证</span></div>';
+          if (narr.status === 'pending') {
+            html += '<div class="kb-narrative-pending">叙事生成中,稍后刷新</div>';
+          } else if (narr.status === 'catalyst_unclear') {
+            html += '<div class="kb-narrative-pending">催化剂暂不明</div>';
+            if (narr.summary) html += '<div class="kb-narrative-text">' + esc(narr.summary) + '</div>';
+          } else {
+            if (narr.summary) html += '<div class="kb-narrative-text">' + esc(narr.summary) + '</div>';
+            if (narr.catalyst) html += '<div class="kb-narrative-catalyst"><span class="kb-narrative-catalyst-label">催化剂</span>' + esc(narr.catalyst) + '</div>';
+            html += renderKBCitedTweets(narr.cited_tweets);
+            if (!narr.summary && !narr.catalyst && !(narr.cited_tweets && narr.cited_tweets.length)) {
+              html += '<div class="kb-narrative-pending">叙事生成中,稍后刷新</div>';
+            }
           }
-          if (sig.cluster_risk && sig.cluster_risk.level && sig.cluster_risk.level !== 'none') {
+          html += '</div>';
+
+          // ③ 庄家集群(KB 币恒显示)
+          var plabel = { equal_amounts: '等额注资', treasury_funder: '私人 treasury', router_chain: 'router 链', cooldown: '冷却期', same_second_snipe: '同分钟狙击' };
+          html += '<div class="kb-block"><div class="kb-block-title">庄家集群</div>';
+          if (sig.onchain_cluster) {
+            var oc = sig.onchain_cluster;
+            html += '<div class="info-row"><span class="info-row-label">结论</span><span class="info-row-value" style="font-size:0.82rem">' + esc(oc.verdict || '—') + '</span></div>';
+            var pats = (oc.patterns_hit || []).map(function(p) { return plabel[p] || p; }).join(' · ');
+            if (pats) html += '<div class="info-row"><span class="info-row-label">命中 pattern</span><span class="info-row-value" style="font-size:0.8rem;color:var(--text-muted)">' + esc(pats) + '</span></div>';
+            if (oc.reason) html += '<div class="info-row"><span class="info-row-label">说明</span><span class="info-row-value" style="font-size:0.8rem;color:var(--text-muted)">' + esc(oc.reason) + '</span></div>';
+          } else if (sig.cluster_risk && sig.cluster_risk.level && sig.cluster_risk.level !== 'none') {
             var cm = { high: 'var(--negative)', med: 'var(--bn-yellow)', low: 'var(--text-muted)' };
             var cl = { high: '⚠ 高风险', med: '中', low: '低' }[sig.cluster_risk.level] || sig.cluster_risk.level;
-            rows += '<div class="info-row"><span class="info-row-label">庄家/集群风险</span><span class="info-row-value">' + kbCardPill(cl, cm[sig.cluster_risk.level] || 'var(--text-muted)') + '</span></div>';
-            if (sig.cluster_risk.reason) rows += '<div class="info-row"><span class="info-row-label">说明</span><span class="info-row-value" style="font-size:0.8rem;color:var(--text-muted)">' + esc(sig.cluster_risk.reason) + '</span></div>';
+            html += '<div class="info-row"><span class="info-row-label">集群风险</span><span class="info-row-value">' + kbCardPill(cl, cm[sig.cluster_risk.level] || 'var(--text-muted)') + '</span></div>';
+            if (sig.cluster_risk.reason) html += '<div class="info-row"><span class="info-row-label">说明</span><span class="info-row-value" style="font-size:0.8rem;color:var(--text-muted)">' + esc(sig.cluster_risk.reason) + '</span></div>';
+          } else {
+            html += '<div class="info-row"><span class="info-row-value" style="font-size:0.82rem;color:var(--text-muted)">未检出集群信号</span></div>';
           }
+          html += '</div>';
+
+          // ④ 聪明钱 24h
           if (sig.smart_money_24h && sig.smart_money_24h.wallet_count) {
-            rows += '<div class="info-row"><span class="info-row-label">聪明钱 (24h)</span><span class="info-row-value green">' + sig.smart_money_24h.wallet_count + ' 个已验证钱包买入</span></div>';
+            html += '<div class="kb-block"><div class="kb-block-title">聪明钱 (24H)</div>';
+            html += '<div class="info-row"><span class="info-row-value green">' + sig.smart_money_24h.wallet_count + ' 个已验证钱包买入</span></div>';
+            html += '</div>';
+          }
+
+          // ⑤ 信心评级 + 综合分
+          html += '<div class="kb-block"><div class="kb-block-title">信心评级 + 综合分</div>';
+          if (sig.conviction_rating) {
+            var rm = { '高信心': 'var(--positive)', '中信心': 'var(--sol-blue)', '关注': 'var(--accent)', '观望': 'var(--text-muted)' };
+            html += '<div class="info-row"><span class="info-row-label">研究评级</span><span class="info-row-value">' + kbCardPill(esc(sig.conviction_rating), rm[sig.conviction_rating] || 'var(--text-muted)') + '</span></div>';
+          }
+          if (sig.score != null) {
+            html += '<div class="info-row"><span class="info-row-label">综合分</span><span class="info-row-value">' + esc(sig.score) + '</span></div>';
           }
           if (sig.revival && sig.revival.status) {
             var rv = sig.revival.status === 'confirmed' ? '确认重启' : '观察中';
-            rows += '<div class="info-row"><span class="info-row-label">Revival</span><span class="info-row-value">' + rv + (sig.revival.drawdown_pct != null ? '（回撤 ' + Number(sig.revival.drawdown_pct).toFixed(0) + '%）' : '') + '</span></div>';
+            html += '<div class="info-row"><span class="info-row-label">Revival</span><span class="info-row-value">' + rv + (sig.revival.drawdown_pct != null ? '（回撤 ' + Number(sig.revival.drawdown_pct).toFixed(0) + '%）' : '') + '</span></div>';
           }
-          if (sig.onchain_cluster) {
-            var oc = sig.onchain_cluster;
-            var plabel = { equal_amounts: '等额注资', treasury_funder: '私人 treasury', router_chain: 'router 链', cooldown: '冷却期', same_second_snipe: '同分钟狙击' };
-            var pats = (oc.patterns_hit || []).map(function(p) { return plabel[p] || p; }).join(' · ');
-            rows += '<div class="info-row"><span class="info-row-label">链上协同钱包</span><span class="info-row-value" style="font-size:0.82rem">' + esc(oc.verdict || '') + '</span></div>';
-            if (pats) rows += '<div class="info-row"><span class="info-row-label">命中 pattern</span><span class="info-row-value" style="font-size:0.8rem;color:var(--text-muted)">' + esc(pats) + '</span></div>';
+          html += '</div>';
+
+          // ⑥ 分析依据 + 免责声明
+          var ev = sig.evidence || {};
+          var evParts = [];
+          if (ev.verdict_file) evParts.push('verdict: ' + ev.verdict_file);
+          if (ev.cluster_report) evParts.push('cluster 报告: ' + ev.cluster_report);
+          if (evParts.length || sig.disclaimer) {
+            html += '<div class="kb-block kb-block-foot">';
+            if (evParts.length) html += '<div class="info-row"><span class="info-row-label">分析依据</span><span class="info-row-value" style="font-size:0.78rem;color:var(--text-muted)">' + esc(evParts.join(' · ')) + '</span></div>';
+            if (sig.disclaimer) html += '<div class="info-row" style="border:none"><span class="info-row-value" style="font-size:0.72rem;color:var(--text-muted)">' + esc(sig.disclaimer) + '</span></div>';
+            html += '</div>';
           }
-          if (!rows) return;
-          if (sig.disclaimer) rows += '<div class="info-row" style="border:none"><span class="info-row-value" style="font-size:0.72rem;color:var(--text-muted)">' + esc(sig.disclaimer) + '</span></div>';
-          content.innerHTML = rows;
+
+          content.innerHTML = html;
           sec.style.display = '';
         })
         .catch(function() {});
