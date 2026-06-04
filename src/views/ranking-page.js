@@ -383,6 +383,10 @@ return `<!DOCTYPE html>
     /* KB signal pills + disclaimer */
     .kb-pill { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; border: 1px solid; background: oklch(20% 0.02 270 / 0.5); white-space: nowrap; }
     .kb-disclaimer { font-size: 0.75rem; color: var(--text-muted); padding: 8px 14px; border-bottom: 1px solid var(--border-subtle); }
+    .kb-tier-head { font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); padding: 12px 14px 6px; }
+    summary.kb-tier-head { cursor: pointer; user-select: none; }
+    .kb-tier-count { display: inline-block; margin-left: 6px; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+    .kb-tier-details { border-top: 1px solid var(--border-subtle); }
 
     /* Token name + logo */
     td .token-cell {
@@ -1085,30 +1089,65 @@ return `<!DOCTYPE html>
       var label = { high: '⚠ 高', med: '中', low: '低' }[c.level] || c.level;
       return kbPill(label, m[c.level] || '--text-muted');
     }
+    function kbSignalCell(row) {
+      // 知智信号 pill — 复用标准榜单的 KB 信号列逻辑(评级 > 庄家风险 > 聪明钱)
+      if (row.conviction_rating) return kbRatingPill(row.conviction_rating);
+      if (row.cluster_risk && row.cluster_risk.level && row.cluster_risk.level !== 'none') return kbClusterPill(row.cluster_risk);
+      if (row.smart_money_24h && row.smart_money_24h.wallet_count) return kbPill('聪明钱', '--positive');
+      var rev = row.revival;
+      if (rev && rev.status) return kbPill(rev.status === 'confirmed' ? 'Revival' : '观察中', rev.status === 'confirmed' ? '--sol-green' : '--text-secondary');
+      return '—';
+    }
+    function kbRowsTable(rows) {
+      // 复用标准榜单列:#, 代币, 符号, 市值, 24h 涨跌, 24h 交易量, 知智信号
+      var html = '<table><thead><tr><th>#</th><th>代币</th><th>符号</th><th class="num">市值</th><th class="num">24h 涨跌</th><th class="num">24h 交易量</th><th>知智信号</th></tr></thead><tbody>';
+      rows.forEach(function(row, i) {
+        var caStr = typeof row.ca === 'string' ? row.ca : '';
+        var nameStr = row.name || row.symbol || '未命名';   // 永不直显 CA
+        var symbolStr = typeof row.symbol === 'string' ? row.symbol : '—';
+        if (typeof nameStr === 'string' && nameStr.length > 200) nameStr = nameStr.slice(0, 200) + '…';
+        if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
+        var change = row.price_change_24h != null ? parseFloat(row.price_change_24h) : null;
+        var changeCl = change != null ? (change >= 0 ? 'positive' : 'negative') : '';
+        var changeStr = change != null ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '—';
+        var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+        html += '<tr class="clickable-row" data-token="' + esc(caStr) + '">';
+        html += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
+        html += '<td><div class="token-cell"><span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
+        html += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
+        html += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
+        html += '<td class="num ' + changeCl + '">' + changeStr + '</td>';
+        html += '<td class="num">' + formatCompact(row.vol_24h_usd) + '</td>';
+        html += '<td>' + kbSignalCell(row) + '</td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      return html;
+    }
     function renderKBSignals(list, rootId) {
       var root = document.getElementById(rootId);
       if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无 KB 信号</div>'; return; }
       var disc = (list[0] && list[0].disclaimer) ? list[0].disclaimer : '';
       var html = disc ? '<div class="kb-disclaimer">' + esc(disc) + '</div>' : '';
-      html += '<table><thead><tr><th>#</th><th>代币</th><th class="num">综合分</th><th>研究评级</th><th>庄家风险</th><th>聪明钱(24h)</th><th>Revival</th></tr></thead><tbody>';
-      list.forEach(function(row, i) {
-        var caStr = typeof row.ca === 'string' ? row.ca : '';
-        var nameStr = row.name || row.symbol || '未命名';   // 永不直显 CA
-        var sm = row.smart_money_24h, rev = row.revival;
-        var smStr = sm && sm.wallet_count ? kbPill(sm.wallet_count + ' 钱包买入', '--positive') : '—';
-        var revStr = rev && rev.status ? kbPill(rev.status === 'confirmed' ? '确认' : '观察中', rev.status === 'confirmed' ? '--sol-green' : '--text-secondary') : '—';
-        var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
-        html += '<tr class="clickable-row" data-token="' + esc(caStr) + '">';
-        html += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
-        html += '<td><div class="token-cell"><span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
-        html += '<td class="num">' + (row.score != null ? Number(row.score).toFixed(1) : '—') + '</td>';
-        html += '<td>' + kbRatingPill(row.conviction_rating) + '</td>';
-        html += '<td>' + kbClusterPill(row.cluster_risk) + '</td>';
-        html += '<td>' + smStr + '</td>';
-        html += '<td>' + revStr + '</td>';
-        html += '</tr>';
+      // 分层:深度分析(narrative 已生成 或 有研究评级)置顶,其余为雷达发现(可折叠)
+      var deep = [], radar = [];
+      list.forEach(function(row) {
+        var isDeep = (row.narrative && row.narrative.status === 'generated') || !!row.conviction_rating;
+        (isDeep ? deep : radar).push(row);
       });
-      html += '</tbody></table>';
+      var byScore = function(a, b) { return (Number(b.score) || 0) - (Number(a.score) || 0); };
+      deep.sort(byScore);
+      radar.sort(byScore);
+      if (deep.length) {
+        html += '<div class="kb-tier-head">🔬 KB 深度分析 <span class="kb-tier-count">' + deep.length + '</span></div>';
+        html += kbRowsTable(deep);
+      }
+      if (radar.length) {
+        html += '<details class="kb-tier-details"' + (deep.length ? '' : ' open') + '>';
+        html += '<summary class="kb-tier-head">📡 雷达发现 <span class="kb-tier-count">' + radar.length + '</span></summary>';
+        html += kbRowsTable(radar);
+        html += '</details>';
+      }
       root.innerHTML = html;
     }
     function formatSignalTime(ms) {
