@@ -46,7 +46,8 @@ return `<!DOCTYPE html>
   ${gaSnippet()}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/glass-system.css">
   <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"><\/script>
   <style>
     /* Design tokens (shared with welcome + ranking) */
@@ -85,7 +86,7 @@ return `<!DOCTYPE html>
     html { height: 100%; }
     body {
       min-height: 100%;
-      font-family: 'Exo 2', system-ui, sans-serif;
+      font-family: var(--font-ui);
       background: var(--bg-primary);
       color: var(--text-primary);
       overflow-x: hidden;
@@ -161,7 +162,7 @@ return `<!DOCTYPE html>
     .back-btn {
       display: inline-flex; align-items: center; gap: 0.5rem;
       padding: 0.5rem 1.25rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.8125rem; font-weight: 600;
       color: var(--text-secondary);
       text-decoration: none;
@@ -290,7 +291,7 @@ return `<!DOCTYPE html>
       line-height: 1.2;
     }
     .symbol-badge {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.75rem;
       font-weight: 700;
       color: var(--sol-blue);
@@ -302,7 +303,7 @@ return `<!DOCTYPE html>
     }
     .chain-badge {
       display: inline-flex; align-items: center; gap: 0.3rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.6875rem;
       font-weight: 600;
       color: var(--sol-green);
@@ -324,7 +325,7 @@ return `<!DOCTYPE html>
       letter-spacing: -0.02em;
     }
     .token-change {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 1rem; font-weight: 700;
       padding: 0.2em 0.75em;
       border-radius: 8px;
@@ -376,7 +377,7 @@ return `<!DOCTYPE html>
       flex-shrink: 0;
     }
     .contract-addr {
-      font-family: 'Fira Code', 'Courier New', monospace;
+      font-family: var(--font-mono);
       font-size: 0.8rem;
       color: var(--sol-blue);
       white-space: nowrap;
@@ -386,7 +387,7 @@ return `<!DOCTYPE html>
     }
     .copy-btn {
       padding: 0.35rem 0.65rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.6875rem; font-weight: 600;
       color: var(--text-secondary);
       background: rgba(153,69,255,0.08);
@@ -415,7 +416,7 @@ return `<!DOCTYPE html>
     .ext-link {
       display: inline-flex; align-items: center; gap: 0.4rem;
       padding: 0.75rem 1rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.8rem; font-weight: 600;
       color: var(--text-secondary);
       text-decoration: none;
@@ -481,7 +482,7 @@ return `<!DOCTYPE html>
       margin-bottom: 0.5rem;
     }
     .stat-label {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.6875rem;
       font-weight: 600;
       text-transform: uppercase;
@@ -565,7 +566,7 @@ return `<!DOCTYPE html>
       padding: 1rem 1.125rem;
     }
     .info-panel-title {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.6875rem;
       font-weight: 700;
       color: var(--text-muted);
@@ -649,7 +650,7 @@ return `<!DOCTYPE html>
       padding: 2px;
     }
     .chart-intervals button {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.6875rem; font-weight: 600;
       padding: 0.3rem 0.55rem;
       border-radius: 6px;
@@ -672,7 +673,7 @@ return `<!DOCTYPE html>
     .chart-ohlcv-bar {
       display: flex; align-items: center; gap: 0.75rem;
       padding: 0.5rem 1rem 0.25rem;
-      font-family: 'Exo 2', monospace;
+      font-family: var(--font-ui);
       font-size: 0.6875rem;
       flex-wrap: wrap;
       min-height: 1.75rem;
@@ -706,7 +707,7 @@ return `<!DOCTYPE html>
     .chart-ohlcv-bar .ohlcv-change.down { color: #ff4d6a; background: rgba(255,77,106,0.1); }
     .chart-vol-label {
       position: absolute; bottom: 72px; left: 16px;
-      font-family: 'Exo 2', monospace;
+      font-family: var(--font-ui);
       font-size: 0.625rem;
       color: var(--text-muted);
       pointer-events: none;
@@ -775,7 +776,7 @@ return `<!DOCTYPE html>
     }
     .narrative-title svg { flex-shrink: 0; }
     .narrative-title .ai-tag {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.5625rem;
       font-weight: 700;
       color: var(--sol-purple);
@@ -902,7 +903,7 @@ return `<!DOCTYPE html>
       text-align: center;
     }
     .narrative-metric-value {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.9375rem;
       font-weight: 700;
       color: var(--text-primary);
@@ -984,7 +985,7 @@ return `<!DOCTYPE html>
     }
     .tweets-title svg { flex-shrink: 0; }
     .tweets-title .update-tag {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.625rem;
       font-weight: 600;
       color: var(--sol-blue);
@@ -1229,7 +1230,7 @@ return `<!DOCTYPE html>
     }
     .kb-narrative-head svg { width: 16px; height: 16px; flex-shrink: 0; }
     .kb-verified-tag {
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.5625rem;
       font-weight: 700;
       color: var(--sol-purple);
@@ -1703,7 +1704,7 @@ return `<!DOCTYPE html>
         layout: {
           background: { type: 'solid', color: 'transparent' },
           textColor: 'rgba(138,132,160,0.8)',
-          fontFamily: "'Exo 2', system-ui, sans-serif",
+          fontFamily: "system-ui, 'PingFang SC', 'Helvetica Neue', sans-serif",
           fontSize: 11,
         },
         grid: {
