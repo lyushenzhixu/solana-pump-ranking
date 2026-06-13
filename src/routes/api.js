@@ -319,4 +319,18 @@ router.get('/kline/:pairAddress', cache(30, 60), async (req, res) => {
   res.json(data);
 });
 
+// ── GET /paper — 模拟盘战绩(summary + trades) ──
+router.get('/paper', async (_req, res) => {
+  try {
+    const { data: summary, error: e1 } = await supabase.from('paper_summary').select('*').eq('id', 'main').single();
+    // PGRST116 = single() 0 行(表空,非错误);其它 error 才抛,避免掩盖 SQL/权限问题(对齐 /ranking)
+    if (e1 && e1.code !== 'PGRST116') throw e1;
+    const { data: trades, error: e2 } = await supabase.from('paper_trades').select('*').order('opened_at', { ascending: false });
+    if (e2) throw e2;
+    res.json({ summary: summary || null, trades: trades || [] });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+});
+
 export default router;
