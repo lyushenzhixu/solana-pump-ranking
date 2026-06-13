@@ -1074,6 +1074,27 @@ return `<!DOCTYPE html>
       var str = String(s);
       return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
+    // 术语表(client 镜像 _shared/signal-glossary.js GLOSSARY,server 模块无法在模板串内 runtime import)
+    var ZL_GLOSSARY = {
+      'AI 叙事': 'AI 对该代币社区叙事/题材的归纳分析,非投资建议。',
+      'KB 信号': '知智 KB(链上分析知识库)对该币的判断标签,来源 /api/kb-signals。',
+      'CONVICTION': 'KB 最高档位:多维证据齐备的高确信信号(5-10% 仓位级别)。',
+      'SWING': 'KB 波段档:satisfies 部分证据,适合波段而非重仓(1-3% 级别)。',
+      'WATCH': 'KB 观察档:有苗头但证据不足,先观察不入场。',
+      'SMALL': 'KB 小仓档:可小仓试探(0.5-1% 级别)。',
+      'PASS': 'KB 跳过:不构成入场依据。',
+      'Top10%': '前 10 大持有地址占总供应比例,越高越集中(庄控/砸盘风险)。',
+      '聪明钱': '历史上有可验证盈利轨迹的链上钱包;其建仓常作为早期信号之一。'
+    };
+    // 把术语包成可 hover 的 .zl-term;内部转义 label(复用 esc),无定义则返回裸转义文本。语义对齐 server termHtml。
+    function zlTermHtml(label, key) {
+      var safe = esc(label);
+      var def = ZL_GLOSSARY[key || label];
+      if (!def) return safe;
+      var defSafe = esc(def);
+      return '<span class="zl-term" tabindex="0" aria-label="' + safe + ':' + defSafe + '">' + safe +
+        '<span class="zl-pop" role="tooltip">' + defSafe + '</span></span>';
+    }
     function rankClass(i) {
       if (i === 0) return 'rank gold';
       if (i === 1) return 'rank silver';
@@ -1154,8 +1175,8 @@ return `<!DOCTYPE html>
       // 首帧 / 结构未初始化:全量构建表格(含 thead)
       if (!root.__inited || !root.querySelector('table.zl-data-table tbody')) {
         var headers = ['#', '代币', '符号', '市值', '24h 交易量', '24h 涨跌', '持币地址'];
-        if (isPump) { headers.push('Top10%'); }
-        headers.push('知智信号');
+        if (isPump) { headers.push(zlTermHtml('Top10%', 'Top10%')); }
+        headers.push(zlTermHtml('知智信号', 'KB 信号'));
         var numColIdx = { 3: true, 4: true, 5: true, 6: true };
         if (isPump) numColIdx[7] = true;
         // 可排序列 → 数据字段映射(列序号对 pump/zhilabs 一致)
@@ -1463,7 +1484,11 @@ return `<!DOCTYPE html>
       }
     }
     function kbPill(text, colorVar) {
-      return '<span class="kb-pill" style="color:var(' + colorVar + ');border-color:var(' + colorVar + ')">' + esc(text) + '</span>';
+      return kbPillRaw(zlTermHtml(text), colorVar);
+    }
+    // pre-built(已转义/含 .zl-term)inner html 的 pill 变体,避免 zlTermHtml 输出被二次转义
+    function kbPillRaw(innerHtml, colorVar) {
+      return '<span class="kb-pill" style="color:var(' + colorVar + ');border-color:var(' + colorVar + ')">' + innerHtml + '</span>';
     }
     function kbRatingPill(r) {
       if (!r) return '—';
@@ -1769,6 +1794,23 @@ return `<!DOCTYPE html>
       var ss = String(d.getSeconds()).padStart(2, '0');
       el.textContent = '同步 ' + hh + ':' + mm + ':' + ss;
     }
+    // 单例 .zl-toast「已复制」浮层:append 一次,复用 + 重置计时器
+    var _zlToastTimer = null;
+    function showToast(msg) {
+      var t = document.getElementById('zl-copy-toast');
+      if (!t) {
+        t = document.createElement('div');
+        t.id = 'zl-copy-toast';
+        t.className = 'zl-toast';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg || '已复制';
+      // reflow 后加 show,确保过渡每次都触发
+      void t.offsetWidth;
+      t.classList.add('show');
+      if (_zlToastTimer) clearTimeout(_zlToastTimer);
+      _zlToastTimer = setTimeout(function() { t.classList.remove('show'); }, 1500);
+    }
     function showCopied(btn) {
       btn.classList.add('copied');
       btn.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>';
@@ -1785,17 +1827,19 @@ return `<!DOCTYPE html>
         var ca = btn.getAttribute('data-ca');
         if (!ca) return;
         navigator.clipboard.writeText(ca).then(function() {
-          showCopied(btn);
+          showCopied(btn); showToast();
         }).catch(function() {
           var ta = document.createElement('textarea');
           ta.value = ca; ta.style.position = 'fixed'; ta.style.opacity = '0';
           document.body.appendChild(ta); ta.select();
           try { document.execCommand('copy'); } catch(ex) {}
           document.body.removeChild(ta);
-          showCopied(btn);
+          showCopied(btn); showToast();
         });
         return;
       }
+      // 术语 popover 触发器(.zl-term)在可点击行内:click 不应导航到详情页
+      if (e.target.closest('.zl-term')) { e.stopPropagation(); return; }
       var row = e.target.closest('.clickable-row');
       if (row) {
         var token = row.getAttribute('data-token');
