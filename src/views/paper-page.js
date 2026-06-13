@@ -8,7 +8,11 @@ export function renderPaperPage({ summary, trades }) {
   const pct = (v) => (v == null ? '—' : `${v > 0 ? '+' : ''}${Number(v).toFixed(1)}%`);
   const color = (v) => (v == null ? '#888' : v >= 0 ? '#3fb950' : '#f85149');
   const badge = (src) => `<span class="badge">${esc(src)}</span>`;
-  const fmtMc = (v) => (v == null ? '—' : `$${(v / 1000).toFixed(0)}K`);
+  const fmtMc = (v) => {
+    if (v == null) return '—';
+    if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;   // ≥$1M 显示为 $X.XM,读起来更顺
+    return `$${(v / 1000).toFixed(0)}K`;
+  };
 
   const card = (label, val, c) => `<div class="card"><div class="lbl">${label}</div><div class="val" style="color:${c||'#eee'}">${val}</div></div>`;
 
