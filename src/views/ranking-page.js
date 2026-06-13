@@ -291,6 +291,48 @@ return `<!DOCTYPE html>
       border-radius: 0 8px 8px 0;
     }
 
+    /* === SEARCH BAR === */
+    .search-bar {
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+    .table-search {
+      flex: 1; max-width: 320px;
+      padding: 0.5rem 0.875rem;
+      font-family: var(--font-ui);
+      font-size: 0.8125rem;
+      color: var(--text-primary);
+      background: oklch(18% 0.02 270 / 0.6);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      transition: border-color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+    }
+    .table-search::placeholder { color: var(--text-muted); }
+    .table-search:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 12px oklch(55% 0.2 290 / 0.12);
+    }
+    .search-hint {
+      font-size: 0.75rem; color: var(--text-muted);
+      font-variant-numeric: tabular-nums;
+    }
+    /* Sortable header cells */
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.2s var(--ease-out);
+    }
+    th.sortable:hover { color: var(--text-secondary); }
+    th.sortable .sort-arrow {
+      display: inline-block;
+      margin-left: 0.25rem;
+      font-size: 0.7em;
+      opacity: 0.35;
+    }
+    th.sortable.sort-active { color: var(--accent); }
+    th.sortable.sort-active .sort-arrow { opacity: 1; color: var(--accent); }
+
     /* === TABLE CONTAINER === */
     .table-card {
       background: var(--bg-card);
@@ -1003,6 +1045,11 @@ return `<!DOCTYPE html>
     </div>
     <p class="desc" id="desc">已成功发射、上线 &lt; 10 天、市值 &gt; 100K，需有图片，insider ≤50%，Top10 持仓 ≤30%，按 24h 交易量排序</p>
 
+    <div class="search-bar" id="searchBar">
+      <input type="text" id="tableSearch" class="table-search" placeholder="搜索名称 / 符号 / CA…" autocomplete="off" spellcheck="false">
+      <span class="search-hint" id="searchHint"></span>
+    </div>
+
     <div class="table-card">
       <div id="panel-pump" class="panel active"><div id="root-pump"><div class="loading-text">加载中</div></div></div>
       <div id="panel-zhilabs" class="panel"><div id="root-zhilabs"><div class="loading-text">加载中</div></div></div>
@@ -1044,8 +1091,10 @@ return `<!DOCTYPE html>
       if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
       var caStr = typeof row.token === 'string' ? row.token : '';
       var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+      // # 列显示官方发现排名(serverRank,排序/筛选后仍为真实排名);缺失则回退到循环序号
+      var rank = (row.serverRank != null && !Number.isNaN(Number(row.serverRank))) ? Number(row.serverRank) : (i + 1);
       var html = '';
-      html += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
+      html += '<td><span class="' + rankClass(rank - 1) + '">' + rank + '</span></td>';
       html += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
       html += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
       html += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
@@ -1109,7 +1158,26 @@ return `<!DOCTYPE html>
         headers.push('知智信号');
         var numColIdx = { 3: true, 4: true, 5: true, 6: true };
         if (isPump) numColIdx[7] = true;
-        var thead = '<thead><tr>' + headers.map(function(h, idx){ return '<th' + (numColIdx[idx] ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead>';
+        // 可排序列 → 数据字段映射(列序号对 pump/zhilabs 一致)
+        var sortKeyByIdx = { 3: 'market_cap', 4: 'tx_volume_u_24h', 5: 'price_change_24h', 6: 'holders' };
+        var curSort = root.__sort || null;
+        var thead = '<thead><tr>' + headers.map(function(h, idx){
+          var cls = numColIdx[idx] ? 'num' : '';
+          var sk = sortKeyByIdx[idx];
+          var attr = '';
+          var arrow = '';
+          if (sk) {
+            cls += (cls ? ' ' : '') + 'sortable';
+            attr = ' data-sort="' + sk + '"';
+            if (curSort && curSort.key === sk) {
+              cls += ' sort-active';
+              arrow = '<span class="sort-arrow">' + (curSort.dir === 'asc' ? '▲' : '▼') + '</span>';
+            } else {
+              arrow = '<span class="sort-arrow">▼</span>';
+            }
+          }
+          return '<th' + (cls ? ' class="' + cls + '"' : '') + attr + '>' + h + arrow + '</th>';
+        }).join('') + '</tr></thead>';
         var tbody = '<tbody>';
         next.forEach(function(n, i) {
           tbody += '<tr class="clickable-row" data-key="' + esc(n.key) + '" data-token="' + esc(n.key) + '">' + rankRowInnerHtml(n.row, i, isPump) + '</tr>';
@@ -1213,6 +1281,186 @@ return `<!DOCTYPE html>
           tr.style.transform = '';
         });
       });
+    }
+    // ====== 排序 / 搜索 / 刷新保状态 / inspect 软暂停 ======
+    // 每个 keyed 表 root 维护:root.__raw(带 serverRank 的原始全量)/ root.__sort {key,dir} / root.__q(搜索词)
+    // root.__pendingRaw(软暂停期间暂存的新数据)
+    var SORTABLE_ROOTS = { 'root-pump': true, 'root-zhilabs': true };
+    // 数字字段提取(用于排序);非数字一律视为最小
+    function sortNumVal(row, key) {
+      var v = row ? row[key] : null;
+      if (v == null || v === '') return null;
+      var n = parseFloat(v);
+      return Number.isNaN(n) ? null : n;
+    }
+    // 把新到的列表附 serverRank(发现榜真实排名)+ 缓存到 root.__raw,再走 applyView
+    function deliverData(list, rootId) {
+      var root = document.getElementById(rootId);
+      if (!root) return;
+      if (!SORTABLE_ROOTS[rootId]) { renderTable(list, rootId); return; }
+      var arr = Array.isArray(list) ? list : [];
+      // serverRank = 服务端原始顺序(发现排名),在任何排序/筛选前打标
+      var raw = arr.map(function(row, idx) {
+        // 复制一层避免污染调用方对象;serverRank 一旦确定即随该 token
+        var copy = row;
+        if (row && typeof row === 'object') {
+          copy = {};
+          for (var k in row) { if (Object.prototype.hasOwnProperty.call(row, k)) copy[k] = row[k]; }
+          copy.serverRank = idx + 1;
+        }
+        return copy;
+      });
+      // inspect 软暂停:用户正在查看时,暂存新数据,等交互结束再应用,避免行被抽走
+      if (isInspecting(root)) {
+        root.__pendingRaw = raw;
+        return;
+      }
+      root.__raw = raw;
+      root.__pendingRaw = null;
+      applyView(rootId);
+    }
+    // 用户是否正在查看该表:有行 hover / popover focus-within / 搜索框聚焦
+    function isInspecting(root) {
+      if (!root) return false;
+      try {
+        if (root.querySelector('tbody tr:hover')) return true;
+        if (root.querySelector('.zl-term:focus-within, .zl-popover:focus-within')) return true;
+      } catch (e) {}
+      var si = document.getElementById('tableSearch');
+      if (si && document.activeElement === si && (currentTab === 'pump' || currentTab === 'zhilabs')) {
+        // 仅当搜索框对应当前激活的可排序表时算 inspecting
+        if (('root-' + currentTab) === root.id) return true;
+      }
+      return false;
+    }
+    // 交互结束后冲刷暂存数据
+    function flushPending(rootId) {
+      var root = document.getElementById(rootId);
+      if (!root || !root.__pendingRaw) return;
+      if (isInspecting(root)) return;
+      root.__raw = root.__pendingRaw;
+      root.__pendingRaw = null;
+      applyView(rootId);
+    }
+    // 读 __raw → 应用搜索 + 排序 → renderTable(viewList);保留 scrollY
+    function applyView(rootId) {
+      var root = document.getElementById(rootId);
+      if (!root) return;
+      var raw = root.__raw || [];
+      var q = (root.__q || '').trim().toLowerCase();
+      var view = raw;
+      if (q) {
+        view = raw.filter(function(row) {
+          if (!row) return false;
+          var name = typeof row.name === 'string' ? row.name : '';
+          var symbol = typeof row.symbol === 'string' ? row.symbol : '';
+          var token = typeof row.token === 'string' ? row.token : '';
+          return (name.toLowerCase().indexOf(q) >= 0)
+            || (symbol.toLowerCase().indexOf(q) >= 0)
+            || (token.toLowerCase().indexOf(q) >= 0);
+        });
+      }
+      var sort = root.__sort;
+      if (sort && sort.key) {
+        var mul = sort.dir === 'asc' ? 1 : -1;
+        view = view.slice().sort(function(a, b) {
+          var av = sortNumVal(a, sort.key);
+          var bv = sortNumVal(b, sort.key);
+          if (av == null && bv == null) return 0;
+          if (av == null) return 1;   // 缺值永远沉底
+          if (bv == null) return -1;
+          if (av === bv) return (a.serverRank || 0) - (b.serverRank || 0); // 稳定:同值按发现排名
+          return (av - bv) * mul;
+        });
+      } else {
+        // 默认:还原服务端发现顺序(serverRank asc)
+        view = view.slice().sort(function(a, b) { return (a.serverRank || 0) - (b.serverRank || 0); });
+      }
+      var sy = window.scrollY;
+      renderTable(view, rootId);
+      syncSortHeaders(root);
+      // renderTable 可能改变文档高度,恢复滚动位置避免页面跳动
+      if (window.scrollY !== sy) window.scrollTo(0, sy);
+    }
+    // 同步 thead 排序指示器(thead 仅首帧构建,后续增量更新不重建,故单独刷新)
+    function syncSortHeaders(root) {
+      var ths = root.querySelectorAll('th.sortable');
+      var sort = root.__sort;
+      ths.forEach(function(th) {
+        var key = th.getAttribute('data-sort');
+        var arrow = th.querySelector('.sort-arrow');
+        if (sort && sort.key === key) {
+          th.classList.add('sort-active');
+          if (arrow) arrow.textContent = sort.dir === 'asc' ? '▲' : '▼';
+        } else {
+          th.classList.remove('sort-active');
+          if (arrow) arrow.textContent = '▼';
+        }
+      });
+    }
+    // thead 点击排序(委托到 table-card)
+    document.querySelector('.table-card').addEventListener('click', function(e) {
+      var th = e.target.closest('th.sortable');
+      if (!th) return;
+      var root = th.closest('[id^="root-"]');
+      if (!root || !SORTABLE_ROOTS[root.id]) return;
+      var key = th.getAttribute('data-sort');
+      if (!key) return;
+      var cur = root.__sort;
+      if (cur && cur.key === key) {
+        root.__sort = { key: key, dir: cur.dir === 'asc' ? 'desc' : 'asc' };
+      } else {
+        root.__sort = { key: key, dir: 'desc' }; // 首次点击默认降序
+      }
+      applyView(root.id);
+    });
+    // 软暂停:行 mouseleave / popover blur 后冲刷暂存
+    document.querySelector('.table-card').addEventListener('mouseleave', function() {
+      ['root-pump', 'root-zhilabs'].forEach(flushPending);
+    }, true);
+    document.querySelector('.table-card').addEventListener('focusout', function() {
+      // 等浏览器把 activeElement 转移完再判断
+      setTimeout(function() { ['root-pump', 'root-zhilabs'].forEach(flushPending); }, 0);
+    });
+    // 搜索输入
+    (function() {
+      var si = document.getElementById('tableSearch');
+      if (!si) return;
+      si.addEventListener('input', function() {
+        if (currentTab !== 'pump' && currentTab !== 'zhilabs') return;
+        var rootId = 'root-' + currentTab;
+        var root = document.getElementById(rootId);
+        if (!root) return;
+        root.__q = si.value || '';
+        applyView(rootId);
+        updateSearchHint(rootId);
+      });
+      si.addEventListener('blur', function() {
+        setTimeout(function() { ['root-pump', 'root-zhilabs'].forEach(flushPending); }, 0);
+      });
+    })();
+    function updateSearchHint(rootId) {
+      var root = document.getElementById(rootId);
+      var hint = document.getElementById('searchHint');
+      if (!root || !hint) return;
+      var raw = root.__raw || [];
+      var q = (root.__q || '').trim();
+      if (!q) { hint.textContent = ''; return; }
+      var shown = root.querySelectorAll('tbody tr').length;
+      hint.textContent = shown + ' / ' + raw.length;
+    }
+    // 切 tab 时:搜索框反映该表当前搜索词,显隐 search-bar
+    function syncSearchBarForTab(tab) {
+      var bar = document.getElementById('searchBar');
+      var si = document.getElementById('tableSearch');
+      if (!bar) return;
+      var sortable = (tab === 'pump' || tab === 'zhilabs');
+      bar.style.display = sortable ? 'flex' : 'none';
+      if (sortable && si) {
+        var root = document.getElementById('root-' + tab);
+        si.value = (root && root.__q) ? root.__q : '';
+        updateSearchHint('root-' + tab);
+      }
     }
     function kbPill(text, colorVar) {
       return '<span class="kb-pill" style="color:var(' + colorVar + ');border-color:var(' + colorVar + ')">' + esc(text) + '</span>';
@@ -1495,7 +1743,7 @@ return `<!DOCTYPE html>
       }
       var url = panelKey === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
       return fetchJsonOrThrow(url).then(function(list) {
-        if (Array.isArray(list)) renderTable(list, rootId);
+        if (Array.isArray(list)) deliverData(list, rootId);
         else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
       }).catch(function(e) {
         rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
@@ -1606,6 +1854,7 @@ return `<!DOCTYPE html>
         activatePanel(tab);
       }
       updateDesc(tab, currentSubTab);
+      syncSearchBarForTab(tab);
       var btnText = tab === 'pump' ? '更新 Pump 榜单' : (tab === 'zhilabs' ? '更新 zhizhilabs 精选' : (tab === 'kb' ? 'KB 信号' : '刷新数据'));
       document.getElementById('updateBtn').querySelector('span').textContent = btnText;
       var narrativeBtn = document.getElementById('refreshNarrativeBtn');
@@ -1749,12 +1998,25 @@ return `<!DOCTYPE html>
         fetch('/api/ranking/zhilabs').then(function(r){ return r.ok ? r.json() : r.text().then(function(t){ throw new Error(t); }); })
       ]).then(function(results) {
         var r0 = results[0], r1 = results[1];
-        if (r0.status === 'fulfilled' && Array.isArray(r0.value)) renderTable(r0.value, 'root-pump');
+        if (r0.status === 'fulfilled' && Array.isArray(r0.value)) deliverData(r0.value, 'root-pump');
         else document.getElementById('root-pump').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">Pump 榜单: ' + (r0.status === 'rejected' && r0.reason ? (r0.reason.message || r0.reason) : '暂无数据') + '</div>';
-        if (r1.status === 'fulfilled' && Array.isArray(r1.value)) renderTable(r1.value, 'root-zhilabs');
+        if (r1.status === 'fulfilled' && Array.isArray(r1.value)) deliverData(r1.value, 'root-zhilabs');
         else document.getElementById('root-zhilabs').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">zhizhilabs 精选: ' + (r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</div>';
         setLastSync(new Date());
       });
+
+    // 默认 pump tab 的搜索栏显隐初始化
+    syncSearchBarForTab('pump');
+
+    // #kb hash 激活 — /ranking#kb 直达 知智 KB 信号 tab(同 click 代码路径)
+    var KNOWN_TABS = { pump: true, zhilabs: true, binance: true, kb: true };
+    function applyHash() {
+      var h = (location.hash || '').replace(/^#/, '');
+      if (h === 'kb') { switchTab('kb'); }
+      else if (KNOWN_TABS[h] && h !== currentTab) { switchTab(h); }
+    }
+    if ((location.hash || '') === '#kb') applyHash();
+    window.addEventListener('hashchange', applyHash);
   </script>
 </body>
 </html>
