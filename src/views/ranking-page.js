@@ -965,6 +965,7 @@ return `<!DOCTYPE html>
     <div class="page-header">
       <a href="/" class="back-home">← 返回首页</a>
       <h1 class="page-title">⟡ Zhizhi Labs 榜单</h1>
+      <a href="/paper" class="back-home">模拟盘战绩 →</a>
     </div>
 
     <div class="scheduler-bar" id="schedulerBar">

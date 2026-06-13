@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { supabase } from '../supabase.js';
 import { buildRankingPage } from '../views/ranking-page.js';
 import { buildTokenDetailPage } from '../views/token-detail-page.js';
+import { renderPaperPage } from '../views/paper-page.js';
 import { buildSitemap } from '../seo.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -91,6 +92,19 @@ router.get('/token/:address', async (req, res) => {
   } catch (_) { /* 降级为默认 SEO 信息 */ }
   if (!tokenInfo.token) tokenInfo.token = address;
   res.type('html').send(buildTokenDetailPage(tokenInfo));
+});
+
+// ── 模拟盘战绩页 /paper ──
+router.get('/paper', async (_req, res) => {
+  try {
+    const { data: summary, error: e1 } = await supabase.from('paper_summary').select('*').eq('id', 'main').single();
+    if (e1 && e1.code !== 'PGRST116') throw e1;   // 表空不算错;其它 error 抛,不掩盖 SQL/权限问题
+    const { data: trades, error: e2 } = await supabase.from('paper_trades').select('*').order('opened_at', { ascending: false });
+    if (e2) throw e2;
+    res.send(renderPaperPage({ summary, trades: trades || [] }));
+  } catch (e) {
+    res.status(500).send(`paper page error: ${e}`);
+  }
 });
 
 export default router;
