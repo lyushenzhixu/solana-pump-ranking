@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="view-transition" content="same-origin">
+<link rel="stylesheet" href="/styles/glass-system.css">
 <title>Zhizhi Labs | 用 AI 技术探索 Crypto 机遇</title>
 <meta name="description" content="Zhizhi Labs (zhizhilabs.com) — 用 AI 技术探索 Crypto 机遇。">
 <link rel="canonical" href="https://zhizhilabs.com/">
@@ -73,19 +75,46 @@
 }
 
 html, body {
-  width: 100%; height: 100%;
-  overflow: hidden;
+  width: 100%;
+  min-height: 100%;
   background: var(--surface-0);
   font-family: 'Orbitron', sans-serif;
 }
 
+/* 顶部导航:浮在 hero 视觉之上,可点击 */
+.zl-nav {
+  position: relative;
+  z-index: 60;
+  background: oklch(10% 0.02 270 / 0.4);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid oklch(55% 0.15 290 / 0.12);
+}
+
 .universe {
-  position: fixed;
-  inset: 0;
+  position: relative;
+  min-height: calc(100vh - 56px);
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   background: radial-gradient(ellipse at 50% 50%, var(--surface-1) 0%, var(--surface-0) 50%, var(--surface-0) 100%);
+}
+
+/* hero 内的全屏背景装饰层钉在 hero 内部,不随页面滚动溢出 */
+.universe .stars,
+.universe .nebula,
+.universe .warp-grid,
+.universe .shadow-entity,
+.universe .distortion-orb,
+.universe .light-streak,
+.universe .light-streak-2,
+.universe .brand-logos,
+.universe .glyphs,
+.universe .vignette,
+.universe .scanlines,
+.universe .noise {
+  position: absolute;
 }
 
 /* === STARS === */
@@ -551,6 +580,7 @@ html, body {
   letter-spacing: 6px;
   text-transform: uppercase;
   color: var(--text-primary);
+  text-decoration: none;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -912,9 +942,66 @@ html, body {
   0%, 100% { opacity: 0.2; width: 1px; }
   50% { opacity: 0.5; width: 2px; }
 }
+
+/* === VALUE PROP === */
+.value-prop {
+  font-family: var(--font-ui);
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-top: 20px;
+  max-width: 40rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+@media (max-width: 560px) {
+  .value-prop { font-size: 15px; }
+}
+
+/* === LIVE TOP-3 HUD === */
+#zl-hud { font-family: var(--font-ui); }
+.hud-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 20px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.hud-row + .hud-row { border-top: 1px solid oklch(55% 0.04 290 / 0.12); }
+.hud-row .hud-rank { color: var(--text-muted); width: 30px; flex: 0 0 auto; }
+.hud-row .hud-name { flex: 1 1 auto; text-align: left; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hud-row .hud-name .hud-sym { color: var(--text-muted); font-size: 12px; margin-left: 6px; }
+.hud-row .hud-vol { flex: 0 0 auto; width: 88px; text-align: right; color: var(--text-secondary); }
+.hud-row .hud-chg { flex: 0 0 auto; width: 64px; text-align: right; }
+.hud-row .hud-sig { flex: 0 0 auto; width: 64px; text-align: right; color: var(--text-muted); font-size: 12px; }
+.hud-fallback {
+  padding: 18px 22px;
+  text-align: center;
+  font-family: var(--font-ui);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.hud-fallback a {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 18px;
+  border-radius: var(--radius-full, 9999px);
+  border: 1px solid var(--accent);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 13px;
+}
+.hud-fallback a:hover { background: oklch(24% 0.03 270 / 0.6); }
+@media (max-width: 560px) {
+  .hud-row .hud-vol { width: 70px; }
+  .hud-row .hud-sig { display: none; }
+}
 </style>
 </head>
 <body>
+
+<nav class="zl-nav"><a class="zl-brand" href="/"><span style="width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--sol-purple),var(--sol-green))"></span>Zhizhi Labs</a><span class="zl-links"><a href="/ranking">发现榜</a><a href="/ranking#kb">KB 信号</a><a href="/paper">模拟盘</a><a aria-disabled="true" title="即将上线">研究</a></span></nav>
 
 <div class="universe">
   <!-- Background layers -->
@@ -1055,6 +1142,7 @@ html, body {
       <div class="pre-title">⟡ ZHIZHILABS ⟡</div>
       <h1 class="main-title" data-text="Zhizhi Labs">Zhizhi Labs</h1>
       <p class="sub-title">BEYOND THE VISIBLE SPECTRUM</p>
+      <p class="value-prop">实时发现 Solana meme 新币 —— 按交易量、持仓、聪明钱与 AI 叙事信号交叉排序。</p>
     </div>
 
     <div class="btn-container">
@@ -1066,14 +1154,20 @@ html, body {
         <div class="phantom-ring"></div>
         <div class="phantom-ring"></div>
       </div>
-      <button class="explore-btn" id="exploreBtn">
+      <a class="explore-btn" id="exploreBtn" href="/ranking">
         <div class="btn-scanline"></div>
-        <span class="btn-text">discovery</span>
+        <span class="btn-text">查看实时榜单</span>
         <div class="orbit-particle"></div>
         <div class="orbit-particle"></div>
         <div class="orbit-particle"></div>
-      </button>
+      </a>
       <div class="btn-shadow"></div>
+    </div>
+
+    <div id="zl-hud" class="zl-glass-panel" style="width:100%;max-width:760px;margin:32px auto;padding:8px 0">
+      <div class="hud-row" style="opacity:.55"><span class="hud-rank zl-num">#1</span><span class="hud-name"><span class="zl-skel" style="display:inline-block;width:120px"></span></span><span class="hud-vol zl-num"><span class="zl-skel" style="display:inline-block;width:60px"></span></span><span class="hud-chg zl-num"><span class="zl-skel" style="display:inline-block;width:48px"></span></span><span class="hud-sig"><span class="zl-skel" style="display:inline-block;width:48px"></span></span></div>
+      <div class="hud-row" style="opacity:.4"><span class="hud-rank zl-num">#2</span><span class="hud-name"><span class="zl-skel" style="display:inline-block;width:120px"></span></span><span class="hud-vol zl-num"><span class="zl-skel" style="display:inline-block;width:60px"></span></span><span class="hud-chg zl-num"><span class="zl-skel" style="display:inline-block;width:48px"></span></span><span class="hud-sig"><span class="zl-skel" style="display:inline-block;width:48px"></span></span></div>
+      <div class="hud-row" style="opacity:.28"><span class="hud-rank zl-num">#3</span><span class="hud-name"><span class="zl-skel" style="display:inline-block;width:120px"></span></span><span class="hud-vol zl-num"><span class="zl-skel" style="display:inline-block;width:60px"></span></span><span class="hud-chg zl-num"><span class="zl-skel" style="display:inline-block;width:48px"></span></span><span class="hud-sig"><span class="zl-skel" style="display:inline-block;width:48px"></span></span></div>
     </div>
   </div>
 
@@ -1093,59 +1187,96 @@ html, body {
 <script>
 const btn = document.getElementById('exploreBtn');
 const ripple = document.getElementById('ripple');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-btn.addEventListener('click', function(e) {
+// CTA 是原生 <a href="/ranking">,导航交给浏览器;这里只补一个点击辉光彩蛋
+if (btn) btn.addEventListener('click', function() {
+  if (reduceMotion || !ripple) return;
   const rect = btn.getBoundingClientRect();
-  const x = rect.left + rect.width / 2;
-  const y = rect.top + rect.height / 2;
-  
-  ripple.style.left = x + 'px';
-  ripple.style.top = y + 'px';
+  ripple.style.left = (rect.left + rect.width / 2) + 'px';
+  ripple.style.top = (rect.top + rect.height / 2) + 'px';
   ripple.classList.remove('active');
   void ripple.offsetWidth;
   ripple.classList.add('active');
-  
-  // Flash effect
-  btn.style.textShadow = '0 0 40px #fff, 0 0 80px var(--sol-purple), 0 0 120px var(--sol-green)';
-  setTimeout(() => {
-    btn.style.textShadow = '';
-  }, 300);
-  // 点击探索后进入榜单页
-  setTimeout(() => {
-    window.location.href = '/ranking';
-  }, 500);
 });
 
-// Mouse parallax effect
-document.addEventListener('mousemove', function(e) {
-  const cx = window.innerWidth / 2;
-  const cy = window.innerHeight / 2;
-  const dx = (e.clientX - cx) / cx;
-  const dy = (e.clientY - cy) / cy;
-  
-  const nebula = document.querySelector('.nebula');
-  if (nebula) {
-    nebula.style.transform = `translate(${dx * 20}px, ${dy * 20}px)`;
+// Mouse parallax(可滚动后:仅在 hero 仍可见 + 非 reduced-motion 时启用,避免和滚动打架)
+if (!reduceMotion) {
+  const universe = document.querySelector('.universe');
+  let heroVisible = true;
+  if (universe && 'IntersectionObserver' in window) {
+    new IntersectionObserver((entries) => {
+      heroVisible = entries[0].isIntersecting;
+    }, { threshold: 0.15 }).observe(universe);
   }
-  
-  const orb = document.querySelector('.distortion-orb');
-  if (orb) {
-    orb.style.transform = `translate(${dx * -15}px, ${dy * -15}px)`;
-  }
-
-  const content = document.querySelector('.center-content');
-  if (content) {
-    content.style.transform = `translate(${dx * 5}px, ${dy * 5}px)`;
-  }
-
-  const logos = document.querySelectorAll('.brand-logo');
-  logos.forEach((logo, i) => {
-    const speed = (i % 3 + 1) * 4;
-    const dir = i % 2 === 0 ? 1 : -1;
-    logo.style.setProperty('--px', `${dx * speed * dir}px`);
-    logo.style.setProperty('--py', `${dy * speed * dir}px`);
+  document.addEventListener('mousemove', function(e) {
+    if (!heroVisible) return;
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    const dx = (e.clientX - cx) / cx;
+    const dy = (e.clientY - cy) / cy;
+    const nebula = document.querySelector('.nebula');
+    if (nebula) nebula.style.transform = `translate(${dx * 20}px, ${dy * 20}px)`;
+    const orb = document.querySelector('.distortion-orb');
+    if (orb) orb.style.transform = `translate(${dx * -15}px, ${dy * -15}px)`;
+    const content = document.querySelector('.center-content');
+    if (content) content.style.transform = `translate(${dx * 5}px, ${dy * 5}px)`;
+    document.querySelectorAll('.brand-logo').forEach((logo, i) => {
+      const speed = (i % 3 + 1) * 4;
+      const dir = i % 2 === 0 ? 1 : -1;
+      logo.style.setProperty('--px', `${dx * speed * dir}px`);
+      logo.style.setProperty('--py', `${dy * speed * dir}px`);
+    });
   });
-});
+}
+
+// === LIVE TOP-3 HUD ===
+(function () {
+  const hud = document.getElementById('zl-hud');
+  if (!hud) return;
+
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function fmtVol(v) {
+    const n = Number(v) || 0;
+    if (n >= 1e6) return '$' + (n / 1e6).toFixed(2) + 'M';
+    if (n >= 1e3) return '$' + Math.round(n / 1e3) + 'K';
+    return '$' + Math.round(n);
+  }
+  function fmtChg(c) {
+    const n = Number(c) || 0;
+    return (n >= 0 ? '+' : '') + n.toFixed(1) + '%';
+  }
+  function fallback() {
+    hud.innerHTML = '<div class="hud-fallback">榜单加载中,稍后重试<br><a href="/ranking">查看完整榜单 →</a></div>';
+  }
+
+  Promise.all([
+    fetch('/api/ranking').then(r => r.ok ? r.json() : Promise.reject()),
+    fetch('/api/kb-signals').then(r => r.ok ? r.json() : Promise.reject())
+  ]).then(([ranking, kb]) => {
+    const rows = Array.isArray(ranking) ? ranking : (ranking && ranking.rows) || [];
+    const kbRows = Array.isArray(kb) ? kb : (kb && kb.rows) || [];
+    if (!rows.length) { fallback(); return; }
+    const map = new Map(kbRows.map(s => [s.ca, s.conviction_rating || (s.smart_money_24h ? '聪明钱' : '')]));
+    const top = rows.slice(0, 3);
+    hud.innerHTML = top.map((row, i) => {
+      const chg = Number(row.price_change_24h) || 0;
+      const sig = map.get(row.token) || '—';
+      return '<div class="hud-row">' +
+        '<span class="hud-rank zl-num">#' + (i + 1) + '</span>' +
+        '<span class="hud-name">' + esc(row.name || row.symbol || '?') +
+          '<span class="hud-sym">' + esc(row.symbol || '') + '</span></span>' +
+        '<span class="hud-vol zl-num">' + fmtVol(row.tx_volume_u_24h) + '</span>' +
+        '<span class="hud-chg zl-num ' + (chg >= 0 ? 'zl-up' : 'zl-dn') + '">' + fmtChg(chg) + '</span>' +
+        '<span class="hud-sig">' + esc(sig) + '</span>' +
+      '</div>';
+    }).join('');
+  }).catch(fallback);
+})();
 </script>
 
 </body>
