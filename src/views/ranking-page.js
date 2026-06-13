@@ -1033,49 +1033,148 @@ return `<!DOCTYPE html>
       if (i === 2) return 'rank bronze';
       return 'rank';
     }
+    // 构造一行的内层 <td> 串(列内容/格式与 KB 信号列逻辑保持原样,只有更新机制改变)
+    function rankRowInnerHtml(row, i, isPump) {
+      var change = row.price_change_24h != null ? parseFloat(row.price_change_24h) : null;
+      var changeCl = change != null ? (change >= 0 ? 'positive' : 'negative') : '';
+      var changeStr = change != null ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '—';
+      var nameStr = typeof row.name === 'string' ? row.name : (typeof row.token === 'string' ? row.token : '—');
+      var symbolStr = typeof row.symbol === 'string' ? row.symbol : (typeof row.token === 'string' ? row.token : '—');
+      if (nameStr.length > 200) nameStr = nameStr.slice(0, 200) + '…';
+      if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
+      var caStr = typeof row.token === 'string' ? row.token : '';
+      var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
+      var html = '';
+      html += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
+      html += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
+      html += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
+      html += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
+      html += '<td class="num">' + formatCompact(row.tx_volume_u_24h) + '</td>';
+      html += '<td class="num ' + changeCl + '">' + changeStr + '</td>';
+      html += '<td class="num">' + (row.holders != null ? Number(row.holders).toLocaleString() : '—') + '</td>';
+      if (isPump) {
+        html += '<td class="num">' + (row.holders_top10_percent != null ? Number(row.holders_top10_percent).toFixed(1) + '%' : '—') + '</td>';
+      }
+      var kbSig = kbSignalsMap[caStr];
+      var kbCell = '—';
+      if (kbSig) {
+        if (kbSig.conviction_rating) kbCell = kbRatingPill(kbSig.conviction_rating);
+        else if (kbSig.cluster_risk && kbSig.cluster_risk.level && kbSig.cluster_risk.level !== 'none') kbCell = kbClusterPill(kbSig.cluster_risk);
+        else if (kbSig.smart_money_24h && kbSig.smart_money_24h.wallet_count) kbCell = kbPill('聪明钱', '--positive');
+      }
+      html += '<td>' + kbCell + '</td>';
+      return html;
+    }
+    // MC / Volume 列在 td 集合中的索引(用于变化闪动)。结构对 pump / zhilabs 一致。
+    var RANK_MC_TD = 3, RANK_VOL_TD = 4;
+    function flashTd(tr, tdIdx, dir) {
+      if (!dir) return;
+      var td = tr.children[tdIdx];
+      if (!td) return;
+      td.classList.remove('zl-flash-up', 'zl-flash-dn');
+      // reflow 触发重放动画
+      void td.offsetWidth;
+      var cls = dir === 'up' ? 'zl-flash-up' : 'zl-flash-dn';
+      td.classList.add(cls);
+      setTimeout(function() { td.classList.remove('zl-flash-up', 'zl-flash-dn'); }, 950);
+    }
     function renderTable(list, rootId) {
       var root = document.getElementById(rootId);
-      if (!list.length) { root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>'; return; }
+      // request-version guard:renderTable 在本代码库中总是同步拿到已解析的数据再调用,
+      // 内部无任何 await/重新读取数据的异步点(setTimeout 仅做 DOM class 清理,
+      // requestAnimationFrame 仅做 FLIP 收尾,都不会用旧数据覆盖新渲染)。
+      // 因此这里维护 root.__seq 仅作占位:递增并捕获 my,若将来内部新增 await 可在其后 bail。
+      root.__seq = (root.__seq || 0) + 1;
+      var my = root.__seq; void my;
       var isPump = rootId === 'root-pump';
-      var headers = ['#', '代币', '符号', '市值', '24h 交易量', '24h 涨跌', '持币地址'];
-      if (isPump) { headers.push('Top10%'); }
-      headers.push('知智信号');
-      var numColIdx = { 3: true, 4: true, 5: true, 6: true };
-      if (isPump) numColIdx[7] = true;
-      var table = '<table><thead><tr>' + headers.map(function(h, idx){ return '<th' + (numColIdx[idx] ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead><tbody>';
-      list.forEach(function(row, i) {
-        var change = row.price_change_24h != null ? parseFloat(row.price_change_24h) : null;
-        var changeCl = change != null ? (change >= 0 ? 'positive' : 'negative') : '';
-        var changeStr = change != null ? (change >= 0 ? '+' : '') + change.toFixed(2) + '%' : '—';
-        var nameStr = typeof row.name === 'string' ? row.name : (typeof row.token === 'string' ? row.token : '—');
-        var symbolStr = typeof row.symbol === 'string' ? row.symbol : (typeof row.token === 'string' ? row.token : '—');
-        if (nameStr.length > 200) nameStr = nameStr.slice(0, 200) + '…';
-        if (symbolStr.length > 50) symbolStr = symbolStr.slice(0, 50) + '…';
-        var caStr = typeof row.token === 'string' ? row.token : '';
-        table += '<tr class="clickable-row" data-token="' + esc(caStr) + '">';
-        table += '<td><span class="' + rankClass(i) + '">' + (i + 1) + '</span></td>';
-        var copyBtn = caStr ? '<button class="copy-ca-btn" data-ca="' + esc(caStr) + '"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>' : '';
-        table += '<td><div class="token-cell">' + (row.logo_url ? '<img src="' + esc(row.logo_url) + '" alt="" loading="lazy">' : '') + '<span class="token-name">' + esc(nameStr) + '</span>' + copyBtn + '</div></td>';
-        table += '<td><span class="symbol">' + esc(symbolStr) + '</span></td>';
-        table += '<td class="num">' + formatCompact(row.market_cap) + '</td>';
-        table += '<td class="num">' + formatCompact(row.tx_volume_u_24h) + '</td>';
-        table += '<td class="num ' + changeCl + '">' + changeStr + '</td>';
-        table += '<td class="num">' + (row.holders != null ? Number(row.holders).toLocaleString() : '—') + '</td>';
-        if (isPump) {
-          table += '<td class="num">' + (row.holders_top10_percent != null ? Number(row.holders_top10_percent).toFixed(1) + '%' : '—') + '</td>';
-        }
-        var kbSig = kbSignalsMap[caStr];
-        var kbCell = '—';
-        if (kbSig) {
-          if (kbSig.conviction_rating) kbCell = kbRatingPill(kbSig.conviction_rating);
-          else if (kbSig.cluster_risk && kbSig.cluster_risk.level && kbSig.cluster_risk.level !== 'none') kbCell = kbClusterPill(kbSig.cluster_risk);
-          else if (kbSig.smart_money_24h && kbSig.smart_money_24h.wallet_count) kbCell = kbPill('聪明钱', '--positive');
-        }
-        table += '<td>' + kbCell + '</td>';
-        table += '</tr>';
+      if (!list.length) {
+        root.__prev = null; root.__inited = false;
+        root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>';
+        return;
+      }
+      // 计算本帧 next 元信息(key=CA,mc/vol 数值用于 diff)
+      var next = list.map(function(row) {
+        return {
+          key: typeof row.token === 'string' ? row.token : '',
+          mc: row.market_cap != null ? Number(row.market_cap) : NaN,
+          vol: row.tx_volume_u_24h != null ? Number(row.tx_volume_u_24h) : NaN,
+          row: row
+        };
       });
-      table += '</tbody></table>';
-      root.innerHTML = table;
+      var prev = root.__prev || null;
+      // 首帧 / 结构未初始化:全量构建表格(含 thead)
+      if (!root.__inited || !root.querySelector('table.zl-data-table tbody')) {
+        var headers = ['#', '代币', '符号', '市值', '24h 交易量', '24h 涨跌', '持币地址'];
+        if (isPump) { headers.push('Top10%'); }
+        headers.push('知智信号');
+        var numColIdx = { 3: true, 4: true, 5: true, 6: true };
+        if (isPump) numColIdx[7] = true;
+        var thead = '<thead><tr>' + headers.map(function(h, idx){ return '<th' + (numColIdx[idx] ? ' class="num"' : '') + '>' + h + '</th>'; }).join('') + '</tr></thead>';
+        var tbody = '<tbody>';
+        next.forEach(function(n, i) {
+          tbody += '<tr class="clickable-row" data-key="' + esc(n.key) + '" data-token="' + esc(n.key) + '">' + rankRowInnerHtml(n.row, i, isPump) + '</tr>';
+        });
+        tbody += '</tbody>';
+        root.innerHTML = '<table class="zl-data-table">' + thead + tbody + '</table>';
+        if (!root.classList.contains('zl-data-card')) root.classList.add('zl-data-card');
+        if (!root.classList.contains('zl-table-scroll')) root.classList.add('zl-table-scroll');
+        root.__inited = true;
+        root.__prev = next.map(function(n){ return { key: n.key, mc: n.mc, vol: n.vol }; });
+        return;
+      }
+      // 增量更新
+      var tbody = root.querySelector('table.zl-data-table tbody');
+      var pmap = {};
+      (prev || []).forEach(function(p) { pmap[p.key] = p; });
+      // 现有 <tr> 按 key 索引
+      var existing = {};
+      var trList = Array.prototype.slice.call(tbody.children);
+      trList.forEach(function(tr) {
+        var k = tr.getAttribute('data-key');
+        if (k != null) existing[k] = tr;
+      });
+      var nextKeys = {};
+      // 逐 next 行:复用或新建
+      next.forEach(function(n, i) {
+        nextKeys[n.key] = true;
+        var tr = existing[n.key];
+        var p = pmap[n.key];
+        if (tr) {
+          // 仅更新变化的 cell 文本(整行内层重建,内容廉价)
+          tr.innerHTML = rankRowInnerHtml(n.row, i, isPump);
+          // 单元格闪动:MC / Volume 数值变化
+          if (p) {
+            var mcDir = (!isNaN(n.mc) && !isNaN(p.mc)) ? (n.mc > p.mc ? 'up' : n.mc < p.mc ? 'dn' : '') : '';
+            var volDir = (!isNaN(n.vol) && !isNaN(p.vol)) ? (n.vol > p.vol ? 'up' : n.vol < p.vol ? 'dn' : '') : '';
+            flashTd(tr, RANK_MC_TD, mcDir);
+            flashTd(tr, RANK_VOL_TD, volDir);
+          }
+        } else {
+          // 新行:创建 + 标记 enter
+          tr = document.createElement('tr');
+          tr.className = 'clickable-row zl-row-enter';
+          tr.setAttribute('data-key', n.key);
+          tr.setAttribute('data-token', n.key);
+          tr.innerHTML = rankRowInnerHtml(n.row, i, isPump);
+          tbody.appendChild(tr);
+          existing[n.key] = tr;
+        }
+      });
+      // 删除已消失的行
+      trList.forEach(function(tr) {
+        var k = tr.getAttribute('data-key');
+        if (!nextKeys[k]) { if (tr.parentNode) tr.parentNode.removeChild(tr); delete existing[k]; }
+      });
+      // 按 next 顺序重排 tbody 中的 <tr>
+      reorderRows(tbody, next, existing);
+      root.__prev = next.map(function(n){ return { key: n.key, mc: n.mc, vol: n.vol }; });
+    }
+    // 占位:Part B keyed-row 阶段仅按顺序 append;FLIP 阶段会替换为带动画的版本
+    function reorderRows(tbody, next, existing) {
+      next.forEach(function(n) {
+        var tr = existing[n.key];
+        if (tr) tbody.appendChild(tr);
+      });
     }
     function kbPill(text, colorVar) {
       return '<span class="kb-pill" style="color:var(' + colorVar + ');border-color:var(' + colorVar + ')">' + esc(text) + '</span>';

@@ -23,6 +23,20 @@ export function renderGlassBackground() {
   return `<div class="zl-page-bg" aria-hidden="true"></div>`;
 }
 
+// 比较两帧行数据(按 key),返回每行变化标记。prev/next: [{key, mc, vol}]
+export function diffRows(prev, next) {
+  const pmap = new Map((prev||[]).map((r,i)=>[r.key,{...r,rank:i}]));
+  return next.map((r,i)=>{
+    const p = pmap.get(r.key);
+    return {
+      key:r.key, rank:i, isNew: !p,
+      rankDelta: p ? p.rank - i : 0,
+      mcFlash: p ? (r.mc>p.mc?'up':r.mc<p.mc?'dn':'') : '',
+      volFlash: p ? (r.vol>p.vol?'up':r.vol<p.vol?'dn':'') : '',
+    };
+  });
+}
+
 // active: 'ranking' | 'kb' | 'paper'
 export function renderGlassNav(active = '') {
   const link = (href, key, label, disabled) => disabled
