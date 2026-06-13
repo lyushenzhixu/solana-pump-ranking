@@ -36,7 +36,8 @@ return `<!DOCTYPE html>
   ${gaSnippet()}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Exo+2:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/glass-system.css">
   <style>
     /* Design tokens (shared with welcome page — OKLCH, tinted neutrals) */
     :root {
@@ -69,7 +70,7 @@ return `<!DOCTYPE html>
     html { height: 100%; }
     body {
       min-height: 100%;
-      font-family: 'Exo 2', system-ui, sans-serif;
+      font-family: var(--font-ui);
       background: var(--bg-primary);
       color: var(--text-primary);
       overflow-x: hidden;
@@ -129,7 +130,7 @@ return `<!DOCTYPE html>
     .back-home {
       display: inline-flex; align-items: center; gap: 0.5rem;
       padding: 0.5rem 1.25rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.8125rem; font-weight: 600;
       color: var(--text-secondary);
       text-decoration: none;
@@ -205,7 +206,7 @@ return `<!DOCTYPE html>
     .tabs button {
       position: relative;
       padding: 0.625rem 1.25rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.875rem; font-weight: 600;
       color: var(--text-secondary);
       background: transparent;
@@ -233,7 +234,7 @@ return `<!DOCTYPE html>
     .actions button {
       position: relative;
       padding: 0.5rem 1.25rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.8125rem; font-weight: 600;
       color: var(--text-primary);
       background: oklch(28% 0.06 290 / 0.9);
@@ -549,7 +550,7 @@ return `<!DOCTYPE html>
       letter-spacing: 0.15em;
       background: rgba(240, 185, 11, 0.08);
       border-bottom: 1px solid rgba(240, 185, 11, 0.2);
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
     }
     .signal-card-live-dot {
       width: 6px;
@@ -567,7 +568,7 @@ return `<!DOCTYPE html>
     .signal-card-live-sm {
       margin-left: auto;
       color: #555870;
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
     }
     .signal-card-body { padding: 1rem; padding-top: 0.75rem; }
     .signal-card-head {
@@ -618,7 +619,7 @@ return `<!DOCTYPE html>
       display: flex;
       align-items: center;
       gap: 0.25rem;
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
     }
     .signal-card-chain {
       font-size: 0.6875rem;
@@ -649,7 +650,7 @@ return `<!DOCTYPE html>
       padding: 0.5rem 0.75rem;
       text-align: center;
       background: rgba(255,255,255,0.015);
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
     }
     .signal-card-stats-item:not(:last-child) {
       border-right: 1px solid rgba(255,255,255,0.03);
@@ -712,7 +713,7 @@ return `<!DOCTYPE html>
       justify-content: space-between;
       margin-top: 0.25rem;
       font-size: 10px;
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
     }
     .signal-card-bar-labels .buy {
       color: var(--bn-yellow);
@@ -762,7 +763,7 @@ return `<!DOCTYPE html>
       border-radius: 8px;
       font-size: 13px;
       font-weight: 700;
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
       background: rgba(240, 185, 11, 0.12);
       color: var(--bn-yellow);
     }
@@ -815,7 +816,7 @@ return `<!DOCTYPE html>
     }
     .inflow-rank-inflow {
       margin-left: auto;
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
       font-size: 15px;
       font-weight: 700;
     }
@@ -841,7 +842,7 @@ return `<!DOCTYPE html>
       font-size: 12px;
       font-weight: 600;
       color: var(--text-primary);
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
     }
     .inflow-rank-bar-wrap {
       display: flex;
@@ -860,7 +861,7 @@ return `<!DOCTYPE html>
       display: flex;
       justify-content: space-between;
       font-size: 10px;
-      font-family: 'JetBrains Mono', 'Exo 2', monospace;
+      font-family: 'JetBrains Mono', monospace;
     }
     .inflow-rank-bar-labels .buy { color: var(--bn-yellow); }
     .inflow-rank-bar-labels .sell { color: #ff5252; }
@@ -914,7 +915,7 @@ return `<!DOCTYPE html>
     .sub-tabs button {
       position: relative;
       padding: 0.5rem 1rem;
-      font-family: 'Exo 2', sans-serif;
+      font-family: var(--font-ui);
       font-size: 0.8125rem;
       font-weight: 500;
       color: var(--text-muted);
