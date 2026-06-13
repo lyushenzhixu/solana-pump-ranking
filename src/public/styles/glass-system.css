@@ -116,4 +116,9 @@
 
 /* 移动端数据表横滚 */
 .zl-table-scroll{overflow-x:auto}
+
+/* View Transitions — reduced-motion 守护 */
+@media (prefers-reduced-motion: reduce){
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none !important}
+}
 .zl-table-scroll .zl-data-table{min-width:640px}

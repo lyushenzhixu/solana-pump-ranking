@@ -28,7 +28,12 @@ app.use(express.json());
 
 // 静态文件服务（favicon, 等 public 目录下的文件）
 app.use(express.static(path.join(__dirname, 'public'), {
-  maxAge: '1d',
+  maxAge: '1h',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
 }));
 
 // ── 路由 ──
