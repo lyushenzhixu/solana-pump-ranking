@@ -1163,10 +1163,14 @@ return `<!DOCTYPE html>
         root.innerHTML = '<div class="loading-text" style="animation:none">暂无数据</div>';
         return;
       }
-      // 计算本帧 next 元信息(key=CA,mc/vol 数值用于 diff)
-      var next = list.map(function(row) {
+      // 计算本帧 next 元信息(key=reconcile 用的稳定键,token=真实 CA 用于点击跳转)
+      // key 兜底:token 非空时用 token,否则用含 index 的稳定键,避免空/重复 token 导致行坍缩或泄漏
+      var next = list.map(function(row, i) {
+        var token = typeof row.token === 'string' ? row.token : '';
+        var key = (row.token && String(row.token)) || ('__idx_' + i);
         return {
-          key: typeof row.token === 'string' ? row.token : '',
+          key: key,
+          token: token,
           mc: row.market_cap != null ? Number(row.market_cap) : NaN,
           vol: row.tx_volume_u_24h != null ? Number(row.tx_volume_u_24h) : NaN,
           row: row
@@ -1202,7 +1206,7 @@ return `<!DOCTYPE html>
         }).join('') + '</tr></thead>';
         var tbody = '<tbody>';
         next.forEach(function(n, i) {
-          tbody += '<tr class="clickable-row" data-key="' + esc(n.key) + '" data-token="' + esc(n.key) + '">' + rankRowInnerHtml(n.row, i, isPump) + '</tr>';
+          tbody += '<tr class="clickable-row" data-key="' + esc(n.key) + '" data-token="' + esc(n.token) + '">' + rankRowInnerHtml(n.row, i, isPump) + '</tr>';
         });
         tbody += '</tbody>';
         root.innerHTML = '<table class="zl-data-table">' + thead + tbody + '</table>';
@@ -1244,7 +1248,7 @@ return `<!DOCTYPE html>
           tr = document.createElement('tr');
           tr.className = 'clickable-row zl-row-enter';
           tr.setAttribute('data-key', n.key);
-          tr.setAttribute('data-token', n.key);
+          tr.setAttribute('data-token', n.token);
           tr.innerHTML = rankRowInnerHtml(n.row, i, isPump);
           tbody.appendChild(tr);
           existing[n.key] = tr;
@@ -1740,7 +1744,7 @@ return `<!DOCTYPE html>
           if (Array.isArray(list)) renderSignalCards(list, rootId, 'binance');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
-          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + esc(e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'bn-inflow') {
@@ -1748,7 +1752,7 @@ return `<!DOCTYPE html>
           if (Array.isArray(list)) renderInflowRank(list, rootId, 'binance');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
-          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + esc(e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'bn-kol') {
@@ -1756,7 +1760,7 @@ return `<!DOCTYPE html>
           if (Array.isArray(list)) renderInflowRank(list, rootId, 'binance');
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
-          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + esc(e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       if (panelKey === 'kb') {
@@ -1764,7 +1768,7 @@ return `<!DOCTYPE html>
           if (Array.isArray(list)) renderKBSignals(list, rootId);
           else rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">数据格式异常</div>';
         }).catch(function(e) {
-          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + (e && e.message ? e.message : String(e)) + '</div>';
+          rootEl.innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">' + esc(e && e.message ? e.message : String(e)) + '</div>';
         });
       }
       var url = panelKey === 'pump' ? '/api/ranking' : '/api/ranking/zhilabs';
@@ -2044,9 +2048,9 @@ return `<!DOCTYPE html>
       ]).then(function(results) {
         var r0 = results[0], r1 = results[1];
         if (r0.status === 'fulfilled' && Array.isArray(r0.value)) deliverData(r0.value, 'root-pump');
-        else document.getElementById('root-pump').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">Pump 榜单: ' + (r0.status === 'rejected' && r0.reason ? (r0.reason.message || r0.reason) : '暂无数据') + '</div>';
+        else document.getElementById('root-pump').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">Pump 榜单: ' + esc(r0.status === 'rejected' && r0.reason ? (r0.reason.message || r0.reason) : '暂无数据') + '</div>';
         if (r1.status === 'fulfilled' && Array.isArray(r1.value)) deliverData(r1.value, 'root-zhilabs');
-        else document.getElementById('root-zhilabs').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">zhizhilabs 精选: ' + (r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</div>';
+        else document.getElementById('root-zhilabs').innerHTML = '<div class="loading-text" style="color:var(--negative);animation:none">zhizhilabs 精选: ' + esc(r1.status === 'rejected' && r1.reason ? (r1.reason.message || r1.reason) : '暂无数据') + '</div>';
         setLastSync(new Date());
       });
 

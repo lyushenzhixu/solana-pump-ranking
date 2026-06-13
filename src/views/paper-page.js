@@ -53,7 +53,7 @@ ${renderGlassNav('paper')}
     ${card('活仓 / 已平', `${s.active_count || 0} / ${s.closed_count || 0}`)}
     ${card('已实现 / 浮动', `$${(s.realized_pnl_usd || 0).toFixed(0)} / $${(s.unrealized_pnl_usd || 0).toFixed(0)}`)}
   </div>
-  <div class="srcrow">来源:${Object.entries(s.source_stats || {}).map(([k, v]) => `${k} ${v.n}笔/胜率${v.win_rate}%`).join(' · ') || '—'} · 更新 ${(s.last_success_at || '').slice(0, 16).replace('T', ' ')}</div>
+  <div class="srcrow">来源:${Object.entries(s.source_stats || {}).map(([k, v]) => `${esc(k)} ${esc(v.n)}笔/胜率${esc(v.win_rate)}%`).join(' · ') || '—'} · 更新 ${(s.last_success_at || '').slice(0, 16).replace('T', ' ')}</div>
   <h2>活仓 (${active.length})</h2>
   <div class="zl-data-card zl-table-scroll">
     <table class="zl-data-table">

@@ -1254,13 +1254,17 @@ if (!reduceMotion) {
     hud.innerHTML = '<div class="hud-fallback">榜单加载中,稍后重试<br><a href="/ranking">查看完整榜单 →</a></div>';
   }
 
-  Promise.all([
+  Promise.allSettled([
     fetch('/api/ranking').then(r => r.ok ? r.json() : Promise.reject()),
     fetch('/api/kb-signals').then(r => r.ok ? r.json() : Promise.reject())
-  ]).then(([ranking, kb]) => {
+  ]).then(([rankingRes, kbRes]) => {
+    // /api/ranking is the required source; /api/kb-signals is an optional signal join.
+    const ranking = rankingRes.status === 'fulfilled' ? rankingRes.value : null;
+    const kb = kbRes.status === 'fulfilled' ? kbRes.value : null;
     const rows = Array.isArray(ranking) ? ranking : (ranking && ranking.rows) || [];
-    const kbRows = Array.isArray(kb) ? kb : (kb && kb.rows) || [];
+    // Only fall back if ranking itself failed or is empty; kb-signals failure must NOT block the HUD.
     if (!rows.length) { fallback(); return; }
+    const kbRows = Array.isArray(kb) ? kb : (kb && kb.rows) || [];
     const map = new Map(kbRows.map(s => [s.ca, s.conviction_rating || (s.smart_money_24h ? '聪明钱' : '')]));
     const top = rows.slice(0, 3);
     hud.innerHTML = top.map((row, i) => {
