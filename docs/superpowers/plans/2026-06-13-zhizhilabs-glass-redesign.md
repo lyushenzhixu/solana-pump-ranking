@@ -203,12 +203,14 @@ export const GLOSSARY = {
   '聪明钱': '历史上有可验证盈利轨迹的链上钱包;其建仓常作为早期信号之一。',
 };
 
-// 把含术语的文本里的术语包成可 hover 的 .zl-term(传入 esc 后的安全文本)。
+const escTerm = (v)=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// 把术语包成可 hover 的 .zl-term。**内部转义 label**,可安全接受动态信号文本(如 termHtml(sig))。
 export function termHtml(label, key) {
+  const safe = escTerm(label);
   const def = GLOSSARY[key || label];
-  if (!def) return label;
-  return `<span class="zl-term" tabindex="0" aria-label="${label}:${def}">${label}` +
-    `<span class="zl-pop" role="tooltip">${def}</span></span>`;
+  if (!def) return safe;
+  return `<span class="zl-term" tabindex="0" aria-label="${safe}:${escTerm(def)}">${safe}` +
+    `<span class="zl-pop" role="tooltip">${escTerm(def)}</span></span>`;
 }
 ```
 
@@ -258,15 +260,17 @@ const FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">`;
 
-// seoHead = 调用方已有的 buildSeoMeta() 输出,原样透传,避免改丢现有 SEO。
-export function renderGlassHead({ title, seoHead = '', extraCss = '' }) {
+// seoHead = buildSeoMeta() 输出原样透传;ga = 各 view 现有 GA snippet,**务必透传否则统计丢失**
+// (ranking-page.js:36 / token-detail-page.js:45 现在在模板内注入 GA;切到本助手时把那段作为 ga 传入)。
+export function renderGlassHead({ title, seoHead = '', ga = '', extraCss = '' }) {
   return `<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 ${seoHead}
 ${FONTS}
 <link rel="stylesheet" href="/styles/glass-system.css">
 <meta name="view-transition" content="same-origin">
-<style>${extraCss}</style></head>`;
+<style>${extraCss}</style>
+${ga}</head>`;
 }
 
 export function renderGlassBackground() {
@@ -436,11 +440,15 @@ Run: `node test/glass-unit.mjs` → Expected: 追加打印 `diff OK`,退出码 0
 
 - [ ] **Step 2: 改 `renderTable` 为 keyed-row 复用**
 
+> **范围(Codex 核实)**:`renderTable` 只服务 **pump(`root-pump`)与 zhilabs(`root-zhilabs`)** 两个 tab(`ranking-page.js:1360/1614`)。**KB tab 走另一套 `renderKBSignals → kbRowsTable`**(多 `<tbody>` 分区,`:1102/1128/1144`)—— **本任务不改 KB renderer**;KB tab 只在 Task 2.1 拿玻璃样式 + Task 2.5 拿术语 popover,**不做 keyed-row/FLIP/排序/搜索**(v1 保留其现有 `innerHTML` 渲染)。这样 `root.__prev` 单缓存只用于 pump/zhilabs 两个独立 root,无冲突。
+
 把 `renderTable(list, rootId)` 从 `root.innerHTML = table`(全量替换)改为:
-- 首次:建 `<table class="zl-data-table">` + `<tbody>`,每行 `<tr data-key="${esc(token CA)}">`。
-- 后续刷新:读上一帧缓存(挂在 `root.__prev`),`diffRows` 算变化;按 next 顺序 **复用已存在的 `tr`(按 `data-key` 查),更新单元格文本**,新行创建并标 `.enter`,消失行移除;给变化的 MC/量单元格加 `.zl-flash-up/.zl-flash-dn`(动画结束后移除 class)。
-- 把 next 帧缓存回 `root.__prev = next.map(...{key,mc,vol})`。
-- 行点击进详情逻辑保留(见现有委托)。
+- **CA 字段 = `row.token`**(Codex 核实;不是 `row.ca`)。每行 `<tr>` **同时**带 `data-key="${esc(row.token)}"` 和 `data-token="${esc(row.token)}"` —— 后者是现有行点击进详情读取的属性(`:1415`),漏了会断导航。
+- 首次:建 `<table class="zl-data-table">` + `<tbody>`,按上述生成行。
+- 后续刷新:读上一帧缓存(挂在 `root.__prev`,**per-root**),`diffRows`(key=`row.token`)算变化;按 next 顺序 **复用已存在的 `tr`(按 `data-key` 查),更新单元格文本**,新行创建并标 `.enter`,消失行移除;给变化的 MC/量单元格加 `.zl-flash-up/.zl-flash-dn`(动画结束后移除 class)。
+- 把 next 帧缓存回 `root.__prev = next.map(r=>({key:r.token,mc:r.market_cap,vol:r.tx_volume_u_24h}))`。
+- **请求版本守护(Codex 核实:刷新有竞态)**:初始 `Promise.allSettled` + `loadKbMap` 回灌 + 轮询(`:1557/1573/1609`)可能并发。给每个 root 维护递增 `root.__reqSeq`,fetch 发起时记 `myseq`,回来若 `myseq < root.__reqSeq` 则丢弃(不渲染、不 FLIP),避免旧响应覆盖新状态。
+- 行点击进详情逻辑保留(读 `data-token`)。
 
 (完整函数较长;实现时严格按上面 diffRows 的标记驱动 DOM 更新。)
 
@@ -487,9 +495,14 @@ git commit -m "feat(glass): ranking FLIP 重排动画(视口内 + reduced-motion
 **Files:**
 - Modify: `src/views/ranking-page.js`
 
-- [ ] **Step 1: 排序**
+- [ ] **Step 1: 排序(含派生 serverRank)**
 
-表头加可点击排序(市值/24h 量/涨跌/持有),`<th>` 加 `data-sort` + 排序态箭头;点击切升降序,客户端 sort 后走 Task 2.2 的 keyed 更新。**`#` 列始终显示服务端官方名次**(行对象自带 `serverRank`,排序只改显示顺序,`#` 仍渲染 `serverRank`)。
+- **`serverRank` 不存在于 API**(Codex 核实:`/api/ranking` 直接吐 Supabase 行,无名次字段)。在 `renderTable` 拿到 list 时**派生** `serverRank = originalIndex + 1`(排序/过滤**之前**打标),挂到行对象。
+- 表头加可点击排序(市值/24h 量/涨跌/持有),`<th>` 加 `data-sort` + 排序态箭头;点击切升降序,客户端 sort 后走 Task 2.2 的 keyed 更新。**`#` 列始终渲染 `serverRank`**(排序只改显示顺序,名次列不变)。
+
+- [ ] **Step 1.5: `#kb` hash 激活 KB tab**
+
+现 ranking JS 默认 pump,只在按钮点击切 tab,**不读 `location.hash`**(`:1430/1487`)。导航 `/ranking#kb`(Task 0.3)要生效,需:页面加载时读 `location.hash`(`#kb`→激活 KB tab),并监听 `hashchange` 切 tab。无 hash 时维持默认 pump。
 
 - [ ] **Step 2: 搜索**
 
@@ -629,13 +642,14 @@ git commit -m "feat(glass): landing 中文价值主张 + CTA 改 查看实时榜
 在 `src/views/_shared/glass-shell.js` 追加:
 
 ```js
-// 把 ranking 行与 kb-signals 按 CA(token)合并,取 top N。
+// 把 ranking 行与 kb-signals 合并,取 top N。
+// Codex 核实:kb-signals 按 `ca` keyed(不是 token);信号档位字段是 conviction_rating(无顶层 verdict/tier/label)。
 export function joinHudRows(ranking, kbSignals, n = 3) {
-  const sigMap = new Map((kbSignals||[]).map(s => [s.token, s.verdict || s.tier || s.label]));
+  const sigMap = new Map((kbSignals||[]).map(s => [s.ca, s.conviction_rating || (s.smart_money_24h ? '聪明钱' : '') ]));
   return (ranking||[]).slice(0, n).map(r => ({
     name: r.name, symbol: r.symbol, token: r.token,
     vol: r.tx_volume_u_24h, change: r.price_change_24h, mc: r.market_cap,
-    signal: sigMap.get(r.token) || '—',
+    signal: sigMap.get(r.token) || '—',   // ranking 行的 CA = r.token,与 kb 的 s.ca 对齐
   }));
 }
 ```
@@ -645,22 +659,23 @@ export function joinHudRows(ranking, kbSignals, n = 3) {
 ```js
 import { joinHudRows } from '../src/views/_shared/glass-shell.js';
 const rk=[{token:'A',name:'Aa',symbol:'A',tx_volume_u_24h:9,market_cap:1,price_change_24h:5}];
-const kb=[{token:'A',verdict:'SWING'}];
+const kb=[{ca:'A',conviction_rating:'SWING'}];
 const h=joinHudRows(rk,kb,3);
-assert.equal(h[0].signal,'SWING','按 CA join 到信号');
+assert.equal(h[0].signal,'SWING','ranking.token 与 kb.ca join 到信号');
 assert.equal(joinHudRows([{token:'X',name:'x'}],[],3)[0].signal,'—','无信号回退—');
 console.log('hud OK');
 ```
 
 Run: `node test/glass-unit.mjs` → Expected: 追加 `hud OK`,退出码 0。
-注意:实现 Step 2 时按 `/api/kb-signals` 实际字段名(`verdict`/`tier`/`score`)确认 join 字段(先 `curl localhost:<port>/api/kb-signals | head` 核对)。
+注意:实现前 `curl localhost:<port>/api/kb-signals | head` 核对 `conviction_rating` 实际取值(若主显示用别的字段,如 `revival`/`cluster_risk`,按 `kbSignalCell` 语义调整)。
 
 - [ ] **Step 2: 首屏内嵌 HUD + 客户端拉数据**
 
 在 `index.html` 首屏加 `<div id="zl-hud" class="zl-glass-panel">…骨架占位…</div>` + 内联 `<script>`:
+- **必须内联 join + esc 逻辑**(Codex 核实:Express 只静态服务 `src/public`,`src/views/_shared/glass-shell.js` 浏览器**无法 import**会 404)。把 `joinHudRows` 与 `esc` 的逻辑**复制进 `index.html` 的 `<script>`**(landing 是静态页,本就独立)。
 - `Promise.all([fetch('/api/ranking'), fetch('/api/kb-signals')])`,各自 `.ok ? json : 抛错`;
-- 成功:`joinHudRows`(把上面纯函数逻辑内联进 script,或 `<script type="module">` import)取 top3,渲染 3 行;**所有 name/symbol 经 `esc`**(内联同款 esc);数字用 `.zl-num`,涨跌用 `.zl-up/.zl-dn`。
-- 失败/空:渲染静态占位「榜单加载中,稍后重试」+ 一个「查看完整榜单 →」按钮,**不留空玻璃框**。
+- 成功:join 取 top3(ranking 行 CA=`r.token` 对 kb 的 `s.ca`),渲染 3 行;**所有 name/symbol 经 esc**;数字用 `.zl-num`,涨跌用 `.zl-up/.zl-dn`。
+- 失败/空:渲染静态占位「榜单加载中,稍后重试」+「查看完整榜单 →」按钮,**不留空玻璃框**。
 
 - [ ] **Step 3: 预览验证(含失败态)**
 
