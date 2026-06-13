@@ -1169,11 +1169,49 @@ return `<!DOCTYPE html>
       reorderRows(tbody, next, existing);
       root.__prev = next.map(function(n){ return { key: n.key, mc: n.mc, vol: n.vol }; });
     }
-    // 占位:Part B keyed-row 阶段仅按顺序 append;FLIP 阶段会替换为带动画的版本
+    // FLIP 重排:先记录各 <tr> 旧 top,reorder DOM 到新顺序,再对位移非 0 且在视口内的行做 translateY 回放
     function reorderRows(tbody, next, existing) {
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // First:记录旧位置(reorder 前)
+      var oldTop = {};
+      if (!reduce) {
+        Object.keys(existing).forEach(function(k) {
+          var tr = existing[k];
+          // 新行(本帧创建)没有旧位置 → 不记录,reorder 后直接出现
+          if (tr.classList.contains('zl-row-enter')) return;
+          oldTop[k] = tr.getBoundingClientRect().top;
+        });
+      }
+      // Last:按 next 顺序重排 DOM
       next.forEach(function(n) {
         var tr = existing[n.key];
         if (tr) tbody.appendChild(tr);
+      });
+      if (reduce) {
+        // reduced-motion:不做动画,清掉 enter 标记
+        next.forEach(function(n) {
+          var tr = existing[n.key];
+          if (tr) tr.classList.remove('zl-row-enter');
+        });
+        return;
+      }
+      // Invert + Play:对有旧位置且位移非 0、且在视口内的行做 FLIP
+      var vh = window.innerHeight || document.documentElement.clientHeight || 0;
+      next.forEach(function(n) {
+        var tr = existing[n.key];
+        if (!tr) return;
+        if (!(n.key in oldTop)) { tr.classList.remove('zl-row-enter'); return; }
+        var newTop = tr.getBoundingClientRect().top;
+        // 仅 FLIP 新位置在视口内的行,限制工作量
+        if (newTop < 0 || newTop > vh) return;
+        var dy = oldTop[n.key] - newTop;
+        if (!dy) return;
+        tr.style.transform = 'translateY(' + dy + 'px)';
+        tr.style.transition = 'none';
+        requestAnimationFrame(function() {
+          tr.style.transition = 'transform .6s var(--ease-out)';
+          tr.style.transform = '';
+        });
       });
     }
     function kbPill(text, colorVar) {
