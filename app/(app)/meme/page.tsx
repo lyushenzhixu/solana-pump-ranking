@@ -6,7 +6,7 @@ import Badge from '@/components/ui/Badge'
 import ClickableRow from '@/components/ui/ClickableRow'
 import DataFreshness from '@/components/ui/DataFreshness'
 import EmptyState from '@/components/ui/EmptyState'
-import { getPumpRanking, getKbSignals } from '@/lib/queries'
+import { getPumpRanking, getKbSignals, getZhilabsRanking } from '@/lib/queries'
 
 /** 格式化市值：$X.XXM / $XXK / $XXX */
 function fmtMc(val: number | null | undefined): string {
@@ -25,13 +25,14 @@ function fmtVol(val: number | null | undefined): string {
 }
 
 export default async function MemePage() {
-  // 并行拉两路数据，防级联瀑布
-  const [pumpResult, kbResult] = await Promise.all([
+  // 并行拉三路数据，防级联瀑布
+  const [pumpResult, kbResult, zhilabsResult] = await Promise.all([
     getPumpRanking(20),
     getKbSignals(),
+    getZhilabsRanking(),
   ])
 
-  // 两者都 error 才 throw
+  // 两者都 error 才 throw（zhilabs 单独失败不阻断页面）
   if (pumpResult.error && kbResult.error) {
     throw new Error(
       `数据加载失败: ${pumpResult.error.message} / ${kbResult.error.message}`
@@ -60,8 +61,18 @@ export default async function MemePage() {
     discovered_at?: string | null
   }
 
+  type ZhilabsRow = {
+    token?: string | null
+    name?: string | null
+    symbol?: string | null
+    market_cap?: number | null
+    tx_volume_u_24h?: number | null
+    holders?: number | null
+  }
+
   const pumpRows: PumpRow[] = (pumpResult.data as unknown as PumpRow[] | null) ?? []
   const kbRows: KbRow[] = (kbResult.data as unknown as KbRow[] | null) ?? []
+  const zhilabsRows: ZhilabsRow[] = (zhilabsResult.data as unknown as ZhilabsRow[] | null) ?? []
 
   // 取 kbRows 里最大 discovered_at 作新鲜度
   const latestKbIso =
@@ -177,7 +188,105 @@ export default async function MemePage() {
           )}
         </section>
 
-        {/* ── 段2:知智 KB 信号 ── */}
+        {/* ── 段2:Zhilabs 榜 ── */}
+        <section>
+          <div
+            style={{
+              fontSize: 13.5,
+              fontWeight: 500,
+              color: 'var(--text)',
+              marginBottom: 10,
+            }}
+          >
+            Zhilabs 榜
+          </div>
+
+          {zhilabsRows.length === 0 ? (
+            <EmptyState title="Zhilabs 榜暂无数据" hint="等待数据同步" />
+          ) : (
+            <div
+              style={{
+                background: 'var(--surface-1)',
+                border: '1px solid var(--line-soft)',
+                borderRadius: 'var(--radius)',
+                overflow: 'hidden',
+              }}
+            >
+              <table
+                style={{
+                  width: '100%',
+                  borderCollapse: 'collapse',
+                  fontSize: 13,
+                }}
+              >
+                <thead>
+                  <tr
+                    style={{
+                      borderBottom: '1px solid var(--line-soft)',
+                      color: 'var(--text-3)',
+                      fontSize: 11,
+                      fontWeight: 400,
+                    }}
+                  >
+                    <th style={{ padding: '9px 14px', textAlign: 'left', width: 32 }}>#</th>
+                    <th style={{ padding: '9px 14px', textAlign: 'left' }}>名称</th>
+                    <th style={{ padding: '9px 14px', textAlign: 'right' }}>市值</th>
+                    <th style={{ padding: '9px 14px', textAlign: 'right' }}>24h 量</th>
+                    <th style={{ padding: '9px 14px', textAlign: 'right' }}>持有人</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {zhilabsRows.map((row, idx) => {
+                    const displayName =
+                      row.name || row.symbol || (row.token ? row.token.slice(0, 6) + '…' : '—')
+                    return (
+                      <ClickableRow
+                        key={row.token ?? idx}
+                        href={row.token ? `/token/${row.token}` : null}
+                        style={{
+                          borderBottom:
+                            idx < zhilabsRows.length - 1
+                              ? '1px solid var(--line-soft)'
+                              : 'none',
+                        }}
+                      >
+                        <td
+                          className="num"
+                          style={{ padding: '10px 14px', color: 'var(--text-3)', fontSize: 11 }}
+                        >
+                          {idx + 1}
+                        </td>
+                        <td style={{ padding: '10px 14px', color: 'var(--text)' }}>
+                          {displayName}
+                        </td>
+                        <td
+                          className="num"
+                          style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-2)' }}
+                        >
+                          {fmtMc(row.market_cap)}
+                        </td>
+                        <td
+                          className="num"
+                          style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-2)' }}
+                        >
+                          {fmtVol(row.tx_volume_u_24h)}
+                        </td>
+                        <td
+                          className="num"
+                          style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-2)' }}
+                        >
+                          {row.holders != null ? row.holders.toLocaleString() : '—'}
+                        </td>
+                      </ClickableRow>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        {/* ── 段3:知智 KB 信号 ── */}
         <section>
           <div
             style={{
