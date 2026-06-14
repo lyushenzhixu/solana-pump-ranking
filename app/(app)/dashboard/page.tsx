@@ -1,6 +1,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import Topbar from '@/components/shell/Topbar'
 import MetricCard from '@/components/ui/MetricCard'
@@ -106,18 +107,8 @@ export default async function DashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                 {top.map((row, idx) => {
                   const displayName = row.name || (row.ca ? row.ca.slice(0, 6) + '…' : '—')
-                  return (
-                    <div
-                      key={row.ca ?? idx}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '7px 0',
-                        borderBottom:
-                          idx < top.length - 1 ? '1px solid var(--line-soft)' : 'none',
-                      }}
-                    >
+                  const rowContent = (
+                    <>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span
                           style={{
@@ -142,6 +133,32 @@ export default async function DashboardPage() {
                       >
                         {row.score != null ? row.score.toFixed(1) : '—'}
                       </span>
+                    </>
+                  )
+                  const rowStyle: CSSProperties = {
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '7px 0',
+                    borderBottom:
+                      idx < top.length - 1 ? '1px solid var(--line-soft)' : 'none',
+                  }
+                  return row.ca ? (
+                    <Link
+                      key={row.ca}
+                      href={`/token/${row.ca}`}
+                      style={{
+                        ...rowStyle,
+                        textDecoration: 'none',
+                        color: 'inherit',
+                      }}
+                      className="clickable-row"
+                    >
+                      {rowContent}
+                    </Link>
+                  ) : (
+                    <div key={idx} style={rowStyle}>
+                      {rowContent}
                     </div>
                   )
                 })}

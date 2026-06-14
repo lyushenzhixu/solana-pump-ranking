@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import Topbar from '@/components/shell/Topbar'
 import Badge from '@/components/ui/Badge'
+import ClickableRow from '@/components/ui/ClickableRow'
 import DataFreshness from '@/components/ui/DataFreshness'
 import EmptyState from '@/components/ui/EmptyState'
 import { getPumpRanking, getKbSignals } from '@/lib/queries'
@@ -130,8 +131,9 @@ export default async function MemePage() {
                     const displayName =
                       row.name || row.symbol || (row.token ? row.token.slice(0, 6) + '…' : '—')
                     return (
-                      <tr
+                      <ClickableRow
                         key={row.token ?? idx}
+                        href={row.token ? `/token/${row.token}` : null}
                         style={{
                           borderBottom:
                             idx < pumpRows.length - 1
@@ -166,7 +168,7 @@ export default async function MemePage() {
                         >
                           {row.holders != null ? row.holders.toLocaleString() : '—'}
                         </td>
-                      </tr>
+                      </ClickableRow>
                     )
                   })}
                 </tbody>
@@ -236,8 +238,9 @@ export default async function MemePage() {
                     const cr = row.cluster_risk as { level?: string } | null
 
                     return (
-                      <tr
+                      <ClickableRow
                         key={row.ca ?? idx}
+                        href={row.ca ? `/token/${row.ca}` : null}
                         style={{
                           borderBottom:
                             idx < kbRows.length - 1
@@ -282,7 +285,7 @@ export default async function MemePage() {
                         >
                           {fmtMc(row.market_cap)}
                         </td>
-                      </tr>
+                      </ClickableRow>
                     )
                   })}
                 </tbody>
