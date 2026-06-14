@@ -66,20 +66,20 @@ export default function KlineChart({ address }: Props) {
           height: 320,
           layout: {
             background: { color: 'transparent' },
-            textColor: 'oklch(72% 0.01 285)',
+            textColor: '#9C9AA8',
           },
           grid: {
-            vertLines: { color: 'oklch(40% 0.02 285 / 0.14)' },
-            horzLines: { color: 'oklch(40% 0.02 285 / 0.14)' },
+            vertLines: { color: 'rgba(140,140,170,0.08)' },
+            horzLines: { color: 'rgba(140,140,170,0.08)' },
           },
           crosshair: {
             mode: 1,
           },
           rightPriceScale: {
-            borderColor: 'oklch(40% 0.02 285 / 0.28)',
+            borderColor: 'rgba(140,140,170,0.28)',
           },
           timeScale: {
-            borderColor: 'oklch(40% 0.02 285 / 0.28)',
+            borderColor: 'rgba(140,140,170,0.28)',
             timeVisible: true,
             secondsVisible: false,
           },
@@ -87,16 +87,17 @@ export default function KlineChart({ address }: Props) {
 
         // v5 API: addSeries(CandlestickSeries)
         const series = chart.addSeries(lc.CandlestickSeries, {
-          upColor: 'oklch(78% 0.16 158)',
-          downColor: 'oklch(68% 0.17 22)',
-          borderUpColor: 'oklch(78% 0.16 158)',
-          borderDownColor: 'oklch(68% 0.17 22)',
-          wickUpColor: 'oklch(78% 0.16 158)',
-          wickDownColor: 'oklch(68% 0.17 22)',
+          upColor: '#3DD68C',
+          downColor: '#E8654F',
+          borderUpColor: '#3DD68C',
+          borderDownColor: '#E8654F',
+          wickUpColor: '#3DD68C',
+          wickDownColor: '#E8654F',
         })
 
+        const sortedBars = [...bars].sort((a, b) => a.time - b.time)
         series.setData(
-          bars.map((b) => ({
+          sortedBars.map((b) => ({
             time: b.time as any,
             open: b.open,
             high: b.high,
