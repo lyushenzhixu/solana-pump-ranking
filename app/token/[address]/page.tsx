@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
 import { getKbSignalByCa } from '@/lib/queries'
-import KlineChart from '@/components/token/KlineChart'
+import DexChart from '@/components/token/DexChart'
 import TokenSections from '@/components/token/TokenSections'
 
 interface PageProps {
@@ -80,7 +80,7 @@ export default async function TokenPage({ params }: PageProps) {
       </div>
 
       {/* K 线图(客户端) */}
-      <KlineChart address={address} />
+      <DexChart address={address} />
 
       {/* 三卡(行情+安全 / 叙事 / 推文) */}
       <TokenSections address={address} />

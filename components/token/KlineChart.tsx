@@ -1,3 +1,4 @@
+// NOTE: 暂用 DexChart(DexScreener embed)替代;此自有 lightweight-charts 版留作后续 native 替换。
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
