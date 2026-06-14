@@ -5,26 +5,41 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/server.js",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p ${PORT:-3000}",
+    "test": "vitest run && node test/glass-unit.mjs",
+    "test:watch": "vitest",
+    "legacy:start": "node src/server.js",
+    "pump-ranking": "node scripts/fetch-pump-ranking.js",
+    "zhilabs-ranking": "node scripts/fetch-zhilabs-ranking.js",
+    "zhilabs-refresh-narratives": "node scripts/refresh-zhilabs-narratives.js",
     "example:query": "node examples/01-查询.js",
     "example:insert": "node examples/02-新增.js",
     "example:update": "node examples/03-更新与删除.js",
     "example:demo": "node examples/04-完整演示.js",
-    "pump-ranking": "node scripts/fetch-pump-ranking.js",
-    "zhilabs-ranking": "node scripts/fetch-zhilabs-ranking.js",
-    "zhilabs-refresh-narratives": "node scripts/refresh-zhilabs-narratives.js",
     "zhilabs-to-local": "node scripts/fetch-zhilabs-to-local.js",
     "token-audit": "node scripts/token-audit.js",
     "check-token": "node scripts/check-token-eligibility.js",
     "test-data-source": "node scripts/test-data-source.js",
     "test-okx-quick": "node scripts/test-okx-quick.js",
     "test-okx-ranking": "node scripts/test-okx-ranking.js",
-    "phase0-validate": "node scripts/phase0-validate.js",
-    "test": "node -e \"import('./src/index.js').then(m => console.log('Supabase 客户端已导出:', !!m.supabase))\""
+    "phase0-validate": "node scripts/phase0-validate.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
     "dotenv": "^16.4.5",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "next": "^15.5.19",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }
