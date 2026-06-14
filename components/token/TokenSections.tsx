@@ -355,7 +355,7 @@ function NarrativeCard({ address }: Props) {
                 ? `交易 ${fmt(tn.dimensions.market.txns24h)}`
                 : undefined}
               sub2={tn.dimensions?.market?.buyRatio != null
-                ? `买入比 ${fmtPct(tn.dimensions.market.buyRatio * 100)}`
+                ? `买入比 ${fmtPct(tn.dimensions.market.buyRatio)}`
                 : undefined}
             />
             <DimCell
