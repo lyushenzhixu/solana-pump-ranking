@@ -8,10 +8,18 @@ import PreviewCard from '@/components/ui/PreviewCard'
 import { getKbSignals, getPaperSummary } from '@/lib/queries'
 
 export default async function DashboardPage() {
-  const [{ data: signals }, { data: summary }] = await Promise.all([
+  const [sigRes, sumRes] = await Promise.all([
     getKbSignals(),
     getPaperSummary(),
   ])
+
+  // Both failing → throw so error.tsx takes over; single failure → soft degrade
+  if (sigRes.error && sumRes.error) {
+    throw new Error('行情总览数据加载失败')
+  }
+
+  const signals = sigRes.data ?? null
+  const summary = sumRes.data ?? null
 
   type KbRow = {
     ca?: string | null
