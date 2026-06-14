@@ -10,3 +10,7 @@ xxyy-trade-skill/
 
 # Claude Code local agent tooling
 .claude/
+
+# Next.js build artifacts
+.next/
+tsconfig.tsbuildinfo
