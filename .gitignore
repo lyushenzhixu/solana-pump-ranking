@@ -7,3 +7,6 @@ scripts/output/
 gate-skills/
 bitget-wallet-skill/
 xxyy-trade-skill/
+
+# Claude Code local agent tooling
+.claude/
