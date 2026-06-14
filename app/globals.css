@@ -1,0 +1,175 @@
+/* globals.css — 哑光终端设计系统 (Zhizhilabs)
+ * 视觉真相源: docs/2026-06-14-zhizhilabs-design-system.md
+ * 规则: 近黑微紫底 + 1px 发丝边框 + 无 backdrop-blur + 单一克制电紫
+ */
+
+/* ─────────────────────────────────────────────
+   0. Reset
+   ───────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ─────────────────────────────────────────────
+   1. Design Tokens (OKLCH)
+   ───────────────────────────────────────────── */
+:root {
+  /* 背景 */
+  --bg:        oklch(15% 0.014 285);       /* 近黑微紫，页面底 */
+  --surface-1: oklch(18% 0.016 285);       /* 主面板/卡 */
+  --surface-2: oklch(21% 0.018 285);       /* 悬浮/选中底/次级 */
+
+  /* 边框 */
+  --line:      oklch(40% 0.02 285 / 0.28); /* 发丝边框（强） */
+  --line-soft: oklch(40% 0.02 285 / 0.14); /* 发丝边框（弱），默认分隔 */
+
+  /* 文字 */
+  --text:      oklch(95% 0.005 285);       /* 主文字，高对比米白 */
+  --text-2:    oklch(72% 0.01 285);        /* 次文字 */
+  --text-3:    oklch(55% 0.012 285);       /* 提示/弱 */
+
+  /* 强调（唯一，绝不渐变，不进数据区） */
+  --accent:    oklch(68% 0.15 295);        /* 电紫：交互/选中/品牌 */
+  --accent-bg: oklch(68% 0.15 295 / 0.14); /* 强调底（选中态/徽章） */
+
+  /* 语义（数据区专用） */
+  --up:        oklch(78% 0.16 158);        /* 涨/正/流入（绿） */
+  --down:      oklch(68% 0.17 22);         /* 跌/负/流出（红） */
+  --warn:      oklch(80% 0.13 75);         /* 警示（琥珀） */
+
+  /* 语义背景（徽章用） */
+  --up-bg:     oklch(78% 0.16 158 / 0.16);
+  --down-bg:   oklch(68% 0.17 22 / 0.16);
+  --warn-bg:   oklch(80% 0.13 75 / 0.16);
+
+  /* 圆角 */
+  --radius:    10px;
+  --radius-sm: 8px;
+  --radius-xs: 5px;
+
+  /* 字体 */
+  --sans: 'Noto Sans SC', 'HarmonyOS Sans SC', 'PingFang SC', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  /* 间距 scale (4px base) */
+  --sp-2xs: 2px;
+  --sp-xs:  4px;
+  --sp-sm:  8px;
+  --sp-md:  12px;
+  --sp-lg:  16px;
+  --sp-xl:  22px;
+  --sp-2xl: 32px;
+  --sp-3xl: 48px;
+}
+
+/* ─────────────────────────────────────────────
+   2. Base styles
+   ───────────────────────────────────────────── */
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+img, svg {
+  display: block;
+  max-width: 100%;
+}
+
+/* ─────────────────────────────────────────────
+   3. Utility classes
+   ───────────────────────────────────────────── */
+
+/* 等宽 tabular 数字（所有价格/MC/百分比/榜单数字） */
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* 语义色 */
+.up   { color: var(--up); }
+.down { color: var(--down); }
+.warn { color: var(--warn); }
+.muted { color: var(--text-3); }
+.accent { color: var(--accent); }
+
+/* 哑光面板 */
+.panel {
+  background: var(--surface-1);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+/* 骨架 shimmer */
+@keyframes shimmer {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
+}
+
+.skeleton {
+  background: var(--surface-2);
+  border-radius: var(--radius-xs);
+  animation: shimmer 1s ease-in-out infinite alternate;
+}
+
+/* 数字闪动（涨跌更新） */
+@keyframes flash-up {
+  0%   { color: var(--up); }
+  100% { color: inherit; }
+}
+
+@keyframes flash-down {
+  0%   { color: var(--down); }
+  100% { color: inherit; }
+}
+
+.flash-up   { animation: flash-up   0.8s ease-out; }
+.flash-down { animation: flash-down 0.8s ease-out; }
+
+/* reduced motion 全停 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   4. Typography scale
+   ───────────────────────────────────────────── */
+.text-h1    { font-size: 22px; font-weight: 700; line-height: 1.3; }
+.text-h2    { font-size: 16px; font-weight: 500; }
+.text-h3    { font-size: 13.5px; font-weight: 500; }
+.text-body  { font-size: 13.5px; font-weight: 400; }
+.text-sm    { font-size: 12px; }
+.text-xs    { font-size: 11px; }
+.text-num   { font-size: 22px; font-weight: 500; font-family: var(--mono); font-variant-numeric: tabular-nums; }
