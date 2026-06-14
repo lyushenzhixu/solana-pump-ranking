@@ -93,6 +93,7 @@ export default function Sidebar() {
               <Link
                 key={item.href}
                 href={item.status === 'live' ? item.href : '#'}
+                className="nav-item"
                 style={{
                   display: 'flex',
                   alignItems: 'center',

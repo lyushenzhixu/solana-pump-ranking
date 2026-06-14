@@ -152,6 +152,23 @@ img, svg {
 .flash-up   { animation: flash-up   0.8s ease-out; }
 .flash-down { animation: flash-down 0.8s ease-out; }
 
+/* ─────────────────────────────────────────────
+   5. Micro-interactions (reduced-motion gated)
+   ───────────────────────────────────────────── */
+
+/* scroll-reveal — 基础态(opacity:0 只在支持动效时生效,reduced-motion 下直接可见) */
+.reveal {
+  opacity: 1;
+  transform: none;
+}
+
+/* 按钮 / 链接 CTA 基础过渡(低优先级,reduced-motion 下被覆盖) */
+button,
+[role="button"],
+a.btn-cta {
+  transition: background 0.18s ease-out, color 0.18s ease-out, border-color 0.18s ease-out;
+}
+
 /* reduced motion 全停 */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -160,6 +177,63 @@ img, svg {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* 确保 reveal 在 reduced-motion 下始终可见(兜底) */
+  .reveal,
+  .reveal.in {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* ── 卡片 hover(哑光面板 / 榜单卡) ── */
+  .panel,
+  .metric-card,
+  .preview-card {
+    transition: transform 0.2s ease-out, border-color 0.2s ease-out, background 0.2s ease-out;
+    cursor: default;
+  }
+
+  .panel:hover,
+  .metric-card:hover,
+  .preview-card:hover {
+    transform: translateY(-2px);
+    border-color: var(--line);
+    background: var(--surface-2);
+  }
+
+  /* ── 按钮 / CTA 按压 ── */
+  button,
+  [role="button"],
+  a.btn-cta {
+    transition: background 0.18s ease-out, color 0.18s ease-out,
+                border-color 0.18s ease-out, transform 0.12s ease-out;
+  }
+
+  button:active,
+  [role="button"]:active,
+  a.btn-cta:active {
+    transform: scale(0.98);
+  }
+
+  /* ── 导航 active / hover 平滑 ── */
+  .nav-item {
+    transition: background 0.18s ease-out, color 0.18s ease-out;
+  }
+
+  /* ── scroll-reveal 关键帧 ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  .reveal.in {
+    opacity: 1;
+    transform: none;
+    transition: opacity 0.5s ease-out, transform 0.5s ease-out;
   }
 }
 

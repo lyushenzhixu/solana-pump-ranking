@@ -1,17 +1,20 @@
 import React from 'react'
+import CountUp from '@/components/ui/CountUp'
 
 export interface MetricCardProps {
   label: string
   value: string
   sub?: string
   tone?: 'pos' | 'neg' | 'muted'
+  /** When provided, renders an animated CountUp instead of the static value string */
+  countUpValue?: number
 }
 
 /**
  * 哑光指标卡 — 哑光终端设计系统
  * surface-1 底 + line-soft 边框 + 22px 等宽 tabular 数字
  */
-export default function MetricCard({ label, value, sub, tone }: MetricCardProps) {
+export default function MetricCard({ label, value, sub, tone, countUpValue }: MetricCardProps) {
   const subColor: React.CSSProperties['color'] =
     tone === 'pos'
       ? 'var(--up)'
@@ -50,7 +53,11 @@ export default function MetricCard({ label, value, sub, tone }: MetricCardProps)
           lineHeight: 1.2,
         }}
       >
-        {value}
+        {countUpValue !== undefined ? (
+          <CountUp value={countUpValue} durationMs={900} decimals={0} />
+        ) : (
+          value
+        )}
       </div>
 
       {/* sub */}

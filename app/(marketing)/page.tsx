@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Reveal from '@/components/ui/Reveal'
 
 // ─── 营销首页 — Phase 5 (expanded) ────────────────────────────────────────────
 // 无侧边栏。全站 server component，无 'use client'。
@@ -368,11 +369,13 @@ export default function MarketingPage() {
           width: '100%',
         }}
       >
-        <SectionTitle
-          eyebrow="为什么用 ZHIZHILABS"
-          title="不是信息更多,是判断更准"
-          sub="把原始数据变成有 conviction 评级的可操作信号。每条信号公开可查,结果随时间自然累积。"
-        />
+        <Reveal>
+          <SectionTitle
+            eyebrow="为什么用 ZHIZHILABS"
+            title="不是信息更多,是判断更准"
+            sub="把原始数据变成有 conviction 评级的可操作信号。每条信号公开可查,结果随时间自然累积。"
+          />
+        </Reveal>
 
         <div
           style={{
@@ -402,29 +405,30 @@ export default function MarketingPage() {
               title: '聪明钱 / 大户追踪',
               desc: '跨板块看聪明钱在 meme / 永续 / 预测市场怎么做,信号在手早一步。',
             },
-          ].map((card) => (
-            <div
-              key={card.title}
-              className="panel"
-              style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}
-            >
-              <IconBadge icon={card.icon} />
-              <div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    marginBottom: 6,
-                  }}
-                >
-                  {card.title}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65 }}>
-                  {card.desc}
+          ].map((card, i) => (
+            <Reveal key={card.title} delay={i * 60}>
+              <div
+                className="panel"
+                style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 14, height: '100%' }}
+              >
+                <IconBadge icon={card.icon} />
+                <div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--text)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    {card.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65 }}>
+                    {card.desc}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -443,11 +447,13 @@ export default function MarketingPage() {
           width: '100%',
         }}
       >
-        <SectionTitle
-          eyebrow="SECTORS"
-          title="四大板块,一处掌握"
-          sub="从 Meme 聪明钱到宏观大盘,跨板块的资金流向一条线串联。"
-        />
+        <Reveal>
+          <SectionTitle
+            eyebrow="SECTORS"
+            title="四大板块,一处掌握"
+            sub="从 Meme 聪明钱到宏观大盘,跨板块的资金流向一条线串联。"
+          />
+        </Reveal>
 
         <div
           style={{
@@ -485,55 +491,57 @@ export default function MarketingPage() {
               badge: '已上线',
               badgeLive: true,
             },
-          ].map((card) => (
-            <div
-              key={card.title}
-              className="panel"
-              style={{
-                padding: '24px 20px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 16,
-                position: 'relative',
-                border: card.badgeLive ? '1px solid var(--line)' : '1px solid var(--line-soft)',
-              }}
-            >
-              {/* 状态 badge */}
+          ].map((card, i) => (
+            <Reveal key={card.title} delay={i * 60}>
               <div
+                className="panel"
                 style={{
-                  position: 'absolute',
-                  top: 14,
-                  right: 14,
-                  fontSize: 11,
-                  padding: '2px 8px',
-                  borderRadius: 20,
-                  background: card.badgeLive ? 'var(--up-bg)' : 'var(--surface-2)',
-                  color: card.badgeLive ? 'var(--up)' : 'var(--text-3)',
-                  fontWeight: 500,
-                  letterSpacing: '0.04em',
+                  padding: '24px 20px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 16,
+                  position: 'relative',
+                  height: '100%',
+                  border: card.badgeLive ? '1px solid var(--line)' : '1px solid var(--line-soft)',
                 }}
               >
-                {card.badge}
-              </div>
-
-              <IconBadge icon={card.icon} />
-
-              <div>
+                {/* 状态 badge */}
                 <div
                   style={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    marginBottom: 8,
+                    position: 'absolute',
+                    top: 14,
+                    right: 14,
+                    fontSize: 11,
+                    padding: '2px 8px',
+                    borderRadius: 20,
+                    background: card.badgeLive ? 'var(--up-bg)' : 'var(--surface-2)',
+                    color: card.badgeLive ? 'var(--up)' : 'var(--text-3)',
+                    fontWeight: 500,
+                    letterSpacing: '0.04em',
                   }}
                 >
-                  {card.title}
+                  {card.badge}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>
-                  {card.desc}
+
+                <IconBadge icon={card.icon} />
+
+                <div>
+                  <div
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: 'var(--text)',
+                      marginBottom: 8,
+                    }}
+                  >
+                    {card.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>
+                    {card.desc}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -551,12 +559,15 @@ export default function MarketingPage() {
           width: '100%',
         }}
       >
-        <SectionTitle
-          eyebrow="HOW IT WORKS"
-          title="它怎么工作"
-          sub="从原始链上数据到你看板上的可操作信号,四步完成。"
-        />
+        <Reveal>
+          <SectionTitle
+            eyebrow="HOW IT WORKS"
+            title="它怎么工作"
+            sub="从原始链上数据到你看板上的可操作信号,四步完成。"
+          />
+        </Reveal>
 
+        <Reveal delay={80}>
         <div
           style={{
             display: 'grid',
@@ -673,6 +684,7 @@ export default function MarketingPage() {
             </div>
           ))}
         </div>
+        </Reveal>
       </section>
 
       <Divider />
@@ -690,65 +702,71 @@ export default function MarketingPage() {
           textAlign: 'center',
         }}
       >
-        <SectionTitle
-          eyebrow="TRACK RECORD"
-          title="战绩全程透明"
-          sub="模拟盘全量公开,含亏损,不 cherry-pick。每笔记录完整入场 / 出场 / 盈亏,信号发出时间锁定,不可回溯修改。"
-        />
+        <Reveal>
+          <SectionTitle
+            eyebrow="TRACK RECORD"
+            title="战绩全程透明"
+            sub="模拟盘全量公开,含亏损,不 cherry-pick。每笔记录完整入场 / 出场 / 盈亏,信号发出时间锁定,不可回溯修改。"
+          />
+        </Reveal>
 
         {/* 说明卡 */}
-        <div
-          className="panel"
-          style={{
-            maxWidth: 640,
-            margin: '0 auto 32px',
-            padding: '24px 28px',
-            textAlign: 'left',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            {[
-              { icon: 'ti-lock', text: '信号发出时间戳锁定,不可回溯修改' },
-              { icon: 'ti-eye', text: '模拟盘结果全量展示,包括亏损单' },
-              { icon: 'ti-list-details', text: '每笔含入场 MC / 出场 MC / 盈亏 % / 持仓时长' },
-              { icon: 'ti-shield-x', text: '不选取"最佳表现"样本,全量原始记录' },
-            ].map((item) => (
-              <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-                <i
-                  className={`ti ${item.icon}`}
-                  style={{ fontSize: 16, color: 'var(--accent)', marginTop: 1, flexShrink: 0 }}
-                />
-                <span style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.6 }}>
-                  {item.text}
-                </span>
-              </div>
-            ))}
+        <Reveal delay={80}>
+          <div
+            className="panel"
+            style={{
+              maxWidth: 640,
+              margin: '0 auto 32px',
+              padding: '24px 28px',
+              textAlign: 'left',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {[
+                { icon: 'ti-lock', text: '信号发出时间戳锁定,不可回溯修改' },
+                { icon: 'ti-eye', text: '模拟盘结果全量展示,包括亏损单' },
+                { icon: 'ti-list-details', text: '每笔含入场 MC / 出场 MC / 盈亏 % / 持仓时长' },
+                { icon: 'ti-shield-x', text: '不选取"最佳表现"样本,全量原始记录' },
+              ].map((item) => (
+                <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                  <i
+                    className={`ti ${item.icon}`}
+                    style={{ fontSize: 16, color: 'var(--accent)', marginTop: 1, flexShrink: 0 }}
+                  />
+                  <span style={{ fontSize: 13.5, color: 'var(--text-2)', lineHeight: 1.6 }}>
+                    {item.text}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Reveal>
 
-        <Link
-          href="/paper"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 8,
-            fontSize: 14,
-            fontWeight: 500,
-            color: 'var(--accent)',
-            border: '1px solid var(--accent)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '10px 22px',
-            textDecoration: 'none',
-            marginBottom: 16,
-          }}
-        >
-          <i className="ti ti-chart-line" style={{ fontSize: 15 }} />
-          看模拟盘战绩
-        </Link>
+        <Reveal delay={140}>
+          <Link
+            href="/paper"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              fontSize: 14,
+              fontWeight: 500,
+              color: 'var(--accent)',
+              border: '1px solid var(--accent)',
+              borderRadius: 'var(--radius-sm)',
+              padding: '10px 22px',
+              textDecoration: 'none',
+              marginBottom: 16,
+            }}
+          >
+            <i className="ti ti-chart-line" style={{ fontSize: 15 }} />
+            看模拟盘战绩
+          </Link>
 
-        <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 12 }}>
-          PAPER · 模拟盘 · 非投资建议
-        </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 12 }}>
+            PAPER · 模拟盘 · 非投资建议
+          </p>
+        </Reveal>
       </section>
 
       <Divider />
@@ -765,11 +783,13 @@ export default function MarketingPage() {
           width: '100%',
         }}
       >
-        <SectionTitle
-          eyebrow="COMMUNITY"
-          title="和真正在看数据的人一起交流"
-          sub="Discord / Telegram 私域频道,Pro 解锁实时告警推送 + 分析师研究同步。"
-        />
+        <Reveal>
+          <SectionTitle
+            eyebrow="COMMUNITY"
+            title="和真正在看数据的人一起交流"
+            sub="Discord / Telegram 私域频道,Pro 解锁实时告警推送 + 分析师研究同步。"
+          />
+        </Reveal>
 
         <div
           style={{
@@ -791,53 +811,56 @@ export default function MarketingPage() {
               title: 'Telegram 告警',
               desc: 'Pro 解锁专属告警 Bot,聪明钱动向 / 信号变化第一时间推送到手机。',
             },
-          ].map((card) => (
-            <div
-              key={card.title}
-              className="panel"
-              style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}
-            >
-              <IconBadge icon={card.icon} />
-              <div>
-                <div
-                  style={{
-                    fontSize: 14,
-                    fontWeight: 600,
-                    color: 'var(--text)',
-                    marginBottom: 6,
-                  }}
-                >
-                  {card.title}
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65 }}>
-                  {card.desc}
+          ].map((card, i) => (
+            <Reveal key={card.title} delay={i * 60}>
+              <div
+                className="panel"
+                style={{ padding: '22px 20px', display: 'flex', flexDirection: 'column', gap: 14, height: '100%' }}
+              >
+                <IconBadge icon={card.icon} />
+                <div>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: 'var(--text)',
+                      marginBottom: 6,
+                    }}
+                  >
+                    {card.title}
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65 }}>
+                    {card.desc}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
 
-        <div style={{ textAlign: 'center', marginTop: 32 }}>
-          {/* 占位按钮，待配置社区链接 */}
-          <a
-            href="#"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
-              fontSize: 14,
-              fontWeight: 500,
-              color: 'var(--text-2)',
-              border: '1px solid var(--line)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '10px 22px',
-              textDecoration: 'none',
-            }}
-          >
-            <i className="ti ti-brand-discord" style={{ fontSize: 15 }} />
-            加入社区(链接即将开放)
-          </a>
-        </div>
+        <Reveal delay={100}>
+          <div style={{ textAlign: 'center', marginTop: 32 }}>
+            {/* 占位按钮，待配置社区链接 */}
+            <a
+              href="#"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                fontSize: 14,
+                fontWeight: 500,
+                color: 'var(--text-2)',
+                border: '1px solid var(--line)',
+                borderRadius: 'var(--radius-sm)',
+                padding: '10px 22px',
+                textDecoration: 'none',
+              }}
+            >
+              <i className="ti ti-brand-discord" style={{ fontSize: 15 }} />
+              加入社区(链接即将开放)
+            </a>
+          </div>
+        </Reveal>
       </section>
 
       <Divider />
@@ -854,11 +877,13 @@ export default function MarketingPage() {
           width: '100%',
         }}
       >
-        <SectionTitle
-          eyebrow="PRICING"
-          title="按需订阅,从免费开始"
-          sub="价格即将公布。现在免费试用全部基础功能,无需信用卡。"
-        />
+        <Reveal>
+          <SectionTitle
+            eyebrow="PRICING"
+            title="按需订阅,从免费开始"
+            sub="价格即将公布。现在免费试用全部基础功能,无需信用卡。"
+          />
+        </Reveal>
 
         <div
           style={{
@@ -894,9 +919,9 @@ export default function MarketingPage() {
               ctaHref: '#',
               highlight: false,
             },
-          ].map((plan) => (
+          ].map((plan, i) => (
+            <Reveal key={plan.tier} delay={i * 70}>
             <div
-              key={plan.tier}
               className="panel"
               style={{
                 padding: '28px 22px',
@@ -997,6 +1022,7 @@ export default function MarketingPage() {
                 {plan.cta}
               </Link>
             </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -1014,8 +1040,11 @@ export default function MarketingPage() {
           width: '100%',
         }}
       >
-        <SectionTitle title="常见问题" />
+        <Reveal>
+          <SectionTitle title="常见问题" />
+        </Reveal>
 
+        <Reveal delay={60}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {[
             {
@@ -1080,6 +1109,7 @@ export default function MarketingPage() {
           ))}
           <div style={{ borderTop: '1px solid var(--line-soft)' }} />
         </div>
+        </Reveal>
       </section>
 
       <Divider />

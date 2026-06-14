@@ -79,6 +79,7 @@ export default async function DashboardPage() {
           <MetricCard
             label="今日 KB 信号"
             value={String(kbCount)}
+            countUpValue={kbCount}
             sub="已落档"
             tone="muted"
           />
