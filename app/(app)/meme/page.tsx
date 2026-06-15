@@ -64,6 +64,7 @@ export default async function MemePage() {
     cluster_risk?: unknown
     smart_money_24h?: unknown
     revival?: unknown
+    onchain_cluster?: unknown
     market_cap?: number | null
     discovered_at?: string | null
     price_change_24h?: number | null
@@ -348,6 +349,7 @@ export default async function MemePage() {
                                   {sm && (sm.wallet_count ?? 0) > 0 && <Badge kind="smart">聪明钱 {sm.wallet_count}</Badge>}
                                   {rev?.status && rev.status !== 'none' && <Badge kind="revival">复活</Badge>}
                                   {(cr?.level === 'high' || cr?.level === 'medium') && <Badge kind="cluster">cluster {cr.level === 'high' ? '高' : '中'}</Badge>}
+                                  {!cr?.level && row.onchain_cluster != null && <Badge kind="cluster">链上集群</Badge>}
                                   {row.conviction_rating && <Badge kind="conviction">{row.conviction_rating}</Badge>}
                                 </div>
                               </td>
