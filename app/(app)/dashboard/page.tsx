@@ -7,12 +7,18 @@ import Topbar from '@/components/shell/Topbar'
 import MetricCard from '@/components/ui/MetricCard'
 import PreviewCard from '@/components/ui/PreviewCard'
 import { getKbSignals, getPaperSummary } from '@/lib/queries'
+import { getMarketOverview } from '@/lib/fetchers/marketOverview'
+import { fetchSmartMoneySignals } from '@/lib/sources/index.js'
 
 export default async function DashboardPage() {
-  const [sigRes, sumRes] = await Promise.all([
+  const [sigRes, sumRes, overview, smRaw] = await Promise.all([
     getKbSignals(),
     getPaperSummary(),
+    getMarketOverview(),
+    fetchSmartMoneySignals({ page: 1, pageSize: 5, chainId: 'CT_501' }).catch(() => []),
   ])
+  const smRows: Array<{ name?: string; symbol?: string; ticker?: string; contractAddress?: string; contract_address?: string }> =
+    Array.isArray(smRaw) ? smRaw.slice(0, 5) : []
 
   // Both failing → throw so error.tsx takes over; single failure → soft degrade
   if (sigRes.error && sumRes.error) {
@@ -51,6 +57,12 @@ export default async function DashboardPage() {
 
   const kbCount = (signals as unknown as KbRow[] | null)?.length ?? 0
 
+  const fmtTotalMc = (v: number | null) =>
+    v == null ? '—' : v >= 1e12 ? `$${(v / 1e12).toFixed(2)}T` : v >= 1e9 ? `$${(v / 1e9).toFixed(0)}B` : `$${(v / 1e6).toFixed(0)}M`
+  const mcChg = overview.totalMcChange24h
+  const fng = overview.fearGreedValue
+  const fngTone: 'pos' | 'neg' | 'muted' = fng == null ? 'muted' : fng >= 55 ? 'pos' : fng <= 45 ? 'neg' : 'muted'
+
   return (
     <>
       <Topbar title="行情总览" />
@@ -67,15 +79,15 @@ export default async function DashboardPage() {
         >
           <MetricCard
             label="总市值"
-            value="—"
-            sub="即将接入"
-            tone="muted"
+            value={fmtTotalMc(overview.totalMcUsd)}
+            sub={mcChg != null ? `${mcChg > 0 ? '+' : ''}${mcChg.toFixed(2)}% · 24h` : '暂不可用'}
+            tone={mcChg == null ? 'muted' : mcChg > 0 ? 'pos' : 'neg'}
           />
           <MetricCard
             label="恐贪指数"
-            value="—"
-            sub="即将接入"
-            tone="muted"
+            value={fng != null ? String(fng) : '—'}
+            sub={overview.fearGreedLabel ?? '暂不可用'}
+            tone={fngTone}
           />
           <MetricCard
             label="今日 KB 信号"
@@ -89,6 +101,10 @@ export default async function DashboardPage() {
             value={returnVal}
             tone={returnTone}
           />
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: -8 }}>
+          市场数据 as of {new Date(overview.asOf).toLocaleString('zh-CN', { hour12: false })} · 恐贪/总市值来自公开源
         </div>
 
         {/* ── 预览面板区 ── */}
@@ -169,12 +185,38 @@ export default async function DashboardPage() {
           {/* 模拟盘预览 */}
           <PreviewCard title="模拟盘" href="/paper">
             {s ? (
-              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>
-                活仓 {s.active_count ?? '—'} · 已平 {s.closed_count ?? '—'} · 胜率{' '}
-                {s.win_rate_pct != null ? `${s.win_rate_pct.toFixed(0)}%` : '—'}
+              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.8 }}>
+                <div>总收益(含浮盈){' '}
+                  <span style={{ color: s.total_return_pct != null && s.total_return_pct > 0 ? 'var(--up)' : s.total_return_pct != null && s.total_return_pct < 0 ? 'var(--down)' : 'var(--text-2)', fontFamily: 'var(--mono)' }}>
+                    {returnVal}
+                  </span>
+                </div>
+                <div style={{ color: 'var(--text-3)', fontSize: 12.5 }}>
+                  活仓 {s.active_count ?? '—'} · 已平 {s.closed_count ?? '—'} · 已平仓胜率 {s.win_rate_pct != null ? `${s.win_rate_pct.toFixed(0)}%` : '—'}
+                </div>
               </div>
             ) : (
               <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>暂无数据</div>
+            )}
+          </PreviewCard>
+
+          {/* Solana 聪明钱近期活动(仅取 CT_501 一路,口径与标题一致) */}
+          <PreviewCard title="Solana 聪明钱近期活动" href="/smart-money">
+            {smRows.length === 0 ? (
+              <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>暂无聪明钱数据</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                {smRows.map((row, idx) => {
+                  const ca = row.contractAddress || row.contract_address || ''
+                  const nm = row.ticker || row.name || row.symbol || (ca ? ca.slice(0, 6) + '…' : '—')
+                  return (
+                    <div key={ca || idx} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: idx < smRows.length - 1 ? '1px solid var(--line-soft)' : 'none' }}>
+                      <span style={{ fontSize: 11, color: 'var(--text-3)', width: 16, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{idx + 1}</span>
+                      <span style={{ fontSize: 13, color: 'var(--text)' }}>{nm}</span>
+                    </div>
+                  )
+                })}
+              </div>
             )}
           </PreviewCard>
         </div>
