@@ -12,23 +12,19 @@ function isActive(pathname: string, href: string): boolean {
  * 持久左抽屉 — 200px 固定宽,surface-1 底,right line-soft 分隔
  * 品牌 Z logo + 三组 nav + 底部升级占位
  */
-export default function Sidebar() {
+export default function Sidebar({ open, onClose }: { open?: boolean; onClose?: () => void }) {
   const pathname = usePathname()
 
   return (
     <aside
+      className={`app-sidebar${open ? ' open' : ''}`}
       style={{
-        width: 200,
         flexShrink: 0,
         background: 'var(--surface-1)',
         borderRight: '1px solid var(--line-soft)',
         padding: '16px 0',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
-        position: 'sticky',
-        top: 0,
-        alignSelf: 'flex-start',
         overflowY: 'auto',
       }}
     >
@@ -109,6 +105,7 @@ export default function Sidebar() {
                   textDecoration: 'none',
                   transition: 'background 150ms ease-out, color 150ms ease-out',
                 }}
+                onClick={() => { if (item.status === 'live') onClose?.() }}
                 // CSS hover handled inline via onMouse — we keep it simple
                 onMouseEnter={(e) => {
                   if (!active) {

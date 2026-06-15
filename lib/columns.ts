@@ -20,6 +20,8 @@ export const KB_SIGNAL_PUBLIC_COLUMNS = [
   'market_cap',
   'narrative',
   'onchain_cluster',
+  'price_change_24h',
+  'has_signal',
 ] as const
 
 export const PAPER_TRADE_PUBLIC_COLUMNS = [
