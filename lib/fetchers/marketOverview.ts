@@ -4,12 +4,28 @@ import type { MarketOverview, GlobalRes, FngRes } from './marketOverviewCore'
 
 export type { MarketOverview } from './marketOverviewCore'
 
-async function fetchGlobal(): Promise<GlobalRes> {
+// 总市值主源 = coinpaprika(keyless,限速宽松);CoinGecko 免费档无 key 经常 429,仅作兜底。
+async function fetchGlobalCoinpaprika(): Promise<GlobalRes> {
+  const res = await fetch('https://api.coinpaprika.com/v1/global')
+  if (!res.ok) throw new Error(`coinpaprika ${res.status}`)
+  const j = await res.json()
+  return { mc: j?.market_cap_usd ?? null, chg: j?.market_cap_change_24h ?? null }
+}
+
+async function fetchGlobalCoingecko(): Promise<GlobalRes> {
   const res = await fetch('https://api.coingecko.com/api/v3/global')
   if (!res.ok) throw new Error(`coingecko ${res.status}`)
   const j = await res.json()
   const d = j?.data ?? {}
   return { mc: d.total_market_cap?.usd ?? null, chg: d.market_cap_change_percentage_24h_usd ?? null }
+}
+
+async function fetchGlobal(): Promise<GlobalRes> {
+  try {
+    return await fetchGlobalCoinpaprika()
+  } catch {
+    return await fetchGlobalCoingecko()
+  }
 }
 
 async function fetchFng(): Promise<FngRes> {
@@ -26,7 +42,7 @@ const cachedOverview = unstable_cache(
     const [g, f] = await Promise.allSettled([fetchGlobal(), fetchFng()])
     return composeOverview(g, f, new Date().toISOString())
   },
-  ['market-overview-v1'],
+  ['market-overview-v2'],
   { revalidate: 300 },
 )
 
