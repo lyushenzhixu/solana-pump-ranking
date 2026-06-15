@@ -14,3 +14,4 @@ xxyy-trade-skill/
 # Next.js build artifacts
 .next/
 tsconfig.tsbuildinfo
+.superpowers/
