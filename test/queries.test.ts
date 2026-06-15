@@ -8,7 +8,7 @@ describe('public column whitelists', () => {
     for (const f of FORBIDDEN) expect(KB_SIGNAL_PUBLIC_COLUMNS).not.toContain(f)
   })
   it('kb whitelist includes display fields', () => {
-    for (const f of ['ca','score','conviction_rating','narrative','discovered_at']) {
+    for (const f of ['ca','score','conviction_rating','narrative','discovered_at','price_change_24h','has_signal']) {
       expect(KB_SIGNAL_PUBLIC_COLUMNS).toContain(f)
     }
   })
