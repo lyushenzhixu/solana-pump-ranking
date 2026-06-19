@@ -4,12 +4,12 @@ import './globals.css'
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || 'https://zhizhilabs.com'),
-  title: 'Zhizhilabs · 综合 crypto 数据看板',
+  title: 'Zhizhilabs · Solana Meme 发现榜',
   description:
-    '面向中文 crypto 交易者的链上数据终端：Meme 热榜、聪明钱追踪、永续资金费率、预测市场。一个面板看懂钱在往哪走。',
+    '面向中文 crypto 交易者的 Solana 链上发现榜：KB 精选信号、聪明钱动向、Binance 资金流入、实时 K 线。',
   openGraph: {
-    title: 'Zhizhilabs · 综合 crypto 数据看板',
-    description: '面向中文 crypto 交易者的链上数据终端',
+    title: 'Zhizhilabs · Solana Meme 发现榜',
+    description: '面向中文 crypto 交易者的 Solana 链上发现榜',
     locale: 'zh_CN',
     type: 'website',
   },
