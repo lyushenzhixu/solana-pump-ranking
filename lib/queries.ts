@@ -10,6 +10,7 @@ export async function getKbSignals() {
 }
 
 export async function getKbSignalByCa(ca: string) {
+  assertNoSensitive([...KB_SIGNAL_PUBLIC_COLUMNS])
   return supabase
     .from('kb_signals')
     .select(KB_SIGNAL_PUBLIC_COLUMNS.join(','))
