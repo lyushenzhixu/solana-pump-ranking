@@ -1675,17 +1675,17 @@ return `<!DOCTYPE html>
         if (p && mc && isFinite(p) && isFinite(mc) && p > 0) _supply = mc / p;
       })();
 
-      // Init KLineChart if we have a pair
+      // Init Lightweight Charts if we have a pair
       if (token.main_pair) {
-        initKLine(token.main_pair);
+        initLwc(token.main_pair);
         // Wire interval buttons
         var intervalBtns = document.querySelectorAll('.chart-interval-btn');
         intervalBtns.forEach(function(btn) {
           btn.addEventListener('click', function() {
             intervalBtns.forEach(function(b) { b.classList.remove('active'); });
             btn.classList.add('active');
-            _klcInterval = parseInt(btn.getAttribute('data-interval'), 10);
-            loadKLineData(token.main_pair);
+            _lwcInterval = parseInt(btn.dataset.interval || btn.getAttribute('data-interval'), 10);
+            loadLwcData(token.main_pair);
           });
         });
       }
@@ -2138,18 +2138,18 @@ return `<!DOCTYPE html>
         });
     }
 
-    // ── KLineChart (open-source, no third-party branding) ──────────────────
-    var _klc = null, _klcInterval = 15;
+    // ── TradingView Lightweight Charts v4 ──────────────────────────────────
+    var _lwc = null, _candle = null, _vol = null, _ma1 = null, _ma2 = null, _lwcInterval = 15;
     // Circulating supply derived from token detail — used to convert price OHLC → MCap OHLC
     var _supply = null;
 
-    function loadKLineLib(cb) {
-      if (window.klinecharts) return cb();
-      var ex = document.getElementById('klc-lib');
+    function loadLwcLib(cb) {
+      if (window.LightweightCharts) return cb();
+      var ex = document.getElementById('lwc-lib');
       if (ex) { ex.addEventListener('load', cb); return; }
       var s = document.createElement('script');
-      s.id = 'klc-lib';
-      s.src = 'https://cdn.jsdelivr.net/npm/klinecharts@9.8.10/dist/umd/klinecharts.min.js';
+      s.id = 'lwc-lib';
+      s.src = 'https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js';
       s.onload = cb;
       s.onerror = function() {
         var el = document.getElementById('kline-chart');
@@ -2167,64 +2167,68 @@ return `<!DOCTYPE html>
       return String(Math.round(n));
     }
 
-    function initKLine(pair) {
-      loadKLineLib(function() {
-        if (_klc) { klinecharts.dispose('kline-chart'); _klc = null; }
-        _klc = klinecharts.init('kline-chart');
-        if (typeof _klc.setPriceVolumePrecision === 'function') {
-          _klc.setPriceVolumePrecision(0, 0);
-        }
-        _klc.setStyles({
+    function initLwc(pair) {
+      loadLwcLib(function() {
+        var el = document.getElementById('kline-chart');
+        if (!el) return;
+        if (_lwc) { _lwc.remove(); _lwc = null; }
+        el.innerHTML = '';
+        _lwc = LightweightCharts.createChart(el, {
+          width: el.clientWidth,
+          height: el.clientHeight || 460,
+          layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#9aa' },
           grid: {
-            horizontal: { color: 'rgba(120,120,140,0.08)' },
-            vertical:   { color: 'rgba(120,120,140,0.08)' }
+            vertLines: { color: 'rgba(120,120,140,0.06)' },
+            horzLines: { color: 'rgba(120,120,140,0.06)' }
           },
-          candle: {
-            bar: {
-              upColor: '#14F195', downColor: '#ff4d6a', noChangeColor: '#888',
-              upBorderColor: '#14F195', downBorderColor: '#ff4d6a',
-              upWickColor: '#14F195', downWickColor: '#ff4d6a'
-            },
-            priceMark: {
-              high: { color: '#cfcfe0' }, low: { color: '#cfcfe0' },
-              last: { upColor: '#14F195', downColor: '#ff4d6a', text: { color: '#fff' } }
-            },
-            tooltip: {
-              rect: { color: 'rgba(20,18,30,0.9)', borderColor: 'rgba(153,69,255,0.4)' },
-              text: { color: '#cfcfe0' }
-            }
-          },
-          xAxis: {
-            axisLine: { color: 'rgba(120,120,140,0.2)' },
-            tickText: { color: '#888' }
-          },
-          yAxis: {
-            axisLine: { color: 'rgba(120,120,140,0.2)' },
-            tickText: { color: '#888' }
-          },
+          localization: { priceFormatter: fmtMcap },
+          rightPriceScale: { borderColor: 'rgba(120,120,140,0.2)' },
+          timeScale: { borderColor: 'rgba(120,120,140,0.2)', timeVisible: true, secondsVisible: false },
           crosshair: {
-            horizontal: { line: { color: '#9945FF' }, text: { backgroundColor: '#9945FF' } },
-            vertical:   { line: { color: '#9945FF' }, text: { backgroundColor: '#9945FF' } }
-          },
-          indicator: { tooltip: { text: { color: '#cfcfe0' } } }
+            mode: LightweightCharts.CrosshairMode.Normal,
+            vertLine: { color: '#9945FF', labelBackgroundColor: '#9945FF' },
+            horzLine: { color: '#9945FF', labelBackgroundColor: '#9945FF' }
+          }
         });
-        _klc.createIndicator('VOL', false);
-        _klc.createIndicator('MA', true, { id: 'candle_pane' });
-        loadKLineData(pair);
+        _candle = _lwc.addCandlestickSeries({
+          upColor: '#14F195', downColor: '#ff4d6a',
+          borderUpColor: '#14F195', borderDownColor: '#ff4d6a',
+          wickUpColor: '#14F195', wickDownColor: '#ff4d6a'
+        });
+        _vol = _lwc.addHistogramSeries({ priceFormat: { type: 'volume' }, priceScaleId: 'vol' });
+        _lwc.priceScale('vol').applyOptions({ scaleMargins: { top: 0.82, bottom: 0 } });
+        _ma1 = _lwc.addLineSeries({ color: '#e0b0ff', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        _ma2 = _lwc.addLineSeries({ color: '#5ab1ff', lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false });
+        loadLwcData(pair);
+        if (window._lwcRO) { try { window._lwcRO.disconnect(); } catch(e) {} }
+        window._lwcRO = new ResizeObserver(function() {
+          if (_lwc && el) _lwc.applyOptions({ width: el.clientWidth, height: el.clientHeight || 460 });
+        });
+        window._lwcRO.observe(el);
       });
     }
 
-    function loadKLineData(pair) {
-      fetch('/api/kline/' + encodeURIComponent(pair) + '?interval=' + _klcInterval + '&size=300&chain=solana')
+    function sma(bars, p) {
+      var out = [], sum = 0;
+      for (var i = 0; i < bars.length; i++) {
+        sum += bars[i].close;
+        if (i >= p) sum -= bars[i - p].close;
+        if (i >= p - 1) out.push({ time: bars[i].time, value: sum / p });
+      }
+      return out;
+    }
+
+    function loadLwcData(pair) {
+      fetch('/api/kline/' + encodeURIComponent(pair) + '?interval=' + _lwcInterval + '&size=300&chain=solana')
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(rows) {
           if (!Array.isArray(rows) || !rows.length) return;
-          // Multiply price OHLC by circulating supply to get MCap candles
           var mult = (_supply && isFinite(_supply) && _supply > 0) ? _supply : 1;
+          var seen = {};
           var bars = rows
             .map(function(d) {
               return {
-                timestamp: d.time * 1000,
+                time:   Math.floor(d.time),
                 open:   +d.open   * mult,
                 high:   +d.high   * mult,
                 low:    +d.low    * mult,
@@ -2232,13 +2236,23 @@ return `<!DOCTYPE html>
                 volume: +(d.volume || 0)
               };
             })
-            .filter(function(b) { return isFinite(b.timestamp) && isFinite(b.close) && b.close > 0; })
-            .sort(function(a, b) { return a.timestamp - b.timestamp; });
-          if (_klc) _klc.applyNewData(bars);
+            .filter(function(b) {
+              if (!isFinite(b.time) || !isFinite(b.close) || b.close <= 0) return false;
+              if (seen[b.time]) return false;
+              seen[b.time] = 1;
+              return true;
+            })
+            .sort(function(a, b) { return a.time - b.time; });
+          if (!_candle) return;
+          _candle.setData(bars.map(function(b) { return { time: b.time, open: b.open, high: b.high, low: b.low, close: b.close }; }));
+          _vol.setData(bars.map(function(b) { return { time: b.time, value: b.volume, color: b.close >= b.open ? 'rgba(20,241,149,0.4)' : 'rgba(255,77,106,0.4)' }; }));
+          _ma1.setData(sma(bars, 7));
+          _ma2.setData(sma(bars, 25));
+          _lwc.timeScale().fitContent();
         })
         .catch(function() {});
     }
-    // ── end KLineChart ──────────────────────────────────────────────────────
+    // ── end Lightweight Charts ──────────────────────────────────────────────
   <\/script>
 </body>
 </html>
