@@ -11,6 +11,12 @@ export type RankingRowData = {
   badges: SignalBadge[]
 }
 
+function numOrNull(x: unknown): number | null {
+  if (x == null || x === '') return null
+  const n = typeof x === 'number' ? x : Number(x)
+  return Number.isFinite(n) ? n : null
+}
+
 function badgesFromKb(r: any): SignalBadge[] {
   const out: SignalBadge[] = []
   const sm = r.smart_money_24h as { wallet_count?: number } | null
@@ -39,10 +45,10 @@ export function toRankingRows(rankRows: any[], badgeMap: Map<string, SignalBadge
     ca: r.token ?? null,
     name: displayName(r.name, r.symbol, r.token),
     symbol: r.symbol ?? null,
-    marketCap: r.market_cap ?? null,
-    vol24h: r.tx_volume_u_24h ?? null,
-    pct24h: r.price_change_24h ?? null,
-    holders: r.holders ?? null,
+    marketCap: numOrNull(r.market_cap),
+    vol24h: numOrNull(r.tx_volume_u_24h),
+    pct24h: numOrNull(r.price_change_24h),
+    holders: numOrNull(r.holders),
     badges: (r.token && badgeMap.get(r.token)) || [],
   }))
 }
@@ -52,9 +58,9 @@ export function kbToRankingRows(kbRows: any[]): RankingRowData[] {
     ca: r.ca ?? null,
     name: displayName(r.name, r.symbol, r.ca),
     symbol: r.symbol ?? null,
-    marketCap: r.market_cap ?? null,
-    vol24h: r.vol_24h_usd ?? null,
-    pct24h: r.price_change_24h ?? null,
+    marketCap: numOrNull(r.market_cap),
+    vol24h: numOrNull(r.vol_24h_usd),
+    pct24h: numOrNull(r.price_change_24h),
     holders: null, // kb_signals 无 holders
     badges: badgesFromKb(r),
   }))

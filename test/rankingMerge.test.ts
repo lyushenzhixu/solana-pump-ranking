@@ -24,4 +24,19 @@ describe('rankingMerge', () => {
     expect(rows[0].pct24h).toBe(12.3)
     expect(rows[0].badges.some((b) => b.kind === 'smart')).toBe(true)
   })
+
+  it('toRankingRows coerces string numerics to numbers (real DB returns strings)', () => {
+    const rows = toRankingRows([{ token: 'A', name: 'A', symbol: 'A', market_cap: '1500000', tx_volume_u_24h: '50000', price_change_24h: '12.3', holders: '1200' }] as any, new Map())
+    expect(rows[0].marketCap).toBe(1500000)
+    expect(rows[0].vol24h).toBe(50000)
+    expect(rows[0].pct24h).toBeCloseTo(12.3)
+    expect(rows[0].holders).toBe(1200)
+    expect(typeof rows[0].pct24h).toBe('number')
+  })
+
+  it('numeric coercion: non-numeric string → null', () => {
+    const rows = toRankingRows([{ token: 'B', name: 'B', market_cap: 'N/A', price_change_24h: '' }] as any, new Map())
+    expect(rows[0].marketCap).toBeNull()
+    expect(rows[0].pct24h).toBeNull()
+  })
 })
