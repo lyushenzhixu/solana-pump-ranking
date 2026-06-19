@@ -19,6 +19,7 @@ export const KB_SIGNAL_PUBLIC_COLUMNS = [
   'price_usd',
   'market_cap',
   'narrative',
+  'narrative_twitter',
   'onchain_cluster',
   'price_change_24h',
   'has_signal',
