@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import type { Metadata } from 'next'
 import { getKbSignalByCa } from '@/lib/queries'
+import { getTokenDetail } from '@/lib/sources/index.js'
 import DexChart from '@/components/token/DexChart'
 import TokenSections from '@/components/token/TokenSections'
 
@@ -37,6 +38,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 // ─── Page ──────────────────────────────────────────────────────────────────────
 export default async function TokenPage({ params }: PageProps) {
   const { address } = await params
+
+  // Server-prefetch token detail to eliminate first-paint "—" flash
+  const detail = await (getTokenDetail as (a: string, c: string) => Promise<any>)(address, 'solana').catch(() => null)
 
   return (
     <main
@@ -80,10 +84,10 @@ export default async function TokenPage({ params }: PageProps) {
       </div>
 
       {/* K 线图(客户端) */}
-      <DexChart address={address} />
+      <DexChart address={address} initialToken={detail} />
 
       {/* 三卡(行情+安全 / 叙事 / 推文) */}
-      <TokenSections address={address} />
+      <TokenSections address={address} initialDetail={detail} />
     </main>
   )
 }

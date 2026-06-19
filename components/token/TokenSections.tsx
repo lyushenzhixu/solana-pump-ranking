@@ -2,8 +2,31 @@
 
 import { useEffect, useState } from 'react'
 
+interface TokenDetail {
+  name?: string | null
+  symbol?: string | null
+  chain?: string | null
+  main_pair?: string | null
+  current_price_usd?: number | null
+  market_cap?: number | null
+  tx_volume_u_24h?: number | null
+  holders?: number | null
+  _security?: {
+    topHolderPercent?: number | null
+    isHoneypot?: boolean | null
+    isMintable?: boolean | null
+    isFreezable?: boolean | null
+    lpNotLocked?: boolean | null
+    riskLevel?: string | null
+    buyTax?: number | null
+    sellTax?: number | null
+  } | null
+  [key: string]: unknown
+}
+
 interface Props {
   address: string
+  initialDetail?: TokenDetail | null
 }
 
 // ─── 行情 / 安全 / 持仓卡 ─────────────────────────────────────────────────────
@@ -97,17 +120,20 @@ function KV({ k, v, tone }: { k: string; v: string; tone?: 'up' | 'down' | 'warn
 
 // ── 1. 行情 / 安全卡 ──────────────────────────────────────────────────────────
 
-function MarketCard({ address }: Props) {
-  const [data, setData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+function MarketCard({ address, initialDetail }: Props) {
+  const [data, setData] = useState<TokenDetail | null>(initialDetail ?? null)
+  const [loading, setLoading] = useState(initialDetail == null)
   const [error, setError] = useState(false)
 
   useEffect(() => {
+    // Skip client fetch if server already provided initial data
+    if (initialDetail != null) return
+
     fetch(`/api/token/${address}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d) => { setData(d); setLoading(false) })
       .catch(() => { setError(true); setLoading(false) })
-  }, [address])
+  }, [address, initialDetail])
 
   return (
     <CardShell title="行情 · 安全" icon="ti-report-analytics">
@@ -124,9 +150,9 @@ function MarketCard({ address }: Props) {
       )}
       {!loading && !error && data && (
         <>
-          <KV k="价格" v={fmtPrice(data.price_usd ?? data.price)} />
-          <KV k="市值 (MC)" v={fmtMc(data.market_cap ?? data.mc)} />
-          <KV k="24h 成交量" v={fmtMc(data.vol_24h_usd ?? data.volume_24h)} />
+          <KV k="价格" v={fmtPrice(data.current_price_usd ?? (data as any).price_usd ?? (data as any).price)} />
+          <KV k="市值 (MC)" v={fmtMc(data.market_cap ?? (data as any).mc)} />
+          <KV k="24h 成交量" v={fmtMc(data.tx_volume_u_24h ?? (data as any).vol_24h_usd ?? (data as any).volume_24h)} />
           {data.holders != null && (
             <KV k="持仓人数" v={String(data.holders)} />
           )}
@@ -523,10 +549,10 @@ function TweetsCard({ address }: Props) {
 
 // ── 主导出 ────────────────────────────────────────────────────────────────────
 
-export default function TokenSections({ address }: Props) {
+export default function TokenSections({ address, initialDetail }: Props) {
   return (
     <>
-      <MarketCard address={address} />
+      <MarketCard address={address} initialDetail={initialDetail} />
       <NarrativeCard address={address} />
       <TweetsCard address={address} />
     </>

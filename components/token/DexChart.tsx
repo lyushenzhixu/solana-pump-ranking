@@ -2,8 +2,16 @@
 
 import { useEffect, useState } from 'react'
 
+interface InitialToken {
+  name?: string | null
+  symbol?: string | null
+  chain?: string | null
+  main_pair?: string | null
+}
+
 interface Props {
   address: string
+  initialToken?: InitialToken | null
 }
 
 /** 内部链标识 → DexScreener embed 链 slug */
@@ -32,12 +40,32 @@ type FetchState = 'loading' | 'ready' | 'no-pair' | 'error'
  * 2. 有 pair → 渲染 DexScreener iframe embed
  * 3. 无 pair / 失败 → 友好占位
  */
-export default function DexChart({ address }: Props) {
-  const [state, setState] = useState<FetchState>('loading')
-  const [title, setTitle] = useState('')
-  const [iframeSrc, setIframeSrc] = useState('')
+function computeFromToken(token: InitialToken | null | undefined, address: string): {
+  state: FetchState; title: string; iframeSrc: string
+} | null {
+  if (!token) return null
+  const name = token.name || ''
+  const symbol = token.symbol || ''
+  const t = name ? `${name}${symbol ? ` (${symbol})` : ''}` : address.slice(0, 8) + '…'
+  const pair = token.main_pair || null
+  const chain = token.chain || 'solana'
+  if (!pair) return { state: 'no-pair', title: t, iframeSrc: '' }
+  const slug = toDexScreenerSlug(chain)
+  const src = `https://dexscreener.com/${slug}/${pair}?embed=1&theme=dark&info=0&trades=0`
+  return { state: 'ready', title: t, iframeSrc: src }
+}
+
+export default function DexChart({ address, initialToken }: Props) {
+  const precomputed = computeFromToken(initialToken, address)
+  const [state, setState] = useState<FetchState>(precomputed?.state ?? 'loading')
+  const [title, setTitle] = useState(precomputed?.title ?? '')
+  const [iframeSrc, setIframeSrc] = useState(precomputed?.iframeSrc ?? '')
+  // Track whether we already have server-prefetched data to skip client fetch
+  const hasInitial = precomputed != null
 
   useEffect(() => {
+    if (hasInitial) return
+
     let cancelled = false
 
     async function init() {
@@ -73,7 +101,7 @@ export default function DexChart({ address }: Props) {
 
     init()
     return () => { cancelled = true }
-  }, [address])
+  }, [address, hasInitial])
 
   return (
     <div className="panel" style={{ padding: '16px', marginBottom: 16 }}>
