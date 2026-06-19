@@ -1606,7 +1606,7 @@ return `<!DOCTYPE html>
       // K-line chart — self-hosted KLineChart (open-source, no third-party branding)
       html += '<div class="chart-card">';
       html += '<div class="chart-header">';
-      html += '<div class="chart-title"><span class="live-dot"></span>K线图表</div>';
+      html += '<div class="chart-title"><span class="live-dot"></span>市值K线</div>';
       if (token.main_pair) {
         html += '<div class="chart-intervals">';
         html += '<button class="chart-interval-btn" data-interval="1">1m</button>';
@@ -1665,6 +1665,15 @@ return `<!DOCTYPE html>
       loadTweets(token);
       loadKBSignals(token.token);
       loadTweetTimeline(token);
+
+      // Derive circulating supply once for MCap-based K-line
+      _supply = null;
+      (function(){
+        var p = token.current_price_usd != null ? +token.current_price_usd
+              : (token.price_usd != null ? +token.price_usd : (token.price != null ? +token.price : null));
+        var mc = token.market_cap != null ? +token.market_cap : null;
+        if (p && mc && isFinite(p) && isFinite(mc) && p > 0) _supply = mc / p;
+      })();
 
       // Init KLineChart if we have a pair
       if (token.main_pair) {
@@ -2131,6 +2140,8 @@ return `<!DOCTYPE html>
 
     // ── KLineChart (open-source, no third-party branding) ──────────────────
     var _klc = null, _klcInterval = 15;
+    // Circulating supply derived from token detail — used to convert price OHLC → MCap OHLC
+    var _supply = null;
 
     function loadKLineLib(cb) {
       if (window.klinecharts) return cb();
@@ -2147,10 +2158,26 @@ return `<!DOCTYPE html>
       document.head.appendChild(s);
     }
 
+    function fmtMcap(v) {
+      var n = +v;
+      if (!isFinite(n)) return String(v);
+      if (Math.abs(n) >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+      if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(2) + 'M';
+      if (Math.abs(n) >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return String(Math.round(n));
+    }
+
     function initKLine(pair) {
       loadKLineLib(function() {
         if (_klc) { klinecharts.dispose('kline-chart'); _klc = null; }
-        _klc = klinecharts.init('kline-chart');
+        _klc = klinecharts.init('kline-chart', {
+          customApi: {
+            formatBigNumber: fmtMcap
+          }
+        });
+        if (typeof _klc.setPriceVolumePrecision === 'function') {
+          _klc.setPriceVolumePrecision(0, 0);
+        }
         _klc.setStyles({
           grid: {
             horizontal: { color: 'rgba(120,120,140,0.08)' },
@@ -2196,11 +2223,20 @@ return `<!DOCTYPE html>
         .then(function(r) { return r.ok ? r.json() : []; })
         .then(function(rows) {
           if (!Array.isArray(rows) || !rows.length) return;
+          // Multiply price OHLC by circulating supply to get MCap candles
+          var mult = (_supply && isFinite(_supply) && _supply > 0) ? _supply : 1;
           var bars = rows
             .map(function(d) {
-              return { timestamp: d.time * 1000, open: +d.open, high: +d.high, low: +d.low, close: +d.close, volume: +(d.volume || 0) };
+              return {
+                timestamp: d.time * 1000,
+                open:   +d.open   * mult,
+                high:   +d.high   * mult,
+                low:    +d.low    * mult,
+                close:  +d.close  * mult,
+                volume: +(d.volume || 0)
+              };
             })
-            .filter(function(b) { return isFinite(b.timestamp) && isFinite(b.close); })
+            .filter(function(b) { return isFinite(b.timestamp) && isFinite(b.close) && b.close > 0; })
             .sort(function(a, b) { return a.timestamp - b.timestamp; });
           if (_klc) _klc.applyNewData(bars);
         })
