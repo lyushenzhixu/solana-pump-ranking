@@ -49,7 +49,6 @@ return `<!DOCTYPE html>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/glass-system.css">
-  <script src="https://unpkg.com/lightweight-charts@4.2.2/dist/lightweight-charts.standalone.production.js"><\/script>
   <style>
     /* Design tokens (shared with welcome + ranking) */
     :root {
@@ -644,84 +643,11 @@ return `<!DOCTYPE html>
       box-shadow: 0 0 8px rgba(20,241,149,0.5);
       animation: dotPulse 2s ease-in-out infinite;
     }
-    .chart-intervals {
-      display: flex; gap: 2px; align-items: center;
-      background: rgba(153,69,255,0.04);
-      border-radius: 8px;
-      padding: 2px;
-    }
-    .chart-intervals button {
-      font-family: var(--font-ui);
-      font-size: 0.6875rem; font-weight: 600;
-      padding: 0.3rem 0.55rem;
-      border-radius: 6px;
-      border: none;
-      background: transparent;
-      color: var(--text-muted);
-      cursor: pointer;
-      transition: all 0.2s;
-      white-space: nowrap;
-    }
-    .chart-intervals button.active {
-      color: #fff;
-      background: var(--sol-purple);
-      box-shadow: 0 0 8px rgba(153,69,255,0.3);
-    }
-    .chart-intervals button:hover:not(.active) {
-      color: var(--text-secondary);
-      background: rgba(153,69,255,0.08);
-    }
-    .chart-ohlcv-bar {
-      display: flex; align-items: center; gap: 0.75rem;
-      padding: 0.5rem 1rem 0.25rem;
-      font-family: var(--font-ui);
-      font-size: 0.6875rem;
-      flex-wrap: wrap;
-      min-height: 1.75rem;
-    }
-    .chart-ohlcv-bar .ohlcv-pair {
-      font-weight: 600;
-      color: var(--text-primary);
-      font-size: 0.75rem;
-      display: flex; align-items: center; gap: 0.375rem;
-    }
-    .chart-ohlcv-bar .ohlcv-pair .chain-dot {
-      width: 5px; height: 5px; border-radius: 50%;
-      background: var(--sol-purple);
-    }
-    .chart-ohlcv-bar .ohlcv-label {
-      color: var(--text-muted);
-    }
-    .chart-ohlcv-bar .ohlcv-val {
-      font-variant-numeric: tabular-nums;
-    }
-    .chart-ohlcv-bar .ohlcv-val.up { color: #14F195; }
-    .chart-ohlcv-bar .ohlcv-val.down { color: #ff4d6a; }
-    .chart-ohlcv-bar .ohlcv-val.neutral { color: var(--text-secondary); }
-    .chart-ohlcv-bar .ohlcv-change {
-      font-weight: 600;
-      font-variant-numeric: tabular-nums;
-      padding: 0.1em 0.4em;
-      border-radius: 4px;
-    }
-    .chart-ohlcv-bar .ohlcv-change.up { color: #14F195; background: rgba(20,241,149,0.1); }
-    .chart-ohlcv-bar .ohlcv-change.down { color: #ff4d6a; background: rgba(255,77,106,0.1); }
-    .chart-vol-label {
-      position: absolute; bottom: 72px; left: 16px;
-      font-family: var(--font-ui);
-      font-size: 0.625rem;
-      color: var(--text-muted);
-      pointer-events: none;
-      z-index: 2;
-      display: flex; align-items: center; gap: 0.375rem;
-      opacity: 0.7;
-    }
-    .chart-vol-label .vol-value {
-      color: var(--text-secondary);
-      font-variant-numeric: tabular-nums;
-    }
+    .chart-intervals { display: none; }
+    .chart-ohlcv-bar { display: none; }
+    .chart-vol-label { display: none; }
     .chart-body {
-      padding: 0 0.25rem 0.25rem;
+      padding: 0;
       position: relative;
     }
     #kline-chart {
@@ -729,6 +655,13 @@ return `<!DOCTYPE html>
       height: 460px;
       border-radius: 0 0 10px 10px;
       overflow: hidden;
+    }
+    #kline-chart iframe {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      border-radius: 0 0 10px 10px;
+      display: block;
     }
     .chart-loading {
       display: flex; align-items: center; justify-content: center;
@@ -751,6 +684,119 @@ return `<!DOCTYPE html>
       height: 460px;
       color: var(--text-muted);
       font-size: 0.875rem;
+    }
+
+    /* === Tweet Timeline Card === */
+    .tweet-timeline-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      overflow: hidden;
+      position: relative;
+      margin-bottom: 1.5rem;
+      padding: 1.125rem 1.25rem 1rem;
+      animation: fadeSlideUp 0.5s ease 0.26s both;
+    }
+    .tweet-timeline-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(0,209,255,0.3), rgba(153,69,255,0.2), transparent);
+    }
+    .tweet-timeline-header {
+      display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .tweet-timeline-header-left {
+      display: flex; align-items: baseline; gap: 8px; min-width: 0;
+    }
+    .tweet-timeline-symbol {
+      font-size: 15px; font-weight: 500; color: var(--text-primary); flex-shrink: 0;
+    }
+    .tweet-timeline-name {
+      font-size: 12.5px; color: var(--text-muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .tweet-timeline-conviction {
+      font-size: 10.5px; color: var(--accent);
+      background: rgba(153,69,255,0.1);
+      padding: 1px 7px; border-radius: 4px; flex-shrink: 0;
+    }
+    .tweet-timeline-mc {
+      font-size: 13px; font-weight: 500;
+      font-family: var(--font-mono, ui-monospace);
+      color: var(--text-primary); flex-shrink: 0;
+    }
+    .tweet-timeline-main-shill {
+      display: block; text-decoration: none; color: inherit;
+      background: rgba(153,69,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 10px;
+      transition: background 0.2s;
+    }
+    .tweet-timeline-main-shill:hover {
+      background: rgba(153,69,255,0.08);
+      text-decoration: none;
+    }
+    .tweet-timeline-main-shill-row {
+      display: flex; align-items: center; gap: 9px; margin-bottom: 5px;
+    }
+    .tweet-timeline-avatar {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: rgba(153,69,255,0.1); color: var(--accent);
+      display: grid; place-items: center;
+      font-size: 12px; font-weight: 500; flex-shrink: 0;
+    }
+    .tweet-timeline-shill-info { flex: 1; min-width: 0; }
+    .tweet-timeline-shill-name {
+      font-size: 12.5px; color: var(--text-primary);
+    }
+    .tweet-timeline-shill-sub {
+      font-size: 10.5px; color: var(--text-muted);
+    }
+    .tweet-timeline-main-badge {
+      font-size: 10.5px; color: var(--accent);
+      background: rgba(153,69,255,0.1);
+      padding: 0 5px; border-radius: 4px; margin-left: 6px;
+    }
+    .tweet-timeline-quote {
+      font-size: 12px; color: var(--text-secondary); line-height: 1.5;
+    }
+    .tweet-timeline-list-label {
+      font-size: 10.5px; color: var(--text-muted); margin-bottom: 7px;
+    }
+    .tweet-timeline-list {
+      list-style: none; margin: 0; padding: 0;
+    }
+    .tweet-timeline-list li {
+      margin-bottom: 8px;
+    }
+    .tweet-timeline-list a {
+      display: flex; align-items: center; gap: 8px;
+      text-decoration: none; color: inherit;
+    }
+    .tweet-timeline-list a:hover .tweet-tl-name { text-decoration: underline; }
+    .tweet-tl-dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    }
+    .tweet-tl-text {
+      flex: 1; min-width: 0; font-size: 11.5px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .tweet-tl-name { font-weight: 500; color: var(--text-primary); }
+    .tweet-tl-handle { color: var(--text-muted); font-size: 10.5px; margin-left: 5px; }
+    .tweet-tl-label { font-size: 10px; margin-left: 5px; }
+    .tweet-tl-imp {
+      font-size: 10px; color: var(--text-muted);
+      font-family: var(--font-mono, ui-monospace); flex-shrink: 0;
+    }
+    .tweet-timeline-footer {
+      margin-top: 10px; padding-top: 9px;
+      border-top: 1px solid var(--border-subtle);
+      font-size: 10px; color: var(--text-muted);
     }
 
     /* === Two-column layout === */
@@ -1164,9 +1210,6 @@ return `<!DOCTYPE html>
       .ext-link + .ext-link { border-left: 1px solid var(--border-subtle) !important; }
       #kline-chart { height: 340px; }
       .chart-loading, .chart-error { height: 340px; }
-      .chart-ohlcv-bar { font-size: 0.625rem; gap: 0.5rem; }
-      .chart-ohlcv-bar .ohlcv-pair { font-size: 0.6875rem; }
-      .chart-intervals button { padding: 0.25rem 0.4rem; font-size: 0.625rem; }
       .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
       .stat-card { padding: 0.75rem 0.875rem; }
       .stat-value { font-size: 1rem; }
@@ -1541,26 +1584,21 @@ return `<!DOCTYPE html>
       // Left column: chart + narrative
       html += '<div class="detail-main">';
 
-      // K-line chart (TradingView style)
+      // K-line chart — DexScreener TradingView embed
+      var dsChartChain = (token.chain === 'bsc') ? 'bsc' : 'solana';
       html += '<div class="chart-card">';
       html += '<div class="chart-header">';
       html += '<div class="chart-title"><span class="live-dot"></span>K线图表</div>';
-      html += '<div class="chart-intervals">';
-      html += '<button data-interval="1">1分</button>';
-      html += '<button data-interval="5">5分</button>';
-      html += '<button class="active" data-interval="15">15分</button>';
-      html += '<button data-interval="30">30分</button>';
-      html += '<button data-interval="60">1小时</button>';
-      html += '<button data-interval="240">4小时</button>';
-      html += '<button data-interval="1440">1天</button>';
       html += '</div>';
-      html += '</div>';
-      html += '<div class="chart-ohlcv-bar" id="chart-ohlcv"></div>';
       html += '<div class="chart-body">';
-      html += '<div id="chart-vol-label" class="chart-vol-label">Vol <span class="vol-value" id="vol-display">—</span></div>';
-      html += '<div id="kline-chart"><div class="chart-loading">加载K线数据</div></div>';
+      if (token.main_pair) {
+        html += '<div id="kline-chart"><iframe src="https://dexscreener.com/' + esc(dsChartChain) + '/' + esc(token.main_pair) + '?embed=1&theme=dark&info=0&trades=0" allowfullscreen></iframe></div>';
+      } else {
+        html += '<div id="kline-chart"><div class="chart-error">暂无交易对数据,无法加载图表</div></div>';
+      }
       html += '</div>';
       html += '</div>';
+      html += '<div id="tweet-timeline-section"></div>';
 
       html += '</div>'; // end detail-main
 
@@ -1595,235 +1633,124 @@ return `<!DOCTYPE html>
         });
       }
 
-      // K-line interval buttons
-      var intervalBtns = document.querySelectorAll('.chart-intervals button');
-      intervalBtns.forEach(function(btn) {
-        btn.addEventListener('click', function() {
-          intervalBtns.forEach(function(b){ b.classList.remove('active'); });
-          btn.classList.add('active');
-          loadKlineChart(token, parseInt(btn.dataset.interval, 10));
-        });
-      });
-
-      loadKlineChart(token, 15);
       loadNarrative(token);
       loadTweets(token);
       loadKBSignals(token.token);
+      loadTweetTimeline(token);
     }
 
-    var _chartInstance = null;
-    var _chartResizeHandler = null;
-
-    function fmtPrice(n) {
-      if (n == null || isNaN(n)) return '—';
-      if (n >= 1) return n.toFixed(4);
-      if (n >= 0.01) return n.toFixed(6);
-      return n.toFixed(8);
+    function fmtTimeAgoTl(iso) {
+      if (!iso) return '';
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return '';
+      var h = Math.max(0, Math.round((Date.now() - d.getTime()) / 3600000));
+      if (h < 1) return '刚刚';
+      if (h < 24) return h + ' 小时前';
+      return Math.round(h / 24) + ' 天前';
     }
 
-    function fmtVol(n) {
-      if (n == null || isNaN(n)) return '—';
-      if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
-      if (n >= 1e6) return (n / 1e6).toFixed(2) + 'M';
-      if (n >= 1e3) return (n / 1e3).toFixed(2) + 'K';
-      return n.toFixed(2);
+    function fmtNumTl(n) {
+      if (n == null) return '0';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return String(n);
     }
 
-    function updateOhlcvBar(d, symbol) {
-      var bar = document.getElementById('chart-ohlcv');
-      if (!bar || !d) { if (bar) bar.innerHTML = ''; return; }
-      var bullish = d.close >= d.open;
-      var changeAbs = d.close - d.open;
-      var changePct = d.open !== 0 ? ((changeAbs / d.open) * 100) : 0;
-      var cls = bullish ? 'up' : 'down';
-      var sign = bullish ? '+' : '';
-      bar.innerHTML =
-        '<span class="ohlcv-pair"><span class="chain-dot"></span>' + (symbol || '') + '</span>' +
-        '<span class="ohlcv-label">开</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.open) + '</span>' +
-        '<span class="ohlcv-label">高</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.high) + '</span>' +
-        '<span class="ohlcv-label">低</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.low) + '</span>' +
-        '<span class="ohlcv-label">收</span><span class="ohlcv-val ' + cls + '">' + fmtPrice(d.close) + '</span>' +
-        '<span class="ohlcv-change ' + cls + '">' + sign + fmtPrice(changeAbs) + ' (' + sign + changePct.toFixed(2) + '%)</span>';
+    function initialTl(handle) {
+      return (String(handle || '?').replace(/^@/, '') || '?').slice(0, 1).toUpperCase();
     }
 
-    function loadKlineChart(token, interval) {
-      var pairAddress = token.main_pair;
-      var chain = token.chain || 'solana';
-      interval = interval || 15;
-      var sizeMap = { 1: 120, 5: 120, 15: 96, 30: 96, 60: 96, 240: 96, 1440: 60 };
-      var size = sizeMap[interval] || 96;
-      if (!pairAddress) {
-        document.getElementById('kline-chart').innerHTML = '<div class="chart-error">无交易对数据，无法加载K线</div>';
-        return;
-      }
-      document.getElementById('kline-chart').innerHTML = '<div class="chart-loading">加载K线数据</div>';
-      document.getElementById('chart-ohlcv').innerHTML = '';
-      fetch('/api/kline/' + encodeURIComponent(pairAddress) + '?chain=' + encodeURIComponent(chain) + '&interval=' + interval + '&size=' + size)
+    function loadTweetTimeline(token) {
+      fetch('/api/kb-signals/' + encodeURIComponent(token.token))
         .then(function(r) { return r.json(); })
-        .then(function(data) {
-          if (!Array.isArray(data) || data.length === 0) {
-            document.getElementById('kline-chart').innerHTML = '<div class="chart-error">暂无K线数据</div>';
-            return;
+        .then(function(sig) {
+          var el = document.getElementById('tweet-timeline-section');
+          if (!el) return;
+          if (!sig) return;
+          var nt = sig.narrative_twitter;
+          if (!nt || nt.status !== 'generated') return;
+
+          var symbolStr = esc(token.symbol || sig.symbol || '');
+          var nameStr = esc(token.name || sig.name || '');
+          var convStr = esc(sig.conviction_rating || '');
+          var mcStr = formatCompact(sig.market_cap || token.market_cap);
+
+          var SENT = {
+            bullish: { label: '看涨', color: 'var(--positive)' },
+            bearish: { label: '转空', color: 'var(--negative)' },
+            neutral: { label: '中性', color: 'var(--text-muted)' }
+          };
+
+          var h = '<div class="tweet-timeline-card">';
+
+          // Section heading (chart-title style)
+          h += '<div class="chart-title" style="margin-bottom:12px"><svg style="width:14px;height:14px;flex-shrink:0" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>推特叙事 · CALL 时间线</div>';
+
+          // Header: symbol + name + conviction + mc
+          h += '<div class="tweet-timeline-header">';
+          h += '<div class="tweet-timeline-header-left">';
+          if (symbolStr) h += '<span class="tweet-timeline-symbol">$' + symbolStr + '</span>';
+          if (nameStr && symbolStr !== nameStr) h += '<span class="tweet-timeline-name">' + nameStr + '</span>';
+          if (convStr) h += '<span class="tweet-timeline-conviction">' + convStr + '</span>';
+          h += '</div>';
+          h += '<span class="tweet-timeline-mc">' + mcStr + '</span>';
+          h += '</div>';
+
+          // 主推 KOL
+          var ms = nt.main_shill;
+          if (ms && ms.tweet_id) {
+            var msHandle = String(ms.handle || '').replace(/^@/, '');
+            var tweetUrl = 'https://x.com/' + encodeURIComponent(msHandle) + '/status/' + encodeURIComponent(ms.tweet_id);
+            h += '<a class="tweet-timeline-main-shill" href="' + esc(tweetUrl) + '" target="_blank" rel="noopener noreferrer">';
+            h += '<div class="tweet-timeline-main-shill-row">';
+            h += '<span class="tweet-timeline-avatar">' + esc(initialTl(ms.handle)) + '</span>';
+            h += '<div class="tweet-timeline-shill-info">';
+            h += '<div class="tweet-timeline-shill-name"><b>' + esc(ms.name || ms.handle) + '</b>';
+            if (ms.verified) h += ' <span style="color:#3B82F6;font-size:10px">✓</span>';
+            h += '<span class="tweet-timeline-main-badge">主推</span>';
+            h += '</div>';
+            h += '<div class="tweet-timeline-shill-sub">@' + esc(msHandle) + ' · ' + fmtNumTl(ms.followers) + ' 粉</div>';
+            h += '</div>';
+            h += '</div>';
+            if (ms.text) h += '<div class="tweet-timeline-quote">&ldquo;' + esc(ms.text) + '&rdquo;</div>';
+            h += '</a>';
+          } else {
+            h += '<div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">无单一主推 KOL,caller 群驱动</div>';
           }
-          renderChart(data, token.symbol || '');
+
+          // Call timeline
+          var timeline = nt.timeline || [];
+          var mentionCount = nt.mention_count != null ? nt.mention_count : timeline.length;
+          h += '<div class="tweet-timeline-list-label">call 时间线 · ' + mentionCount + ' 条提及 · 点跳原推</div>';
+          h += '<ol class="tweet-timeline-list">';
+          timeline.forEach(function(t) {
+            var sent = SENT[t.sentiment || 'neutral'] || SENT.neutral;
+            var tHandle = String(t.handle || '').replace(/^@/, '');
+            var tUrl = 'https://x.com/' + encodeURIComponent(tHandle) + '/status/' + encodeURIComponent(t.tweet_id);
+            var nameColor = t.is_main_shill ? 'var(--accent)' : 'var(--text-primary)';
+            h += '<li>';
+            h += '<a href="' + esc(tUrl) + '" target="_blank" rel="noopener noreferrer">';
+            h += '<span class="tweet-tl-dot" style="background:' + sent.color + '"></span>';
+            h += '<span class="tweet-tl-text">';
+            h += '<b class="tweet-tl-name" style="color:' + nameColor + '">' + esc(t.name || t.handle) + '</b>';
+            if (t.verified) h += '<span style="color:#3B82F6;font-size:10px;margin-left:2px">✓</span>';
+            h += '<span class="tweet-tl-handle">@' + esc(tHandle) + '</span>';
+            if (t.is_first_call) h += '<span class="tweet-tl-label" style="color:var(--text-muted)">· 首 call</span>';
+            h += '<span class="tweet-tl-label" style="color:' + sent.color + '">· ' + sent.label + '</span>';
+            h += '</span>';
+            h += '<span class="tweet-tl-imp">👁 ' + fmtNumTl(t.impressions) + '</span>';
+            h += '</a>';
+            h += '</li>';
+          });
+          h += '</ol>';
+
+          // Footer
+          h += '<div class="tweet-timeline-footer">推特数据更新于 ' + fmtTimeAgoTl(nt.fetched_at) + ' · 聚合自公开信息,非投资建议</div>';
+          h += '</div>';
+
+          el.innerHTML = h;
         })
-        .catch(function(e) {
-          document.getElementById('kline-chart').innerHTML = '<div class="chart-error">K线加载失败：' + (e.message || e) + '</div>';
-        });
-    }
-
-    function calcPrecision(data) {
-      var minP = Infinity;
-      for (var i = 0; i < data.length; i++) {
-        var p = Math.min(data[i].open, data[i].close, data[i].low);
-        if (p > 0 && p < minP) minP = p;
-      }
-      if (minP >= 1) return 4;
-      if (minP >= 0.01) return 6;
-      if (minP >= 0.0001) return 8;
-      return 10;
-    }
-
-    function renderChart(data, symbol) {
-      if (_chartInstance) {
-        try { _chartInstance.remove(); } catch(e) {}
-        _chartInstance = null;
-      }
-      if (_chartResizeHandler) {
-        window.removeEventListener('resize', _chartResizeHandler);
-        _chartResizeHandler = null;
-      }
-
-      var precision = calcPrecision(data);
-      var minMove = Math.pow(10, -precision);
-
-      var container = document.getElementById('kline-chart');
-      container.innerHTML = '';
-      var chart = LightweightCharts.createChart(container, {
-        width: container.clientWidth,
-        height: container.clientHeight || 460,
-        layout: {
-          background: { type: 'solid', color: 'transparent' },
-          textColor: 'rgba(138,132,160,0.8)',
-          fontFamily: "system-ui, 'PingFang SC', 'Helvetica Neue', sans-serif",
-          fontSize: 11,
-        },
-        grid: {
-          vertLines: { color: 'rgba(153, 69, 255, 0.04)' },
-          horzLines: { color: 'rgba(153, 69, 255, 0.04)' },
-        },
-        crosshair: {
-          mode: LightweightCharts.CrosshairMode.Normal,
-          vertLine: {
-            color: 'rgba(153, 69, 255, 0.4)',
-            width: 1,
-            style: LightweightCharts.LineStyle.Dashed,
-            labelBackgroundColor: '#9945FF',
-          },
-          horzLine: {
-            color: 'rgba(153, 69, 255, 0.4)',
-            width: 1,
-            style: LightweightCharts.LineStyle.Dashed,
-            labelBackgroundColor: '#9945FF',
-          },
-        },
-        rightPriceScale: {
-          borderColor: 'rgba(153, 69, 255, 0.08)',
-          scaleMargins: { top: 0.08, bottom: 0.22 },
-        },
-        timeScale: {
-          borderColor: 'rgba(153, 69, 255, 0.08)',
-          timeVisible: true,
-          secondsVisible: false,
-          rightOffset: 5,
-          minBarSpacing: 4,
-        },
-        handleScroll: { vertTouchDrag: false },
-      });
-      _chartInstance = chart;
-
-      var priceFmt = function(p) {
-        if (typeof p !== 'number' || isNaN(p)) return '—';
-        return p.toFixed(precision);
-      };
-      chart.applyOptions({
-        localization: { priceFormatter: priceFmt },
-      });
-
-      var candleSeries = chart.addCandlestickSeries({
-        upColor: '#14F195',
-        downColor: '#ff4d6a',
-        borderUpColor: '#14F195',
-        borderDownColor: '#ff4d6a',
-        wickUpColor: 'rgba(20, 241, 149, 0.7)',
-        wickDownColor: 'rgba(255, 77, 106, 0.7)',
-        priceFormat: { type: 'custom', minMove: minMove, formatter: priceFmt },
-      });
-
-      var volumeSeries = chart.addHistogramSeries({
-        priceFormat: { type: 'volume' },
-        priceScaleId: 'volume',
-      });
-      chart.priceScale('volume').applyOptions({
-        scaleMargins: { top: 0.82, bottom: 0 },
-      });
-
-      var candleData = data.map(function(d) {
-        return { time: d.time, open: d.open, high: d.high, low: d.low, close: d.close };
-      }).sort(function(a, b) { return a.time - b.time; });
-
-      var volumeData = data.map(function(d) {
-        var bullish = d.close >= d.open;
-        return {
-          time: d.time,
-          value: d.volume || 0,
-          color: bullish ? 'rgba(20, 241, 149, 0.25)' : 'rgba(255, 77, 106, 0.25)',
-        };
-      }).sort(function(a, b) { return a.time - b.time; });
-
-      candleSeries.setData(candleData);
-      volumeSeries.setData(volumeData);
-      chart.timeScale().fitContent();
-
-      // Current price line
-      var lastCandle = candleData[candleData.length - 1];
-      if (lastCandle) {
-        var bullish = lastCandle.close >= lastCandle.open;
-        candleSeries.createPriceLine({
-          price: lastCandle.close,
-          color: bullish ? 'rgba(20,241,149,0.6)' : 'rgba(255,77,106,0.6)',
-          lineWidth: 1,
-          lineStyle: LightweightCharts.LineStyle.Dashed,
-          axisLabelVisible: true,
-          title: '',
-        });
-
-        updateOhlcvBar(lastCandle, symbol);
-
-        var volEl = document.getElementById('vol-display');
-        if (volEl) {
-          var lastVol = data[data.length - 1];
-          volEl.textContent = lastVol ? fmtVol(lastVol.volume) : '—';
-        }
-      }
-
-      // Crosshair move → update OHLCV bar + volume label
-      chart.subscribeCrosshairMove(function(param) {
-        if (!param || !param.time) {
-          if (lastCandle) updateOhlcvBar(lastCandle, symbol);
-          return;
-        }
-        var cd = param.seriesData ? param.seriesData.get(candleSeries) : null;
-        var vd = param.seriesData ? param.seriesData.get(volumeSeries) : null;
-        if (cd) updateOhlcvBar(cd, symbol);
-        var volEl = document.getElementById('vol-display');
-        if (volEl && vd) volEl.textContent = fmtVol(vd.value);
-      });
-
-      _chartResizeHandler = function() {
-        chart.applyOptions({ width: container.clientWidth });
-      };
-      window.addEventListener('resize', _chartResizeHandler);
+        .catch(function() {});
     }
 
     function fmtCompact(n) {
