@@ -1,7 +1,6 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-import Topbar from '@/components/shell/Topbar'
 import MetricCard from '@/components/ui/MetricCard'
 import DataFreshness from '@/components/ui/DataFreshness'
 import EmptyState from '@/components/ui/EmptyState'
@@ -60,9 +59,9 @@ export default async function PaperPage() {
 
   return (
     <>
-      <Topbar title="模拟盘战绩" />
-
       <main style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+        <h1 style={{ fontSize: 16, fontWeight: 500, color: 'var(--text)', marginBottom: 14 }}>模拟盘战绩</h1>
 
         {/* ── 免责横幅 ── */}
         <div
