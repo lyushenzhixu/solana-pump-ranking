@@ -35,7 +35,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: '跨板块',
     items: [
       { label: '聪明钱追踪', href: '/smart-money', icon: 'wallet', status: 'live' },
-      { label: '信号日志', href: '/signals', icon: 'broadcast', status: 'coming-soon' },
+      { label: '信号日志', href: '/signals', icon: 'broadcast', status: 'live' },
       { label: '模拟盘战绩', href: '/paper', icon: 'report-money', status: 'live' },
     ],
   },
