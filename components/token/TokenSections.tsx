@@ -126,14 +126,14 @@ function MarketCard({ address, initialDetail }: Props) {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    // Skip client fetch if server already provided initial data
-    if (initialDetail != null) return
-
+    // Always fetch /api/token to get _security + DB-holders fallback + fresh price.
+    // initialDetail seeds the initial state so there is no loading-skeleton flash,
+    // but the client fetch still runs in background to enrich and revalidate.
     fetch(`/api/token/${address}`)
       .then((r) => (r.ok ? r.json() : Promise.reject()))
       .then((d) => { setData(d); setLoading(false) })
       .catch(() => { setError(true); setLoading(false) })
-  }, [address, initialDetail])
+  }, [address])
 
   return (
     <CardShell title="行情 · 安全" icon="ti-report-analytics">
