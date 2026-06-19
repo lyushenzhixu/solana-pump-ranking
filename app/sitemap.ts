@@ -14,7 +14,7 @@ const STATIC_PAGES: MetadataRoute.Sitemap = [
     priority: 1.0,
   },
   {
-    url: `${SITE_URL}/meme`,
+    url: `${SITE_URL}/ranking`,
     lastModified: new Date(),
     changeFrequency: 'hourly',
     priority: 0.9,

@@ -58,10 +58,10 @@ export default async function TokenPage({ params }: PageProps) {
         }}
       >
         <a
-          href="/meme"
+          href="/ranking"
           style={{ color: 'var(--text-3)', textDecoration: 'none' }}
         >
-          meme 榜单
+          发现榜
         </a>
         <span style={{ margin: '0 6px' }}>/</span>
         <span

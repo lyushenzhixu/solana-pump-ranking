@@ -1,4 +1,4 @@
-// 信号日志列表行(紧凑,一行一信号,点 → /signals/[ca] 详情)。server component。
+// 信号日志列表行(紧凑,一行一信号,点 → /token/[ca])。server component。
 import Link from 'next/link'
 import type { SignalRow } from './TweetTimelineCard'
 
@@ -44,7 +44,7 @@ export default function SignalListItem({ row, now }: { row: SignalRow; now: numb
 
   return (
     <Link
-      href={`/signals/${row.ca}`}
+      href={`/token/${row.ca}`}
       style={{
         display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'inherit',
         padding: '11px 14px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--line-soft)',
