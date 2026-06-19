@@ -6,6 +6,7 @@ import { getKbSignalByCa } from '@/lib/queries'
 import { getTokenDetail } from '@/lib/sources/index.js'
 import DexChart from '@/components/token/DexChart'
 import TokenSections from '@/components/token/TokenSections'
+import TweetTimelineCard, { type SignalRow } from '@/components/signals/TweetTimelineCard'
 
 interface PageProps {
   params: Promise<{ address: string }>
@@ -41,6 +42,12 @@ export default async function TokenPage({ params }: PageProps) {
 
   // Server-prefetch token detail to eliminate first-paint "—" flash
   const detail = await (getTokenDetail as (a: string, c: string) => Promise<any>)(address, 'solana').catch(() => null)
+
+  // KB 叙事信号(推特时间线)
+  const { data: kb } = await getKbSignalByCa(address).catch(() => ({ data: null }))
+  const signalRow: SignalRow | null = kb
+    ? { ca: address, symbol: (kb as any).symbol ?? (detail as any)?.symbol ?? null, name: (kb as any).name ?? null, market_cap: (kb as any).market_cap ?? null, conviction_rating: (kb as any).conviction_rating ?? null, narrative_twitter: (kb as any).narrative_twitter ?? null }
+    : null
 
   return (
     <main
@@ -85,6 +92,9 @@ export default async function TokenPage({ params }: PageProps) {
 
       {/* K 线图(客户端) */}
       <DexChart address={address} initialToken={detail} />
+
+      {/* 推特叙事时间线卡(仅 narrative_twitter.status==='generated' 的 KB 信号显示) */}
+      {signalRow ? <TweetTimelineCard row={signalRow} now={Date.now()} /> : null}
 
       {/* 三卡(行情+安全 / 叙事 / 推文) */}
       <TokenSections address={address} initialDetail={detail} />
