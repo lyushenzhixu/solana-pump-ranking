@@ -256,55 +256,9 @@ a.clickable-row:hover {
 .text-xs    { font-size: 11px; }
 .text-num   { font-size: 22px; font-weight: 500; font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
-/* ── dashboard 响应式外壳(2026-06-15 视觉打磨 P0) ── */
-.app-shell { display: flex; min-height: 100vh; }
-.app-content { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.mobile-bar { display: none; }
-
-.app-sidebar {
-  width: 200px;
-  min-height: 100vh;
-  position: sticky;
-  top: 0;
-  align-self: flex-start;
-}
-
-@media (max-width: 767px) {
-  .app-shell { display: block; }
-
-  .mobile-bar {
-    display: flex; align-items: center; gap: 12px;
-    height: 52px; padding: 0 14px;
-    border-bottom: 1px solid var(--line-soft);
-    background: var(--surface-1);
-    position: sticky; top: 0; z-index: 30;
-  }
-  .hamburger {
-    display: grid; place-items: center;
-    width: 44px; height: 44px; margin-left: -10px;
-    background: transparent; border: none; cursor: pointer;
-    color: var(--text); font-size: 20px;
-  }
-  .mobile-bar-brand { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
-  .mobile-bar-logo {
-    width: 24px; height: 24px; border-radius: 7px; background: var(--accent);
-    color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px;
-  }
-
-  .app-sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
-    transform: translateX(-100%);
-    transition: transform 200ms ease-out;
-    box-shadow: 0 0 40px rgba(0,0,0,0.5);
-  }
-  .app-sidebar.open { transform: translateX(0); }
-
-  .app-scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,0.55); }
-  body.drawer-open { overflow: hidden; }
-
-  .app-sidebar .nav-item { min-height: 44px; box-sizing: border-box; }
-}
-
-@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
-  .app-sidebar { transition: none; }
+/* 聚焦版居中容器(替换 .app-shell grid) */
+.page-container {
+  max-width: 1080px;
+  margin: 0 auto;
+  width: 100%;
 }

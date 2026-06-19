@@ -1,7 +1,12 @@
-import AppShell from '@/components/shell/AppShell'
+import TopNav from '@/components/shell/TopNav'
 import React from 'react'
 
-/** Dashboard 外壳 layout — 持久不重载;响应式逻辑在 AppShell(client)+ globals.css */
+/** 聚焦版 layout:顶部 nav + 居中容器(替换平台侧栏壳) */
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  return <AppShell>{children}</AppShell>
+  return (
+    <>
+      <TopNav />
+      <div className="page-container">{children}</div>
+    </>
+  )
 }
