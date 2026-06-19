@@ -643,7 +643,32 @@ return `<!DOCTYPE html>
       box-shadow: 0 0 8px rgba(20,241,149,0.5);
       animation: dotPulse 2s ease-in-out infinite;
     }
-    .chart-intervals { display: none; }
+    .chart-intervals {
+      display: flex; align-items: center; gap: 0.25rem;
+      flex-wrap: nowrap;
+    }
+    .chart-interval-btn {
+      background: transparent;
+      border: 1px solid rgba(153,69,255,0.25);
+      border-radius: 5px;
+      color: var(--text-muted);
+      font-size: 0.6875rem; font-weight: 600;
+      padding: 0.2rem 0.45rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      font-family: 'Space Grotesk', sans-serif;
+      letter-spacing: 0.02em;
+    }
+    .chart-interval-btn:hover {
+      background: rgba(153,69,255,0.12);
+      color: var(--text-primary);
+      border-color: rgba(153,69,255,0.45);
+    }
+    .chart-interval-btn.active {
+      background: rgba(153,69,255,0.2);
+      color: #c084fc;
+      border-color: rgba(153,69,255,0.6);
+    }
     .chart-ohlcv-bar { display: none; }
     .chart-vol-label { display: none; }
     .chart-body {
@@ -655,13 +680,7 @@ return `<!DOCTYPE html>
       height: 460px;
       border-radius: 0 0 10px 10px;
       overflow: hidden;
-    }
-    #kline-chart iframe {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      border-radius: 0 0 10px 10px;
-      display: block;
+      background: #0d0b14;
     }
     .chart-loading {
       display: flex; align-items: center; justify-content: center;
@@ -1584,15 +1603,24 @@ return `<!DOCTYPE html>
       // Left column: chart + narrative
       html += '<div class="detail-main">';
 
-      // K-line chart — DexScreener TradingView embed
-      var dsChartChain = (token.chain === 'bsc') ? 'bsc' : 'solana';
+      // K-line chart — self-hosted KLineChart (open-source, no third-party branding)
       html += '<div class="chart-card">';
       html += '<div class="chart-header">';
       html += '<div class="chart-title"><span class="live-dot"></span>K线图表</div>';
+      if (token.main_pair) {
+        html += '<div class="chart-intervals">';
+        html += '<button class="chart-interval-btn" data-interval="1">1m</button>';
+        html += '<button class="chart-interval-btn" data-interval="5">5m</button>';
+        html += '<button class="chart-interval-btn active" data-interval="15">15m</button>';
+        html += '<button class="chart-interval-btn" data-interval="60">1h</button>';
+        html += '<button class="chart-interval-btn" data-interval="240">4h</button>';
+        html += '<button class="chart-interval-btn" data-interval="1440">1d</button>';
+        html += '</div>';
+      }
       html += '</div>';
       html += '<div class="chart-body">';
       if (token.main_pair) {
-        html += '<div id="kline-chart"><iframe src="https://dexscreener.com/' + esc(dsChartChain) + '/' + esc(token.main_pair) + '?embed=1&theme=dark&info=0&trades=0" allowfullscreen></iframe></div>';
+        html += '<div id="kline-chart"></div>';
       } else {
         html += '<div id="kline-chart"><div class="chart-error">暂无交易对数据,无法加载图表</div></div>';
       }
@@ -1637,6 +1665,21 @@ return `<!DOCTYPE html>
       loadTweets(token);
       loadKBSignals(token.token);
       loadTweetTimeline(token);
+
+      // Init KLineChart if we have a pair
+      if (token.main_pair) {
+        initKLine(token.main_pair);
+        // Wire interval buttons
+        var intervalBtns = document.querySelectorAll('.chart-interval-btn');
+        intervalBtns.forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            intervalBtns.forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            _klcInterval = parseInt(btn.getAttribute('data-interval'), 10);
+            loadKLineData(token.main_pair);
+          });
+        });
+      }
     }
 
     function fmtTimeAgoTl(iso) {
@@ -2085,6 +2128,85 @@ return `<!DOCTYPE html>
           document.getElementById('detail-content').innerHTML = '<div class="page-error">加载失败：' + (e.message || e) + '</div>';
         });
     }
+
+    // ── KLineChart (open-source, no third-party branding) ──────────────────
+    var _klc = null, _klcInterval = 15;
+
+    function loadKLineLib(cb) {
+      if (window.klinecharts) return cb();
+      var ex = document.getElementById('klc-lib');
+      if (ex) { ex.addEventListener('load', cb); return; }
+      var s = document.createElement('script');
+      s.id = 'klc-lib';
+      s.src = 'https://cdn.jsdelivr.net/npm/klinecharts@9.8.10/dist/umd/klinecharts.min.js';
+      s.onload = cb;
+      s.onerror = function() {
+        var el = document.getElementById('kline-chart');
+        if (el) el.innerHTML = '<div class="chart-error">图表库加载失败</div>';
+      };
+      document.head.appendChild(s);
+    }
+
+    function initKLine(pair) {
+      loadKLineLib(function() {
+        if (_klc) { klinecharts.dispose('kline-chart'); _klc = null; }
+        _klc = klinecharts.init('kline-chart');
+        _klc.setStyles({
+          grid: {
+            horizontal: { color: 'rgba(120,120,140,0.08)' },
+            vertical:   { color: 'rgba(120,120,140,0.08)' }
+          },
+          candle: {
+            bar: {
+              upColor: '#14F195', downColor: '#ff4d6a', noChangeColor: '#888',
+              upBorderColor: '#14F195', downBorderColor: '#ff4d6a',
+              upWickColor: '#14F195', downWickColor: '#ff4d6a'
+            },
+            priceMark: {
+              high: { color: '#cfcfe0' }, low: { color: '#cfcfe0' },
+              last: { upColor: '#14F195', downColor: '#ff4d6a', text: { color: '#fff' } }
+            },
+            tooltip: {
+              rect: { color: 'rgba(20,18,30,0.9)', borderColor: 'rgba(153,69,255,0.4)' },
+              text: { color: '#cfcfe0' }
+            }
+          },
+          xAxis: {
+            axisLine: { color: 'rgba(120,120,140,0.2)' },
+            tickText: { color: '#888' }
+          },
+          yAxis: {
+            axisLine: { color: 'rgba(120,120,140,0.2)' },
+            tickText: { color: '#888' }
+          },
+          crosshair: {
+            horizontal: { line: { color: '#9945FF' }, text: { backgroundColor: '#9945FF' } },
+            vertical:   { line: { color: '#9945FF' }, text: { backgroundColor: '#9945FF' } }
+          },
+          indicator: { tooltip: { text: { color: '#cfcfe0' } } }
+        });
+        _klc.createIndicator('VOL', false);
+        _klc.createIndicator('MA', true, { id: 'candle_pane' });
+        loadKLineData(pair);
+      });
+    }
+
+    function loadKLineData(pair) {
+      fetch('/api/kline/' + encodeURIComponent(pair) + '?interval=' + _klcInterval + '&size=300&chain=solana')
+        .then(function(r) { return r.ok ? r.json() : []; })
+        .then(function(rows) {
+          if (!Array.isArray(rows) || !rows.length) return;
+          var bars = rows
+            .map(function(d) {
+              return { timestamp: d.time * 1000, open: +d.open, high: +d.high, low: +d.low, close: +d.close, volume: +(d.volume || 0) };
+            })
+            .filter(function(b) { return isFinite(b.timestamp) && isFinite(b.close); })
+            .sort(function(a, b) { return a.timestamp - b.timestamp; });
+          if (_klc) _klc.applyNewData(bars);
+        })
+        .catch(function() {});
+    }
+    // ── end KLineChart ──────────────────────────────────────────────────────
   <\/script>
 </body>
 </html>
