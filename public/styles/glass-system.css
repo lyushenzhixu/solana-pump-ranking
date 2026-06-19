@@ -1,0 +1,124 @@
+:root{
+  /* 深空表面(与 index.html / ranking 现值一致) */
+  --surface-0: oklch(10% 0.02 270);
+  --surface-1: oklch(14% 0.02 270);
+  --surface-2: oklch(18% 0.02 270);
+  --surface-3: oklch(22% 0.02 270);
+  --text-primary: oklch(92% 0.01 270);
+  --text-secondary: oklch(72% 0.02 270);
+  --text-muted: oklch(55% 0.02 270);
+  --accent: oklch(62% 0.2 290);
+  --positive: oklch(72% 0.18 155);
+  --negative: oklch(58% 0.22 25);
+  --sol-purple:#9945FF; --sol-green:#14F195; --sol-blue:#00D1FF; --sol-cyan:#22D3EE;
+  --ease-out: cubic-bezier(0.33,1,0.68,1);
+  /* 玻璃 */
+  --zl-glass-fill: oklch(16% 0.02 270 / 0.55);
+  --zl-glass-fill-solid: oklch(13% 0.02 270 / 0.88); /* 数据面板:高不透明,保读数 */
+  --zl-glass-border: oklch(55% 0.15 290 / 0.22);
+  --zl-blur-strong: 16px;
+  --zl-blur-soft: 11px;
+  --font-display:'Orbitron',sans-serif;
+  --font-ui:system-ui,'PingFang SC','Microsoft YaHei',sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+.zl-num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.zl-up{color:var(--positive)} .zl-dn{color:var(--negative)}
+
+/* 固定辉光背景层:整站一层,内容浮其上 */
+.zl-page-bg{position:fixed;inset:0;z-index:-1;background:
+  radial-gradient(600px 380px at 20% 8%, oklch(55% 0.18 290 / .22), transparent 70%),
+  radial-gradient(560px 360px at 85% 22%, oklch(65% 0.12 230 / .16), transparent 70%),
+  var(--surface-0);}
+@media (prefers-reduced-motion:no-preference){
+  .zl-page-bg{animation:zlGlow 14s ease-in-out infinite}
+}
+@keyframes zlGlow{0%,100%{opacity:1}50%{opacity:.82}}
+
+/* 玻璃面板 */
+.zl-glass-panel{background:var(--zl-glass-fill);
+  -webkit-backdrop-filter:blur(var(--zl-blur-strong));backdrop-filter:blur(var(--zl-blur-strong));
+  border:1px solid var(--zl-glass-border);border-radius:16px;
+  box-shadow:inset 0 1px 0 oklch(100% 0 0 / .06)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .zl-glass-panel{background:var(--surface-1)} /* 不支持 blur → 实色回退 */
+}
+
+/* 数据表容器:soft blur + 高不透明 */
+.zl-data-card{background:var(--zl-glass-fill-solid);
+  -webkit-backdrop-filter:blur(var(--zl-blur-soft));backdrop-filter:blur(var(--zl-blur-soft));
+  border:1px solid var(--zl-glass-border);border-radius:14px;overflow:hidden}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
+  .zl-data-card{background:var(--surface-1)}
+}
+.zl-data-table{width:100%;border-collapse:collapse;color:var(--text-primary)}
+.zl-data-table th{font-family:var(--font-ui);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--text-muted);text-align:right;padding:12px 18px;font-weight:500;
+  position:sticky;top:0;background:var(--surface-1);z-index:2} /* 表头近实色,不糊 */
+.zl-data-table th:first-child,.zl-data-table th:nth-child(2){text-align:left}
+.zl-data-table td{padding:13px 18px;border-top:1px solid oklch(55% 0.04 290 / .12);
+  text-align:right;font-size:14px;background:oklch(11% 0.02 270 / .66)}
+.zl-data-table td:first-child,.zl-data-table td:nth-child(2){text-align:left}
+.zl-data-table tbody tr:hover td{background:oklch(20% 0.03 270 / .72);cursor:pointer}
+
+/* metric 卡 */
+.zl-stat-card{background:var(--zl-glass-fill);
+  -webkit-backdrop-filter:blur(var(--zl-blur-soft));backdrop-filter:blur(var(--zl-blur-soft));
+  border:1px solid var(--zl-glass-border);border-radius:12px;padding:16px 18px}
+.zl-stat-card .zl-l{font-family:var(--font-ui);font-size:12px;color:var(--text-muted)}
+.zl-stat-card .zl-v{font-family:var(--font-mono);font-size:22px;font-weight:700;margin-top:6px}
+
+/* 导航 */
+.zl-nav{display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;font-family:var(--font-ui)}
+.zl-nav .zl-brand{font-family:var(--font-display);font-weight:700;font-size:18px;letter-spacing:.04em;
+  display:flex;align-items:center;gap:10px;color:var(--text-primary);text-decoration:none}
+.zl-nav .zl-links{display:flex;gap:26px}
+.zl-nav .zl-links a{color:var(--text-secondary);text-decoration:none;font-size:14px}
+.zl-nav .zl-links a.on{color:var(--text-primary)}
+.zl-nav .zl-links a[aria-disabled="true"]{color:var(--text-muted);cursor:default}
+
+/* 数字闪动 */
+@keyframes zlFlashUp{0%{background:oklch(72% 0.18 155 / .42)}100%{background:transparent}}
+@keyframes zlFlashDn{0%{background:oklch(58% 0.22 25 / .42)}100%{background:transparent}}
+.zl-flash-up{animation:zlFlashUp .9s ease-out}
+.zl-flash-dn{animation:zlFlashDn .9s ease-out}
+@media (prefers-reduced-motion:reduce){
+  .zl-flash-up,.zl-flash-dn{animation:none}
+}
+
+/* 名次/状态徽章 */
+.zl-bdg{font-family:var(--font-mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;margin-left:7px}
+.zl-bdg.new{color:var(--sol-green);background:oklch(72% 0.18 155 / .18);border:1px solid oklch(72% 0.18 155 / .4)}
+.zl-bdg.up{color:var(--sol-cyan);background:oklch(65% 0.12 230 / .16)}
+.zl-bdg.dn{color:var(--negative);background:oklch(58% 0.22 25 / .16)}
+
+/* 术语 popover */
+.zl-term{border-bottom:1px dashed var(--text-muted);cursor:help;position:relative}
+.zl-pop{position:absolute;bottom:130%;left:0;width:220px;padding:10px 12px;font-size:12px;line-height:1.5;
+  color:var(--text-primary);background:var(--surface-2);border:1px solid var(--zl-glass-border);
+  border-radius:10px;box-shadow:0 6px 24px oklch(0% 0 0 / .4);z-index:50;display:none}
+.zl-term:hover .zl-pop,.zl-term:focus-within .zl-pop{display:block}
+
+/* toast */
+.zl-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surface-2);border:1px solid var(--zl-glass-border);color:var(--text-primary);
+  font-family:var(--font-ui);font-size:13px;padding:10px 18px;border-radius:10px;opacity:0;
+  transition:opacity .2s,transform .2s;z-index:100;pointer-events:none}
+.zl-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 骨架屏 */
+.zl-skel{background:linear-gradient(90deg,oklch(18% 0.02 270 / .4) 25%,oklch(24% 0.02 270 / .6) 50%,oklch(18% 0.02 270 / .4) 75%);
+  background-size:200% 100%;border-radius:8px;height:1em}
+@media (prefers-reduced-motion:no-preference){.zl-skel{animation:zlShimmer 1.3s infinite}}
+@keyframes zlShimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* 移动端数据表横滚 */
+.zl-table-scroll{overflow-x:auto}
+
+/* View Transitions — reduced-motion 守护 */
+@media (prefers-reduced-motion: reduce){
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none !important}
+}
+.zl-table-scroll .zl-data-table{min-width:640px}
