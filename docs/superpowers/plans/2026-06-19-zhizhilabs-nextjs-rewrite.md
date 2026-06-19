@@ -73,7 +73,7 @@ Expected: 文件写出,约 1287 行(含 `<style>` cosmic 背景 + 中心标题 +
 
 - [ ] **Step 3: 写 `app/page.tsx`(client component 包 hero markup + HUD)**
 
-把 `/tmp/express-hero.html` `<body>` 内 `<nav>` 之后到 `</body>` 之前的 markup(`.universe` 整块 + 所有 `.brand-logo`/`.glyphs`/`.center-content`/overlay)逐字搬进 JSX(注意 JSX 化:`class`→`className`、自闭合标签、`<use href>` 保留、inline `style="..."` 改成 `style={{...}}` 或移到 hero.css)。顶部 `import './hero.css'`。HUD + parallax 的 `<script>` 逻辑改写为 `useEffect`。CTA `<a href="/ranking">`。根元素加 `className="hero-root"`。
+把 `/tmp/express-hero.html` `<body>` 内**包含顶部 `<nav class="zl-nav">` 在内**、到 `</body>` 之前的 markup(`.zl-nav` + `.universe` 整块 + 所有 `.brand-logo`/`.glyphs`/`.center-content`/overlay)逐字搬进 JSX(注意 JSX 化:`class`→`className`、自闭合标签、`<use href>` 保留、inline `style="..."` 改成 `style={{...}}` 或移到 hero.css)。**hero 在 `/`(root layout,不含 `(app)` 的 TopNav),所以必须保留这条 `.zl-nav` 自带导航**——但把其中 `<a aria-disabled="true" title="即将上线">研究</a>` 这条删掉(本次 IA 无「研究」),保留 `发现榜(/ranking)` / `KB 信号(/ranking#kb)` / `模拟盘(/paper)` 三链 + brand。顶部 `import './hero.css'`。HUD + parallax 的 `<script>` 逻辑改写为 `useEffect`。CTA `<a href="/ranking">`。根元素加 `className="hero-root"`。`.zl-nav` 的样式从 `glass-system.css` 一并并入 `app/hero.css`(Step 2)。
 
 ```tsx
 'use client'
