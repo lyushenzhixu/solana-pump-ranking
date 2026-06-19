@@ -1,7 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
 /* Design tokens (OKLCH, tinted neutrals, no pure black — Impeccable-aligned) */
 .hero-root {
   --surface-0: oklch(10% 0.02 270);
@@ -120,10 +118,6 @@
   font-size: 14px;
 }
 .zl-nav .zl-links a.on { color: var(--text-primary); }
-.zl-nav .zl-links a[aria-disabled="true"] {
-  color: var(--text-muted);
-  cursor: default;
-}
 
 /* ─── Universe hero styles ────────────────────────────────────────────────── */
 

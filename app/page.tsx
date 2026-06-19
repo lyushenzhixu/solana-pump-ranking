@@ -21,13 +21,15 @@ export default function HomeHero() {
 
     // 2) 鼠标 parallax(仅非 reduced-motion)
     let onMove: ((e: MouseEvent) => void) | null = null
+    let observer: IntersectionObserver | null = null
     if (!reduce) {
       const universe = document.querySelector('.universe') as HTMLElement | null
       let heroVisible = true
       if (universe && 'IntersectionObserver' in window) {
-        new IntersectionObserver((entries) => {
+        observer = new IntersectionObserver((entries) => {
           heroVisible = entries[0].isIntersecting
-        }, { threshold: 0.15 }).observe(universe)
+        }, { threshold: 0.15 })
+        observer.observe(universe)
       }
       onMove = (e: MouseEvent) => {
         if (!heroVisible) return
@@ -78,6 +80,7 @@ export default function HomeHero() {
     return () => {
       btn?.removeEventListener('click', onClick)
       if (onMove) document.removeEventListener('mousemove', onMove)
+      observer?.disconnect()
     }
   }, [])
 
@@ -88,11 +91,11 @@ export default function HomeHero() {
           <span style={{ width: 20, height: 20, borderRadius: 6, background: 'linear-gradient(135deg,var(--sol-purple),var(--sol-green))', display: 'inline-block' }}></span>
           Zhizhi Labs
         </a>
-        <span className="zl-links">
+        <div className="zl-links">
           <a href="/ranking">发现榜</a>
           <a href="/ranking#kb">KB 信号</a>
           <a href="/paper">模拟盘</a>
-        </span>
+        </div>
       </nav>
 
       <div className="universe">
