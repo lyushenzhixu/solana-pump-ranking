@@ -2170,11 +2170,7 @@ return `<!DOCTYPE html>
     function initKLine(pair) {
       loadKLineLib(function() {
         if (_klc) { klinecharts.dispose('kline-chart'); _klc = null; }
-        _klc = klinecharts.init('kline-chart', {
-          customApi: {
-            formatBigNumber: fmtMcap
-          }
-        });
+        _klc = klinecharts.init('kline-chart');
         if (typeof _klc.setPriceVolumePrecision === 'function') {
           _klc.setPriceVolumePrecision(0, 0);
         }
