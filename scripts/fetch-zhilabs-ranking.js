@@ -159,6 +159,25 @@ export async function updateZhilabsRanking() {
 
   if (error) throw new Error('Supabase 写入失败: ' + error.message);
   console.log('已写入 zhilabs_ranking，共', data?.length ?? rows.length, '条');
+
+  // 剪除不在 ca.md 名单里的旧行 —— 让表精确镜像 ca.md。
+  // upsert 只增改不删,换币后旧/死币会永久残留并被反复刷新累积
+  // (2026-06-20 实操踩坑:换成 8 币后旧 10 个未删,被一次刷新 upsert 回来变 18 行)。
+  // 按 ca.md 意图集 addresses 剪(不是本轮成功取数的 rows),避免某币临时取数失败被误删。
+  try {
+    const keep = addresses.filter(Boolean);
+    if (keep.length > 0) {
+      const { error: pruneErr, count } = await supabase
+        .from('zhilabs_ranking')
+        .delete({ count: 'exact' })
+        .not('token', 'in', '(' + keep.join(',') + ')');
+      if (pruneErr) console.warn('剪除旧行失败(忽略):', pruneErr.message);
+      else if (count) console.log('已剪除', count, '个不在 ca.md 的旧行');
+    }
+  } catch (e) {
+    console.warn('剪除旧行异常(忽略):', e.message);
+  }
+
   return data;
 }
 
